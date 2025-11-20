@@ -1,0 +1,72 @@
+# 环境
+Stage = "dev"
+
+# 是否调试模式
+Debug = true
+
+# 集群配置（严格匹配结构体字段名）
+[Cluster]
+EtcdEndPoints = ["localhost:2379"]
+EtcdRoot = "/cluster/nodes"
+NodeId = "game-1"  # 节点ID
+Port = 20821 # 集群端口
+ExpectedConcurrentSessions = 1000 # 预期同时存在的会话数量
+
+# 握手配置（严格匹配结构体字段名）
+[Cluster.Handshake]
+Token = "dev-token-123"  # 握手令牌
+Timeout = "5s"  # 握手超时时间
+
+# 会话配置（严格匹配结构体字段名）
+[Cluster.Session]
+PendingPacketQueueSize = 100  # 待处理包队列大小
+MaxPacketLength = 1048576  # 最大包长度
+ReadBufSize = 8192  # 读取缓冲区大小
+WriteBufSize = 8192  # 写入缓冲区大小
+ReadWriteTimeout = "10s"  # 读写超时时间
+BatchWriteLimit = 10  # 批量写入限制
+BatchWriteTimeLmit = "1ms"  # 批量写入时间限制
+TickInterval = "2s"  # 心跳间隔
+HeartbeatTimeout = "5s"  # 心跳超时时间
+InactiveTimeout = "10m"  # 非活动超时时间
+
+# 数据库配置
+[DB]
+
+# Redis配置
+[DB.Redis]
+Addrs = ["localhost:6379"]
+Username = ""
+Password = ""
+DB = 0
+DialTimeout = "5s"
+ReadWriteTimeout = "3s"
+PoolSize = 10
+PoolTimeout = "4s"
+MinIdleConns = 5
+MaxIdleConns = 10
+MaxActiveConns = 100
+ConnMaxIdleTime = "30m"
+
+# MongoDB配置
+[DB.Mongo]
+URI = "mongodb://localhost:27017/?readPreference=primary"
+ConnectTimeout = "10s"
+MaxPoolSize = 100
+MinPoolSize = 5
+MaxConnIdleTime = "30m"
+ServerSelectionTimeout = "5s"
+HeartbeatInterval = "10s"
+RetryWrites = true
+RetryReads = true
+Direct = false
+ReplicaSet = ""
+MaxConnecting = 10
+
+# 日志配置
+[Log]
+Level = "debug"
+Caller = true
+CallerSkip = 0
+# Development = true
+EnableStd = true

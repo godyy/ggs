@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package c2s;
+
+
+option go_package = "github.com/godyy/ggs/internal/core/proto/pb/c2s";
+
+// PID 协议ID.
+// 如果协议消息结构来common, 可在其注释中添加 /from_common 标识.
+enum PID {
+    PUnknown = 0;
+    PError = 1; // 通用错误. /from_common.
+    PLoginReq = 2; // 网关登陆请求.
+    PLoginResp = 3; // 网关登陆响应.
+    PLoginCharacterReq = 4; // 游戏角色登陆请求.
+    PLoginCharacterResp = 5; // 游戏角色登陆响应.
+    PDisconnectPush = 6; // 断开连接推送.
+    PHeartbeatReq = 7; // 心跳请求.
+    PHeartbeatResp = 8; // 心跳响应.
+    PModifyNameReq = 9; // 修改名称请求.
+    PModifyNameResp = 10; // 修改名称响应.
+}

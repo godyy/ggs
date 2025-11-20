@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package c2s;
+
+option go_package = "github.com/godyy/ggs/internal/core/proto/pb/c2s";
+
+// 错误码.
+enum ErrCode {
+    ECSuccess = 0; // 成功.
+    ECInternalError = 1; // 内部错误.
+    ECInvalidPacket = 2; // 无效的数据包.
+    ECInvalidToken = 3; // 无效的令牌.
+    ECLoginTimeout = 4; // 登陆超时.
+}

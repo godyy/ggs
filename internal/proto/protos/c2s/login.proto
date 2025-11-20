@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package c2s;
+
+option go_package = "github.com/godyy/ggs/internal/core/proto/pb/c2s";
+
+
+// 登陆请求.
+message LoginReq {
+    string token = 1; // 令牌.
+}
+
+// 登陆响应.
+message LoginResp {
+
+}
+
+// 登陆游戏请求.
+message LoginCharacterReq {
+    string uid = 1; // 用户ID
+    int64 accountId = 2; // 账号ID.
+}
+
+// 登陆游戏响应.
+message LoginCharacterResp {
+}
+
+// 断开连接推送.
+message DisconnectPush {
+    enum Reason {
+        Unknown = 0; // 未知.
+        SystemError = 1; // 系统错误.
+        Disconnect = 2; // 被断开.
+        AnotherLogin = 3; // 另一个登录.
+        LoginTimeout = 4; // 登录超时.
+    }
+
+    Reason reason = 1; // 原因.
+}
+
+// 心跳
+message HeartbeatReq {
+}
+message HeartbeatResp {
+}

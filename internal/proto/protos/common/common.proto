@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/godyy/ggs/internal/core/proto/pb/common";
+
+// 通用错误.
+message Error {
+    int32 code = 1; // 错误码.
+    repeated ErrArg args = 2; // 错误参数.
+}
+
+// 错误参数
+message ErrArg {
+    oneof value {
+        string s = 1; // 字符串值
+        int64  i = 2; // 整形值
+        double f = 3; // 浮点值
+    }
+}

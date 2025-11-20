@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package c2s;
+
+option go_package = "github.com/godyy/ggs/internal/core/proto/pb/c2s";
+
+// 修改名称请求.
+message ModifyNameReq {
+    string name = 1; // 新名称.
+}
+
+// 修改名称响应
+message ModifyNameResp {
+    string name = 1; // 新名称.
+}
