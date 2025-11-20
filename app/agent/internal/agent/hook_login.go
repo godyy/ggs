@@ -1,0 +1,148 @@
+package agent
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/godyy/ggs/app/agent/internal"
+	"github.com/godyy/ggs/app/agent/internal/actor"
+	"github.com/godyy/ggs/app/agent/internal/app"
+	"github.com/godyy/ggs/app/agent/internal/base/log"
+	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
+	"github.com/godyy/ggs/internal/base/models"
+	"github.com/godyy/ggs/internal/libs/db/redis"
+	"github.com/godyy/ggs/internal/libs/db/redis/dlock"
+	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
+	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
+	pbcommon "github.com/godyy/ggs/internal/proto/pb/common"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
+)
+
+const (
+	loginLockExpiry     = 10 * time.Second
+	loginLockRetryDelay = 500 * time.Millisecond
+)
+
+var loginLockOpts = &dlock.Options{
+	Expiry:     loginLockExpiry,
+	RetryDelay: loginLockRetryDelay,
+}
+
+// getLoginLock 获取登录锁.
+func getLoginLock(uid string) *dlock.Lock {
+	return redis.NewDLock(fmt.Sprintf("agent_login_lock:%s", uid), "", loginLockOpts)
+}
+
+// handleLoginReq 处理登录请求.
+func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
+	var (
+		playerId  int64
+		sessionId uint32
+		seq       = codecc2s.HeadGetSeq(p)
+	)
+
+	req := msg.(*pbc2s.LoginReq)
+
+	// 解析token
+	tokenInfo, errcode := parseLoginToken(a, req.Token)
+	if errcode != pbc2s.ErrCode_ECSuccess {
+		a.sendRespMessage(seq, &pbcommon.Error{Code: int32(errcode)})
+		a.Stop(pbc2s.DisconnectPush_Unknown)
+		return
+	}
+	playerId = tokenInfo.CharacterID
+
+	// 获取登录锁.
+	lock := getLoginLock(tokenInfo.UID)
+
+	// 创建 context.
+	ctx, cancel := context.WithTimeout(context.Background(), loginLockExpiry)
+	defer cancel()
+
+	// 登录锁加锁.
+	if err := lock.Lock(ctx); err != nil {
+		// 加锁超时.
+		a.errorFields("login lock timeout", log.FldUid(tokenInfo.UID))
+		a.Stop(pbc2s.DisconnectPush_LoginTimeout)
+		return
+	}
+
+	// 停止当前的anothor
+	if anothor := internal.GetAgent(playerId); anothor != nil {
+		internal.DelAgent(anothor)
+		anothor.Stop(pbc2s.DisconnectPush_AnotherLogin)
+	}
+
+	// 连接 player Actor
+	sessionId = actor.GenSessionId()
+	if err := actor.Connect2Player(playerId, sessionId); err != nil {
+		a.errorFields("connect player actor failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
+		a.Stop(pbc2s.DisconnectPush_SystemError)
+		return
+	}
+
+	// 更新 agent
+	a.playerId = playerId
+	a.sessionId = sessionId
+	internal.AddAgent(a)
+
+	// 编码并发送登录游戏请求.
+	if err := a.forwardReq2Player(seq, &pbc2s.LoginCharacterReq{
+		Uid:       tokenInfo.UID,
+		AccountId: tokenInfo.AccountID,
+	}); err != nil {
+		a.errorFields("forward login game request failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
+		internal.DelAgent(a)
+		a.Stop(pbc2s.DisconnectPush_SystemError)
+		lock.Unlock(ctx)
+		return
+	}
+
+	// 登录锁解锁.
+	lock.Unlock(ctx)
+}
+
+// parseLoginToken 解析登录令牌.
+func parseLoginToken(a *Agent, token string) (*models.TokenInfo, pbc2s.ErrCode) {
+	// 解析token
+	claims, err := authjwt.ParseToken(tokenKey, token)
+	if err != nil {
+		a.InfoFields("parse token failed", zap.String("token", token), zap.NamedError("error", err))
+		return nil, pbc2s.ErrCode_ECInvalidToken
+	}
+
+	// 验证issuer
+	if !claims.VerifyIssuer(app.Env().Stage(), true) {
+		a.InfoFields("token issuer error", zap.String("token", token))
+		return nil, pbc2s.ErrCode_ECInvalidToken
+	}
+
+	// 解析subject
+	ti := &models.TokenInfo{}
+	sub, _ := authjwt.GetSub(claims)
+	if err := json.Unmarshal([]byte(sub), ti); err != nil {
+		a.InfoFields("unmarshal token subject error", zap.String("token", token), zap.NamedError("error", err))
+		return nil, pbc2s.ErrCode_ECInvalidToken
+	}
+
+	return ti, pbc2s.ErrCode_ECSuccess
+}
+
+// handleLoginGameResp 处理登录游戏响应.
+func handleLoginGameResp(a *Agent, p []byte, msg proto.Message) {
+	seq := codecc2s.HeadGetSeq(p)
+	resp := msg.(*pbc2s.LoginCharacterResp)
+	_ = resp
+
+	// 发送登录响应.
+	if err := a.sendRespMessage(seq, &pbc2s.LoginResp{
+		// todo
+	}); err != nil {
+		a.errorFields("send login response failed", log.FldError(err))
+		a.Stop(pbc2s.DisconnectPush_SystemError)
+		return
+	}
+}

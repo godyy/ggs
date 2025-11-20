@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package s2s;
+
+option go_package = "github.com/godyy/ggs/internal/core/proto/pb/s2s";
+
+// PID 协议ID.
+// 如果协议消息结构来common, 可在其注释中添加 /from_common 标识.
+enum PID {
+    PUnknown = 0; // 未知.
+    PError = 1; // 错误. /from_common
+    PActorSaveResult = 99; // Actor 保存结果.
+}

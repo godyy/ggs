@@ -1,0 +1,90 @@
+version: '3.8'
+
+name: ggs_dev
+
+services:
+  # Redis服务
+  redis:
+    image: redis:7-alpine
+    container_name: ggs_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./volumes/redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - ggs_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # MongoDB服务
+  mongodb:
+    image: mongo:8
+    container_name: ggs_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    # environment:
+    #   MONGO_INITDB_ROOT_USERNAME: admin
+    #   MONGO_INITDB_ROOT_PASSWORD: admin123
+    #   MONGO_INITDB_DATABASE: ggs_dev
+    volumes:
+      - ./volumes/mongodb_data:/data/db
+      - ./volumes/mongodb_config:/data/configdb
+      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - ggs_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+
+  # Etcd服务（单节点，开发用）
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.12
+    container_name: ggs_etcd
+    restart: unless-stopped
+    ports:
+      - "2379:2379"  # 客户端端口
+    environment:
+      - ETCD_ENABLE_V2=false
+      - ETCD_NAME=etcd
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+    volumes:
+      - ./volumes/etcd_data:/var/lib/etcd
+    networks:
+      - ggs_network
+    healthcheck:
+      test: ["CMD-SHELL", "ETCDCTL_API=3 etcdctl --endpoints=http://localhost:2379 endpoint health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# 数据卷
+volumes:
+  redis_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
+  etcd_data:
+    driver: local
+
+# 网络
+networks:
+  ggs_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.2.0/24

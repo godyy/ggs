@@ -1,0 +1,43 @@
+# 服务端口
+Port = 8080
+
+# 数据库配置
+[DB]
+
+# Redis配置
+[DB.Redis]
+Addrs = ["localhost:6379"]
+Username = ""
+Password = ""
+DB = 0
+DialTimeout = "5s"
+ReadWriteTimeout = "3s"
+PoolSize = 10
+PoolTimeout = "4s"
+MinIdleConns = 5
+MaxIdleConns = 10
+MaxActiveConns = 100
+ConnMaxIdleTime = "30m"
+
+# MongoDB配置
+[DB.Mongo]
+URI = "mongodb://localhost:27017/?readPreference=primary"
+ConnectTimeout = "10s"
+MaxPoolSize = 100
+MinPoolSize = 5
+MaxConnIdleTime = "30m"
+ServerSelectionTimeout = "5s"
+HeartbeatInterval = "10s"
+RetryWrites = true
+RetryReads = true
+Direct = false
+ReplicaSet = ""
+MaxConnecting = 10
+
+# 日志配置
+[Log]
+Level = "debug"
+Caller = true
+CallerSkip = 0
+# Development = true
+EnableStd = true
