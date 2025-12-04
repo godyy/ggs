@@ -18,6 +18,12 @@ type Config struct {
 	// TokenKeyPath 令牌密钥文件路径.
 	TokenKeyPath string
 
+	// HttpPort http端口.
+	HttpPort int
+
+	// EnablePProf 是否开启pprof.
+	EnablePProf bool
+
 	// Cluster 集群配置.
 	Cluster cluster.Config
 

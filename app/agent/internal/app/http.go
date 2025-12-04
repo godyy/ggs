@@ -5,23 +5,18 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/db/mongo"
-	"github.com/godyy/ggs/internal/libs/db/redis"
 	"github.com/godyy/ggs/internal/libs/logger"
 	"github.com/godyy/ggs/internal/libs/pprof"
-	"github.com/godyy/ggs/internal/libs/probe"
 )
 
 func (a *app) startHttp() {
-	if a.config.HttpPort <= 0 {
+	if a.config.HttpPort <= 0 || !a.config.EnablePProf {
 		return
 	}
 
 	mux := http.NewServeMux()
-	a.registerHttpProbe(mux)
 	if a.config.EnablePProf {
 		pprof.RegisterHTTP(mux, "")
 	}
@@ -52,21 +47,4 @@ func (a *app) stopHttp() {
 			logger.GetLogger().Error("http server shutdown with error: %v", err)
 		}
 	}
-}
-
-func (a *app) registerHttpProbe(mux *http.ServeMux) {
-	probe.Init(
-		probe.WithReadinessPolicy(probe.Cached),
-		probe.WithReadinessCacheTTL(5*time.Second),
-		probe.WithReadinessTimeout(5*time.Second),
-		probe.WithReadinessChecker("mongo", func(ctx context.Context) error {
-			return mongo.Inst().Ping(ctx, nil)
-		}),
-		probe.WithReadinessChecker("redis", func(ctx context.Context) error {
-			return redis.Inst().Ping(ctx).Err()
-		}),
-	)
-
-	probe.SetReady(true)
-	probe.RegisterHTTP(mux, "/healthz", "/readyz")
 }

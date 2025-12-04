@@ -10,4 +10,6 @@ const (
 	HeartbeatInterval = 30 * time.Second
 
 	HeartbeatTimeout = 45 * time.Second
+
+	ShutdownTimeout = 30 * time.Second
 )

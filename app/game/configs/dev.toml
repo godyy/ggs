@@ -1,8 +1,4 @@
-# 环境
-Stage = "dev"
-
-# 是否调试模式
-Debug = true
+EnablePProf = true
 
 # 集群配置（严格匹配结构体字段名）
 [Cluster]

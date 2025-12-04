@@ -9,6 +9,7 @@ func init() {
 	flags.Int("cluster-port", 0, "cluster port")
 	flags.Int("port", 0, "port")
 	flags.String("token-key-path", "", "token key path")
+	flags.Int("http-port", 0, "http port")
 }
 
 func (c *Config) ApplyFlags() error {
@@ -25,6 +26,10 @@ func (c *Config) ApplyFlags() error {
 
 	if tokenKeyPath, ok := flags.GetValue[string]("token-key-path"); ok && tokenKeyPath != "" {
 		c.TokenKeyPath = tokenKeyPath
+	}
+
+	if httpPort, ok := flags.GetValue[int]("http-port"); ok && httpPort > 0 {
+		c.HttpPort = httpPort
 	}
 
 	return nil

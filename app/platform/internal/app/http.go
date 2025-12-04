@@ -5,15 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/ggs/app/platform/internal"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/libs/logger"
 )
-
-// shutdownTimeout 停机超时.
-const shutdonwTimeout = 30 * time.Second
 
 var (
 	srv *http.Server
@@ -49,7 +46,7 @@ func startHttp() {
 func stopHttp() {
 	if srv != nil {
 		// 创建上下文用于优雅关闭
-		ctx, cancel := context.WithTimeout(context.Background(), shutdonwTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), consts.ShutdownTimeout)
 		defer cancel()
 
 		// 优雅关闭服务器

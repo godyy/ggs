@@ -3,6 +3,9 @@
 # 服务端口（严格匹配结构体字段名）
 Port = 20811
 
+# 是否开启pprof
+EnablePProf = true
+
 # 集群配置（严格匹配结构体字段名）
 [Cluster]
 EtcdEndPoints = ["localhost:2379"]

@@ -2,6 +2,7 @@ package app
 
 import (
 	"net"
+	"net/http"
 
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/base/config"
@@ -33,6 +34,8 @@ type app struct {
 
 	// crypto.
 	secretDecryptor crypto.Decryptor
+
+	httpServer *http.Server // http 服务
 }
 
 var appInst *app
@@ -87,10 +90,16 @@ func Start() {
 	if err := appInst.startListen(); err != nil {
 		logger.GetLogger().Fatalf("start listening failed, %v", err)
 	}
+
+	// 启动 http 服务.
+	appInst.startHttp()
 }
 
 // Stop 停止应用.
 func Stop() {
+	// 停止 http 服务.
+	appInst.stopHttp()
+
 	// 停止对 c 端监听服务.
 	appInst.stopListen()
 
