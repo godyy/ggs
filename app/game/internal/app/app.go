@@ -1,6 +1,7 @@
 package app
 
 import (
+	"net/http"
 	"runtime"
 	"time"
 
@@ -31,6 +32,8 @@ type app struct {
 	actorCodec      actorcodec.Codec   // actor编解码
 	actorMetaDriver *mactor.MetaDriver // actor Meta驱动
 	actorService    *mactor.Service    // actor 服务
+
+	httpServer *http.Server // http 服务
 }
 
 var appInst *app
@@ -95,11 +98,20 @@ func Start() {
 	if err := appInst.startCluster(); err != nil {
 		logger.GetLogger().Fatalf("start cluster failed, %v", err)
 	}
+
+	// 启动http服务.
+	appInst.startHttp()
 }
 
 func Stop() {
+	// 停止 http 服务.
+	appInst.stopHttp()
+
 	// 停止 Actor 服务.
 	appInst.stopActor()
+
+	// 停止 mongo 后台.
+	appInst.mongobd.Stop()
 
 	// 停止 cluster.
 	appInst.stopCluster()

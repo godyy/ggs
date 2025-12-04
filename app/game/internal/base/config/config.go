@@ -14,6 +14,9 @@ type Config struct {
 	// Stage 环境. dev/prod
 	Stage string
 
+	// HttpPort http服务端口.
+	HttpPort int
+
 	// Cluster 集群配置.
 	Cluster cluster.Config
 
