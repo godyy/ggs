@@ -1,7 +1,6 @@
 package config
 
 import (
-	"github.com/godyy/gcluster/net"
 	"github.com/godyy/ggs/internal/libs/config"
 	"github.com/godyy/ggs/internal/libs/db/mongo"
 	"github.com/godyy/ggs/internal/libs/db/redis"
@@ -15,17 +14,17 @@ type Config struct {
 	// Port 服务端口.
 	Port int
 
-	// TokenKeyPath 令牌密钥文件路径.
-	TokenKeyPath string
-
-	// HttpPort http端口.
-	HttpPort int
-
-	// EnablePProf 是否开启pprof.
-	EnablePProf bool
-
 	// Cluster 集群配置.
-	Cluster cluster.Config
+	Cluster struct {
+		// NodeName 集群节点名称.
+		NodeName string
+
+		// Port 集群端口.
+		Port int
+
+		// Core 核心配置.
+		Core cluster.Config
+	}
 
 	// DB 数据库配置.
 	DB struct {
@@ -36,32 +35,17 @@ type Config struct {
 		Mongo *mongo.Config
 	}
 
+	// TokenKeyPath 令牌密钥文件路径.
+	TokenKeyPath string
+
+	// HttpPort HTTP端口.
+	HttpPort int
+
+	// EnablePProf 是否启用pprof.
+	EnablePProf bool
+
 	// Log 日志配置
 	Log *logger.Config
-}
-
-// ClusterConfig 集群配置.
-type ClusterConfig struct {
-	// NodeId 节点ID.
-	NodeId string
-
-	// Port 集群端口号.
-	Port int
-
-	// EtcdEndPoints etcd 节点地址列表.
-	EtcdEndPoints []string
-
-	// EtcdRoot 用于发现其它节点信息的etcd根路径.
-	EtcdRoot string
-
-	// Handshake 握手配置.
-	Handshake net.HandshakeConfig
-
-	// Session 会话配置.
-	Session net.SessionConfig
-
-	// ExpectedConcurrentSessions 预期同时存在的 Session 数量.
-	ExpectedConcurrentSessions int
 }
 
 // Load 从指定路径加载配置文件.

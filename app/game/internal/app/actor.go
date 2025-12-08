@@ -7,9 +7,11 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/actor"
 	actordefine "github.com/godyy/ggs/internal/base/actor/define"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/libs/db/redis"
 	"github.com/godyy/ggs/internal/libs/logger"
 	mactor "github.com/godyy/ggs/internal/modules/actor"
+	"github.com/godyy/ggs/internal/modules/cluster"
 	"github.com/godyy/gtimewheel"
 	pkgerrors "github.com/pkg/errors"
 )
@@ -26,7 +28,7 @@ func (a *app) startActor() error {
 	// 创建Actor服务.
 	actorConfig := &mactor.ServiceConfig{
 		Core: &gactor.ServiceConfig{
-			NodeId: a.config.Cluster.NodeId,
+			NodeId: cluster.MakeNodeID(consts.NodeGame, a.config.Cluster.NodeName),
 			ActorConfig: gactor.ActorConfig{
 				ActorDefines:        actordefine.GetDefineList(),
 				ClientActorCategory: actor.CategoryPlayer.Uint16(),

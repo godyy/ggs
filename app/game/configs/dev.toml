@@ -1,20 +1,26 @@
-EnablePProf = true
+# HTTP端口
+HttpPort = 23088
 
-# 集群配置（严格匹配结构体字段名）
+# 是否启用PProf
+EnablePProf = false
+
 [Cluster]
+NodeName = "1" # 集群节点名称
+Port = 23002 # 集群端口
+
+# 集群核心配置（严格匹配结构体字段名）
+[Cluster.Core]
 EtcdEndPoints = ["localhost:2379"]
-EtcdRoot = "/cluster/nodes"
-NodeId = "game-1"  # 节点ID
-Port = 20821 # 集群端口
+EtcdRoot = "/ggs/cluster"
 ExpectedConcurrentSessions = 1000 # 预期同时存在的会话数量
 
 # 握手配置（严格匹配结构体字段名）
-[Cluster.Handshake]
+[Cluster.Core.Handshake]
 Token = "dev-token-123"  # 握手令牌
 Timeout = "5s"  # 握手超时时间
 
 # 会话配置（严格匹配结构体字段名）
-[Cluster.Session]
+[Cluster.Core.Session]
 PendingPacketQueueSize = 100  # 待处理包队列大小
 MaxPacketLength = 1048576  # 最大包长度
 ReadBufSize = 8192  # 读取缓冲区大小

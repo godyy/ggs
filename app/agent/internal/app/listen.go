@@ -16,6 +16,10 @@ import (
 // startListen 启动监听.
 func (a *app) startListen() error {
 	port := a.config.Port
+	if port == 0 {
+		return pkgerrors.New("port not specified")
+	}
+
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return pkgerrors.WithMessagef(err, "listening at :%d", port)

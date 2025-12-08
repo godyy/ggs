@@ -1,8 +1,11 @@
 package app
 
 import (
+	"errors"
+	"fmt"
 	"time"
 
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/libs/logger"
 	"github.com/godyy/ggs/internal/modules/cluster"
 	"github.com/godyy/ggs/internal/utils"
@@ -14,9 +17,14 @@ func (a *app) startCluster() error {
 	ip := utils.ResolveLocalIPv4()
 
 	// 创建cluster
+	port := a.config.Cluster.Port
+	if port == 0 {
+		return errors.New("cluster port not specified")
+	}
+	node := cluster.NewNode(consts.NodeGame, a.config.Cluster.NodeName, fmt.Sprintf("%s:%d", ip, port))
 	clusterCfg := &cluster.ServiceConfig{
-		Core:    &a.config.Cluster,
-		IP:      ip,
+		Core:    &a.config.Cluster.Core,
+		Self:    node,
 		Handler: a,
 		Logger:  logger.GetLogger(),
 	}

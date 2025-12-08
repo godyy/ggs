@@ -16,7 +16,8 @@ import (
 )
 
 func (a *app) startHttp() {
-	if a.config.HttpPort <= 0 {
+	port := a.config.HttpPort
+	if port <= 0 {
 		return
 	}
 
@@ -27,12 +28,12 @@ func (a *app) startHttp() {
 	}
 
 	a.httpServer = &http.Server{
-		Addr:    ":" + strconv.Itoa(a.config.HttpPort),
+		Addr:    ":" + strconv.Itoa(port),
 		Handler: mux,
 	}
 
 	go func() {
-		logger.GetLogger().Infof("http server listening at :%d", a.config.HttpPort)
+		logger.GetLogger().Infof("http server listening at :%d", port)
 		if err := a.httpServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
 			logger.GetLogger().Info("http server closed.")
 		} else {

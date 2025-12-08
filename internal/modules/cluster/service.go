@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 
@@ -16,8 +15,8 @@ type ServiceConfig struct {
 	// Core 核心配置.
 	Core *Config
 
-	// IP 节点IP地址.
-	IP string
+	// Self 本地节点信息.
+	Self *Node
 
 	// Handler 集群代理处理函数.
 	Handler gcluster.AgentHandler
@@ -37,27 +36,25 @@ type Service struct {
 
 // NewService 构造集群服务.
 func NewService(cfg *ServiceConfig) (*Service, error) {
-	// 构造节点地址
-	addr := fmt.Sprintf("%s:%d", cfg.IP, cfg.Core.Port)
-
 	// 创建center
-	center := NewCenter(&CenterConfig{
-		EndPoints: cfg.Core.EtcdEndPoints,
-		Root:      cfg.Core.EtcdRoot,
-		Self: &Node{
-			ID:   cfg.Core.NodeId,
-			Addr: addr,
-		},
-		Log: cfg.Logger.Named("cluster-center"),
+	center, err := NewCenter(&CenterConfig{
+		EndPoints:   cfg.Core.EtcdEndPoints,
+		Root:        cfg.Core.EtcdRoot,
+		WatchPrefix: cfg.Core.EtcdWatchPrefix,
+		Self:        cfg.Self,
+		Log:         cfg.Logger.Named("cluster-center"),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	// 创建agent
 	agent, err := gcluster.CreateAgent(
 		&gcluster.AgentConfig{
 			Center: center,
 			Net: &clusternet.ServiceConfig{
-				NodeId:    cfg.Core.NodeId,
-				Addr:      addr,
+				NodeId:    cfg.Self.GetNodeId(),
+				Addr:      cfg.Self.Addr,
 				Handshake: cfg.Core.Handshake,
 				Session:   cfg.Core.Session,
 				Dialer: func(addr string) (net.Conn, error) {

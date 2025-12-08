@@ -11,14 +11,17 @@ import (
 
 // Config 配置.
 type Config struct {
-	// HttpPort http服务端口.
-	HttpPort int
-
-	// EnablePProf 是否启用 pprof 性能分析.
-	EnablePProf bool
-
 	// Cluster 集群配置.
-	Cluster cluster.Config
+	Cluster struct {
+		// NodeName 集群节点名称.
+		NodeName string
+
+		// Port 集群端口.
+		Port int
+
+		// Core 核心配置.
+		Core cluster.Config
+	}
 
 	// DB 数据库配置.
 	DB struct {
@@ -28,6 +31,12 @@ type Config struct {
 		// Mongo 配置.
 		Mongo *mongo.Config
 	}
+
+	// HttpPort HTTP端口.
+	HttpPort int
+
+	// EnablePProf 是否启用pprof.
+	EnablePProf bool
 
 	// Log 日志配置
 	Log *logger.Config

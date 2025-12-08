@@ -4,11 +4,10 @@ import (
 	"fmt"
 
 	"github.com/godyy/ggs/internal/base/env"
-	"github.com/godyy/ggs/internal/libs/flags"
 )
 
 func (e *Env) applyFlags() {
-	sid, ok := flags.GetValue[int64](env.FlagName("server-id"))
+	sid, ok := env.GetFlagValue[int64]("server-id")
 	if ok && sid > 0 {
 		e.serverId = sid
 		e.db = fmt.Sprintf("game_%d", sid)
@@ -18,5 +17,5 @@ func (e *Env) applyFlags() {
 }
 
 func init() {
-	flags.Int64(env.FlagName("server-id"), 0, "server id")
+	env.AddFlag("server-id", int64(0), "server id")
 }

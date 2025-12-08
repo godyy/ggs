@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
 	"sync"
@@ -20,18 +21,63 @@ var ErrNodeNotFound = errors.New("node not found")
 
 // Node 节点信息.
 type Node struct {
-	ID   string `json:"id"`   // 节点ID.
-	Addr string `json:"addr"` // 节点集群内通信地址.
+	Category string `json:"category"` // 节点种类.
+	Name     string `json:"name"`     // 名称.
+	Addr     string `json:"addr"`     // 节点集群内通信地址.
+}
+
+// NewNode 创建节点信息.
+func NewNode(category, name, addr string) *Node {
+	return &Node{
+		Category: category,
+		Name:     name,
+		Addr:     addr,
+	}
+}
+
+// checkValid 检查节点是否有效.
+func (n *Node) checkValid() error {
+	if n == nil {
+		return errors.New("node is nil")
+	}
+	if n.Category == "" {
+		return errors.New("node category is empty")
+	}
+	if n.Name == "" {
+		return errors.New("node name is empty")
+	}
+	if n.Addr == "" {
+		return errors.New("node addr is empty")
+	}
+	return nil
 }
 
 // GetNodeId 节点ID.
 func (n *Node) GetNodeId() string {
-	return n.ID
+	return MakeNodeID(n.Category, n.Name)
 }
 
 // GetNodeAddr 获取节点地址.
 func (n *Node) GetNodeAddr() string {
 	return n.Addr
+}
+
+// String 节点信息字符串表示.
+func (n *Node) String() string {
+	return fmt.Sprintf("{Category:%s, Name:%s, Addr:%s}", n.Category, n.Name, n.Addr)
+}
+
+// NodeIDSep 节点ID分隔符.
+const NodeIDSep = "/"
+
+// MakeNodeID 生成节点ID.
+func MakeNodeID(category, name string) string {
+	return category + NodeIDSep + name
+}
+
+// ParseNodeID 解析节点ID.
+func ParseNodeID(nodeId string) (category, name string, ok bool) {
+	return strings.Cut(nodeId, NodeIDSep)
 }
 
 const (
@@ -53,6 +99,10 @@ type CenterConfig struct {
 	// Root etcd 根路径.
 	Root string
 
+	// WatchPrefix 监听用的路径前缀.
+	// 最终的监听路径为 root+WatchPrefix.
+	WatchPrefix string
+
 	// Self 自身节点信息.
 	Self *Node
 
@@ -68,20 +118,49 @@ func (c *CenterConfig) init() error {
 	if c.Root == "" {
 		return errors.New("no Root")
 	}
+	c.Root = normalizePath(c.Root)
+
+	if c.WatchPrefix != "" {
+		c.WatchPrefix = normalizePath(c.WatchPrefix)
+	}
 
 	if c.Self == nil {
 		return errors.New("no Self")
 	}
+	if err := c.Self.checkValid(); err != nil {
+		return pkgerrors.WithMessage(err, "self node invalid")
+	}
+
+	if c.Log == nil {
+		return errors.New("no Log")
+	}
 
 	return nil
+}
+
+// normalizePath 标准化 etcd 路径：前导斜杠、去尾斜杠、折叠重复斜杠
+func normalizePath(r string) string {
+	r = strings.TrimSpace(r)
+	if r == "" {
+		return r
+	}
+	r = strings.TrimSuffix(r, "/")
+	if !strings.HasPrefix(r, "/") {
+		r = "/" + r
+	}
+	for strings.Contains(r, "//") {
+		r = strings.ReplaceAll(r, "//", "/")
+	}
+	return r
 }
 
 // Center Center 负责管理和维护集群中的节点信息.
 // 使用etcd，通过配置根路径，在根路径下注册自身节点,并获取根路径下注册的所有其它节点.
 // 同时还会异步监听根路径下产生的节点新增/删除事件,并实时更新本地节点列表.
 type Center struct {
-	cfg     *CenterConfig
-	etcdCli *etcdv3.Client
+	cfg        *CenterConfig
+	selfNodeId string
+	etcdCli    *etcdv3.Client
 
 	mu    sync.RWMutex
 	nodes map[string]*Node
@@ -91,15 +170,15 @@ type Center struct {
 	keepAliveCancel context.CancelFunc
 }
 
-func NewCenter(cfg *CenterConfig) *Center {
+func NewCenter(cfg *CenterConfig) (*Center, error) {
 	if err := cfg.init(); err != nil {
-		panic(err)
+		return nil, err
 	}
-
 	return &Center{
-		cfg:   cfg,
-		nodes: make(map[string]*Node),
-	}
+		cfg:        cfg,
+		selfNodeId: cfg.Self.GetNodeId(),
+		nodes:      make(map[string]*Node),
+	}, nil
 }
 
 // Start 启动集群中心，注册自身并同步/监听节点列表。
@@ -194,7 +273,7 @@ func (c *Center) GetNode(nodeID string) (center.Node, error) {
 	if c.nodes == nil {
 		return nil, errors.New("nodes not initialize")
 	}
-	if c.cfg.Self.ID == nodeID {
+	if nodeID == c.selfNodeId {
 		return c.cfg.Self, nil
 	}
 	node, ok := c.nodes[nodeID]
@@ -204,9 +283,36 @@ func (c *Center) GetNode(nodeID string) (center.Node, error) {
 	return node, nil
 }
 
-// keyForNode 返回节点对应的key.
-func (c *Center) keyForNode(nodeID string) string {
-	return c.cfg.Root + "/" + nodeID
+// parseNodeKey 从 etcd key 中解析出节点ID.
+// 期望的 key 格式为：root+/nodeID
+func parseNodeKey(root, key string) (string, bool) {
+	return strings.CutPrefix(key, root+"/")
+}
+
+// parseNode 解析节点信息.
+func parseNode(root, key string, val []byte) (*Node, string, error) {
+	nodeId, ok := parseNodeKey(root, key)
+	if !ok {
+		return nil, "", fmt.Errorf("invalid node key %s", key)
+	}
+	category, name, ok := ParseNodeID(nodeId)
+	if !ok {
+		return nil, "", fmt.Errorf("invalid node id %s", nodeId)
+	}
+	n := &Node{}
+	if err := json.Unmarshal(val, n); err != nil {
+		return nil, "", fmt.Errorf("unmarshal node %s: %w", nodeId, err)
+	}
+	if err := n.checkValid(); err != nil {
+		return nil, "", err
+	}
+	if n.Category != category {
+		return nil, "", fmt.Errorf("node %s category not match, expect %s, got %s", nodeId, category, n.Category)
+	}
+	if n.Name != name {
+		return nil, "", fmt.Errorf("node %s name not match, expect %s, got %s", nodeId, name, n.Name)
+	}
+	return n, nodeId, nil
 }
 
 // grantLease 申请租约.
@@ -237,7 +343,8 @@ func (c *Center) registerSelf(ctx context.Context) error {
 	if err != nil {
 		return pkgerrors.WithMessage(err, "marshal self node")
 	}
-	_, err = c.etcdCli.Put(ctx, c.keyForNode(c.cfg.Self.ID), string(val), etcdv3.WithLease(c.leaseID))
+	key := c.cfg.Root + "/" + c.selfNodeId
+	_, err = c.etcdCli.Put(ctx, key, string(val), etcdv3.WithLease(c.leaseID))
 	if err != nil {
 		return pkgerrors.WithMessage(err, "put self node to etcd")
 	}
@@ -266,7 +373,7 @@ func (c *Center) syncNodes(ctx context.Context, withTimeout bool) (int64, error)
 		defer cancel()
 	}
 
-	prefix := c.cfg.Root + "/"
+	prefix := c.getWatchPrefix()
 	resp, err := c.etcdCli.Get(ctx, prefix, etcdv3.WithPrefix())
 	if err != nil {
 		return 0, err
@@ -274,16 +381,16 @@ func (c *Center) syncNodes(ctx context.Context, withTimeout bool) (int64, error)
 
 	nodes := make(map[string]*Node)
 	for _, kv := range resp.Kvs {
-		id := strings.TrimPrefix(string(kv.Key), prefix)
-		if id == c.cfg.Self.ID {
+		n, id, err := parseNode(c.cfg.Root, string(kv.Key), kv.Value)
+		if err != nil {
+			c.getLog().Errorf("syncNodes: parse node %s: %v", string(kv.Key), err)
 			continue
 		}
-		n := &Node{}
-		if err := json.Unmarshal(kv.Value, n); err != nil {
-			c.getLog().Errorf("unmarshal node %s: %v", id, err)
+		if id == c.selfNodeId {
 			continue
 		}
 		nodes[id] = n
+		c.getLog().Infof("syncNodes: add node %s", n)
 	}
 
 	c.mu.Lock()
@@ -294,17 +401,23 @@ func (c *Center) syncNodes(ctx context.Context, withTimeout bool) (int64, error)
 }
 
 // addNode 添加节点.
-func (c *Center) addNode(n *Node) {
+func (c *Center) addNode(id string, n *Node) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.nodes[n.ID] = n
+	c.nodes[id] = n
+	c.getLog().Infof("addNode: %s", n)
 }
 
 // delNode 删除节点.
-func (c *Center) delNode(nodeID string) {
+func (c *Center) delNode(nodeId string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	delete(c.nodes, nodeID)
+	if _, ok := c.nodes[nodeId]; !ok {
+		c.getLog().Errorf("delNode: node %s not found", nodeId)
+		return
+	}
+	delete(c.nodes, nodeId)
+	c.getLog().Infof("delNode: %s", nodeId)
 }
 
 // keepAlive 保持租约活跃.
@@ -381,7 +494,7 @@ func (c *Center) keepAlive(ctx context.Context) {
 // watch 监听节点变更.
 func (c *Center) watch(ctx context.Context, startRev int64) {
 	var (
-		prefix  = c.cfg.Root + "/"   // 监听前缀
+		prefix  = c.getWatchPrefix() // 监听前缀
 		lastRev = startRev           // 最后一次同步数据的修订好号
 		backoff = getRetryBackoff(0) // 重试退避时间
 		sync    = false              // 是否需要同步数据
@@ -438,27 +551,34 @@ func (c *Center) watch(ctx context.Context, startRev int64) {
 				// 正常事件，处理并更新最新修订
 				lastRev = wresp.Header.Revision
 				for _, ev := range wresp.Events {
-					nodeID := strings.TrimPrefix(string(ev.Kv.Key), prefix)
-					if nodeID == c.cfg.Self.ID {
-						continue
-					}
 					switch ev.Type {
 					case etcdv3.EventTypePut:
-						n := &Node{}
-						if err := json.Unmarshal(ev.Kv.Value, n); err != nil {
-							c.getLog().Errorf("watch: unmarshal node %s: %v", nodeID, err)
+						n, id, err := parseNode(c.cfg.Root, string(ev.Kv.Key), ev.Kv.Value)
+						if err != nil {
+							c.getLog().Errorf("watch: add: parse node %s: %v", string(ev.Kv.Key), err)
 							continue
 						}
-						c.addNode(n)
-						c.getLog().Infof("watch: add node %s", nodeID)
+						if id == c.selfNodeId {
+							continue
+						}
+						c.addNode(id, n)
 					case etcdv3.EventTypeDelete:
-						c.delNode(nodeID)
-						c.getLog().Infof("watch: del node %s", nodeID)
+						nodeId, ok := parseNodeKey(c.cfg.Root, string(ev.Kv.Key))
+						if !ok {
+							c.getLog().Errorf("watch: del: invalid node key %s", string(ev.Kv.Key))
+							continue
+						}
+						c.delNode(nodeId)
 					}
 				}
 			}
 		}
 	}
+}
+
+// getWatchPrefix 返回用于监听的 etcd 前缀。
+func (c *Center) getWatchPrefix() string {
+	return c.cfg.Root + c.cfg.WatchPrefix + "/"
 }
 
 const (

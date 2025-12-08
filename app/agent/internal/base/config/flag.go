@@ -1,36 +1,36 @@
 package config
 
 import (
-	"github.com/godyy/ggs/internal/libs/flags"
+	"github.com/godyy/ggs/internal/libs/config"
 )
 
 func init() {
-	flags.String("cluster-node-id", "", "cluster node id")
-	flags.Int("cluster-port", 0, "cluster port")
-	flags.Int("port", 0, "port")
-	flags.String("token-key-path", "", "token key path")
-	flags.Int("http-port", 0, "http port")
+	config.AddFlag("token-key-path", "", "token key path")
+	config.AddFlag("port", 0, "service port, must > 0")
+	config.AddFlag("cluster-node-name", "", "cluster node name, cant be empty")
+	config.AddFlag("cluster-port", 0, "cluster port, must > 0")
+	config.AddFlag("http-port", 0, "http port, 0 means disable http server")
+	config.AddFlag("enable-pprof", false, "enable pprof")
 }
 
 func (c *Config) ApplyFlags() error {
-	if nodeId, ok := flags.GetValue[string]("cluster-node-id"); ok && nodeId != "" {
-		c.Cluster.NodeId = nodeId
-	}
-	if clusterPort, ok := flags.GetValue[int]("cluster-port"); ok && clusterPort > 0 {
-		c.Cluster.Port = clusterPort
-	}
-
-	if port, ok := flags.GetValue[int]("port"); ok && port > 0 {
-		c.Port = port
-	}
-
-	if tokenKeyPath, ok := flags.GetValue[string]("token-key-path"); ok && tokenKeyPath != "" {
+	if tokenKeyPath, ok := config.GetFlagValue[string]("token-key-path"); ok && tokenKeyPath != "" {
 		c.TokenKeyPath = tokenKeyPath
 	}
-
-	if httpPort, ok := flags.GetValue[int]("http-port"); ok && httpPort > 0 {
+	if port, ok := config.GetFlagValue[int]("port"); ok && port > 0 {
+		c.Port = port
+	}
+	if clusterNodeName, ok := config.GetFlagValue[string]("cluster-node-name"); ok && clusterNodeName != "" {
+		c.Cluster.NodeName = clusterNodeName
+	}
+	if clusterPort, ok := config.GetFlagValue[int]("cluster-port"); ok && clusterPort > 0 {
+		c.Cluster.Port = clusterPort
+	}
+	if httpPort, ok := config.GetFlagValue[int]("http-port"); ok && httpPort > 0 {
 		c.HttpPort = httpPort
 	}
-
+	if enablePProf, ok := config.GetFlagValue[bool]("enable-pprof"); ok && enablePProf {
+		c.EnablePProf = enablePProf
+	}
 	return nil
 }

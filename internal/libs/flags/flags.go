@@ -2,6 +2,7 @@ package flags
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"time"
 )
@@ -38,6 +39,9 @@ func getFlagSet() *flag.FlagSet {
 func addValue[val Value](name string, p *val) {
 	if valueMap == nil {
 		valueMap = make(map[string]any)
+	}
+	if _, ok := valueMap[name]; ok {
+		panic(fmt.Sprintf("flag name %s already exists", name))
 	}
 	valueMap[name] = p
 }
@@ -117,6 +121,32 @@ func String(name string, value string, usage string) *string {
 	pv := getFlagSet().String(name, value, usage)
 	addValue(name, pv)
 	return pv
+}
+
+// AddFlag 添加flag.
+func AddFlag[val Value](name string, value val, usage string) *val {
+	var i any = value
+	switch o := i.(type) {
+	case int:
+		i = Int(name, o, usage)
+	case int64:
+		i = Int64(name, o, usage)
+	case uint:
+		i = Uint(name, o, usage)
+	case uint64:
+		i = Uint64(name, o, usage)
+	case float64:
+		i = Float64(name, o, usage)
+	case time.Duration:
+		i = Duration(name, o, usage)
+	case bool:
+		i = Bool(name, o, usage)
+	case string:
+		i = String(name, o, usage)
+	default:
+		panic("invalid flag value type")
+	}
+	return i.(*val)
 }
 
 // GetValue 获取flag值.

@@ -8,9 +8,11 @@ import (
 	"github.com/godyy/ggs/app/agent/internal"
 	log "github.com/godyy/ggs/app/agent/internal/base/log"
 	"github.com/godyy/ggs/internal/base/actor"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/libs/db/redis"
 	"github.com/godyy/ggs/internal/libs/logger"
 	mactor "github.com/godyy/ggs/internal/modules/actor"
+	"github.com/godyy/ggs/internal/modules/cluster"
 	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
 )
 
@@ -21,7 +23,7 @@ func (a *app) startActor() error {
 	// 创建 actor 客户端.
 	clientCfg := &mactor.ClientConfig{
 		Core: &gactor.ClientConfig{
-			NodeId:            a.config.Cluster.NodeId,
+			NodeId:            cluster.MakeNodeID(consts.NodeAgent, a.config.Cluster.NodeName),
 			ActorCategory:     actor.CategoryPlayer.Uint16(),
 			DefRequestTimeout: time.Second * 10,
 			Handler:           a,
