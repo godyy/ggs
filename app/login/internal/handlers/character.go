@@ -23,6 +23,7 @@ import (
 	"github.com/godyy/ggs/internal/base/db/redis/dlock"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/models"
+	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/utils/ctxutils"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
 	pkgerrors "github.com/pkg/errors"
@@ -254,14 +255,13 @@ func (h *characterHandler) createCharacter(c *gin.Context, req *httpproto.Create
 	}
 
 	// 添加角色的ActorMeta信息
-	if err := app.ActorMetaDriver().AddMeta(&gactor.Meta{
-		Category: actors.CategoryPlayer.ActorCategory(),
-		ID:       characterID,
-		Deployment: gactor.NewDeploymentFollow(gactor.ActorUID{
-			Category: actors.CategoryServer.ActorCategory(),
-			ID:       req.ServerID,
-		}),
-	}); err != nil {
+	characterMeta := actor.NewMeta(
+		gactor.ActorUID{
+			Category: actors.CategoryPlayer.ActorCategory(),
+			ID:       characterID,
+		},
+	)
+	if err := app.ActorMetaDriver().AddActor(characterMeta); err != nil {
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "add actor meta"))
 	}
 

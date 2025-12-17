@@ -25,6 +25,7 @@ func Init(cfg *InitConfig) {
 	persist.Init(cfg.Persist)
 	db = cfg.DB
 	asyncSaveCallback = cfg.AsyncSaveCallback
+	initialized = true
 }
 
 // checkState 检查状态.

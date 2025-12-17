@@ -14,6 +14,10 @@ func FldPlayerId(playerId int64) zap.Field {
 	return zap.Int64("playerId", playerId)
 }
 
+func FldServerId(serverId int64) zap.Field {
+	return zap.Int64("serverId", serverId)
+}
+
 func FldRemoteAddr(addr net.Addr) zap.Field {
 	return zap.Any("remoteAddr", addr)
 }

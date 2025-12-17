@@ -10,6 +10,7 @@ import (
 	"github.com/godyy/ggs/app/platform/internal/base/db/repo"
 	"github.com/godyy/ggs/app/platform/internal/base/models/httpproto"
 	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
+	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/utils/ginutils"
 )
 
@@ -44,12 +45,14 @@ func (s *serverHandler) handleServerCreate(c *gin.Context, req *httpproto.Server
 	}
 
 	// 创建ActorMeta信息.
-	serverActorMeta := &gactor.Meta{
-		Category:   actors.CategoryServer.ActorCategory(),
-		ID:         server.ID,
-		Deployment: gactor.NewDeploymentOnNode(server.NodeId),
-	}
-	if err := app.ActorMetaDriver().AddMeta(serverActorMeta); err != nil {
+	serverActorMeta := actor.NewMetaOnNode(
+		gactor.ActorUID{
+			Category: actors.CategoryServer.ActorCategory(),
+			ID:       server.ID,
+		},
+		server.NodeId,
+	)
+	if err := app.ActorMetaDriver().AddActor(serverActorMeta); err != nil {
 		return err
 	}
 	return nil

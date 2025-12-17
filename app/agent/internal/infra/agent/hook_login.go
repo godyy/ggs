@@ -39,6 +39,7 @@ func getLoginLock(uid string) *dlock.Lock {
 func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 	var (
 		playerId  int64
+		serverId  int64
 		sessionId uint32
 		seq       = codecc2s.HeadGetSeq(p)
 	)
@@ -53,6 +54,7 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		return
 	}
 	playerId = tokenInfo.CharacterID
+	serverId = tokenInfo.ServerID
 
 	// 获取登录锁.
 	lock := getLoginLock(tokenInfo.UID)
@@ -68,11 +70,38 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		a.Stop(pbc2s.DisconnectPush_LoginTimeout)
 		return
 	}
+	defer func() {
+		if lock != nil {
+			lock.Unlock(ctx)
+		}
+	}()
 
 	// 停止当前的anothor
 	if anothor := internal.GetAgent(playerId); anothor != nil {
 		internal.DelAgent(anothor)
 		anothor.Stop(pbc2s.DisconnectPush_AnotherLogin)
+	}
+
+	// 获取玩家 Actor Meta, 并按需更新节点信息.
+	playerMeta, err := getPlayerMeta(playerId)
+	if err != nil {
+		a.errorFields("get player meta failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
+		a.Stop(pbc2s.DisconnectPush_SystemError)
+		return
+	}
+	if !playerMeta.IsNodeValid() {
+		serverMeta, err := getServerMeta(serverId)
+		if err != nil {
+			a.errorFields("get server meta failed", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldError(err))
+			a.Stop(pbc2s.DisconnectPush_SystemError)
+			return
+		}
+		playerMeta.UpdateNode(serverMeta.NodeId)
+		if err := updateMeta(playerMeta); err != nil {
+			a.errorFields("update player meta failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
+			a.Stop(pbc2s.DisconnectPush_SystemError)
+			return
+		}
 	}
 
 	// 连接 player Actor
@@ -96,12 +125,8 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		a.errorFields("forward login game request failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
 		internal.DelAgent(a)
 		a.Stop(pbc2s.DisconnectPush_SystemError)
-		lock.Unlock(ctx)
 		return
 	}
-
-	// 登录锁解锁.
-	lock.Unlock(ctx)
 }
 
 // parseLoginToken 解析登录令牌.

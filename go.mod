@@ -6,7 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/chzyer/readline v1.5.1
 	github.com/gin-gonic/gin v1.10.1
-	github.com/godyy/gactor v0.0.9
+	github.com/godyy/gactor v0.0.10
 	github.com/godyy/gcluster v0.0.9
 	github.com/godyy/glog v0.1.1
 	github.com/godyy/gtimewheel v0.1.1

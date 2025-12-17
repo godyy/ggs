@@ -138,6 +138,11 @@ func Env() env.Env {
 	return env.Get()
 }
 
+// ActorMetaDriver 获取 Actor Meta 驱动.
+func ActorMetaDriver() *actor.MetaDriver {
+	return appInst.actorMetaDriver
+}
+
 // ActorClient 获取 Actor 客户端.
 func ActorClient() *actor.Client {
 	return appInst.actorClient
