@@ -6,34 +6,34 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal"
-	log "github.com/godyy/ggs/app/agent/internal/base/log"
-	"github.com/godyy/ggs/internal/base/actor"
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/logger"
-	mactor "github.com/godyy/ggs/internal/modules/actor"
-	"github.com/godyy/ggs/internal/modules/cluster"
+	"github.com/godyy/ggs/app/agent/internal/base/log"
+	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/app/internal/infra/actors"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/cluster"
 	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
 )
 
 func (a *app) startActor() error {
 	// 创建meta数据驱动.
-	a.actorMetaDriver = mactor.NewMetaDriver(redis.Inst())
+	a.actorMetaDriver = actor.NewMetaDriver(rediscli.Get())
 
 	// 创建 actor 客户端.
-	clientCfg := &mactor.ClientConfig{
+	clientCfg := &actor.ClientConfig{
 		Core: &gactor.ClientConfig{
 			NodeId:            cluster.MakeNodeID(consts.NodeAgent, a.config.Cluster.NodeName),
-			ActorCategory:     actor.CategoryPlayer.Uint16(),
+			ActorCategory:     actors.CategoryPlayer.ActorCategory(),
 			DefRequestTimeout: time.Second * 10,
 			Handler:           a,
 		},
-		Logger: logger.GetLogger(),
+		Logger: logger.Get(),
 	}
 	if Env().Debug() {
 		clientCfg.Core.DefCtxTimeout = time.Hour * 1
 	}
-	a.actorClient = mactor.NewClient(clientCfg)
+	a.actorClient = actor.NewClient(clientCfg)
 
 	return nil
 }
@@ -76,13 +76,13 @@ func (a *app) HandleResponse(resp gactor.ClientResponse) {
 	}
 
 	if resp.Err != nil {
-		logger.GetLogger().ErrorFields("handle actor response error", log.FldPlayerId(resp.ID), log.FldError(resp.Err))
+		logger.Get().ErrorFields("handle actor response error", log.FldPlayerId(resp.ID), log.FldError(resp.Err))
 		agent.Stop(pbc2s.DisconnectPush_SystemError)
 		return
 	}
 
 	if err := agent.ReceivePacket(resp.Payload); err != nil {
-		logger.GetLogger().ErrorFields("agent receive actor response packet failed", log.FldPlayerId(resp.ID), log.FldError(err))
+		logger.Get().ErrorFields("agent receive actor response packet failed", log.FldPlayerId(resp.ID), log.FldError(err))
 		agent.Stop(pbc2s.DisconnectPush_SystemError)
 		return
 	}
@@ -96,7 +96,7 @@ func (a *app) HandlePush(push gactor.ClientPush) {
 	}
 
 	if err := agent.ReceivePacket(push.Payload); err != nil {
-		logger.GetLogger().ErrorFields("agent receive actor push packet failed", log.FldPlayerId(push.ID), log.FldError(err))
+		logger.Get().ErrorFields("agent receive actor push packet failed", log.FldPlayerId(push.ID), log.FldError(err))
 		agent.Stop(pbc2s.DisconnectPush_SystemError)
 		return
 	}

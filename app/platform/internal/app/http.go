@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/godyy/ggs/app/internal/base/consts"
 	"github.com/godyy/ggs/app/platform/internal"
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/logger"
+	"github.com/godyy/ggs/internal/base/logger"
 )
 
 var (
@@ -22,7 +22,7 @@ func startHttp() {
 
 	// 配置路由
 	if internal.SetupRoutes == nil {
-		logger.GetLogger().Fatal("internal.SetupRoutes is nil")
+		logger.Get().Fatal("internal.SetupRoutes is nil")
 	}
 	internal.SetupRoutes(engine.Group("/api"))
 
@@ -34,11 +34,11 @@ func startHttp() {
 
 	// 启动http服务
 	go func() {
-		logger.GetLogger().Infof("http server listening at :%d", cfg.Port)
+		logger.Get().Infof("http server listening at :%d", cfg.Port)
 		if err := srv.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
-			logger.GetLogger().Info("http server closed.")
+			logger.Get().Info("http server closed.")
 		} else {
-			logger.GetLogger().Errorf("http server closed with error: %v", err)
+			logger.Get().Errorf("http server closed with error: %v", err)
 		}
 	}()
 }
@@ -51,7 +51,7 @@ func stopHttp() {
 
 		// 优雅关闭服务器
 		if err := srv.Shutdown(ctx); err != nil {
-			logger.GetLogger().Error("http server shutdown with error: %v", err)
+			logger.Get().Error("http server shutdown with error: %v", err)
 		}
 	}
 }

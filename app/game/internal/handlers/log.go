@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/godyy/ggs/internal/libs/logger"
+	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/glog"
 )
 

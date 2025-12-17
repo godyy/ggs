@@ -1,9 +1,9 @@
 package net
 
 import (
+	"github.com/godyy/ggs/app/internal/base/consts"
 	"github.com/godyy/ggs/app/internal/base/crypto"
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/net"
+	"github.com/godyy/ggs/app/internal/base/net"
 	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
 )
 

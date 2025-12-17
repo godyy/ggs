@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/ggs/app/login/httpproto"
 	"github.com/godyy/ggs/app/login/internal/base/consts"
-	"github.com/godyy/ggs/app/login/internal/data/repository"
+	"github.com/godyy/ggs/app/login/internal/base/db/repo"
 	"github.com/godyy/ggs/internal/utils/ctxutils"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
 )
@@ -34,7 +34,7 @@ func (h *serverHandler) handleServerList(c *gin.Context, req *httpproto.GetServe
 	ctx, cancel := ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
 	defer cancel()
 
-	allServers, err := repository.Server.GetAllServers(ctx)
+	allServers, err := repo.Server.GetAllServers(ctx)
 	if err != nil {
 		return err
 	}

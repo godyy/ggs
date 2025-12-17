@@ -1,10 +1,10 @@
 package config
 
 import (
-	"github.com/godyy/ggs/internal/libs/config"
-	"github.com/godyy/ggs/internal/libs/db/mongo"
-	"github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/logger"
+	"github.com/godyy/ggs/internal/base/config"
+	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/logger"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -16,10 +16,10 @@ type Config struct {
 	// DB 数据库配置.
 	DB struct {
 		// Redis 配置.
-		Redis *redis.Config
+		Redis *rediscli.Config
 
 		// Mongo 配置.
-		Mongo *mongo.Config
+		Mongo *mongocli.Config
 	}
 
 	// Log 日志配置

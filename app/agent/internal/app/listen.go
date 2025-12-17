@@ -6,10 +6,10 @@ import (
 	"net"
 
 	"github.com/godyy/ggs/app/agent/internal"
+	"github.com/godyy/ggs/app/internal/base/consts"
 	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/logger"
-	inet "github.com/godyy/ggs/internal/net"
+	inet "github.com/godyy/ggs/app/internal/base/net"
+	"github.com/godyy/ggs/internal/base/logger"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -25,7 +25,7 @@ func (a *app) startListen() error {
 		return pkgerrors.WithMessagef(err, "listening at :%d", port)
 	}
 
-	logger.GetLogger().Infof("agent listening at :%d", port)
+	logger.Get().Infof("agent listening at :%d", port)
 	a.listener = l
 	go a.listenLoop()
 
@@ -35,7 +35,7 @@ func (a *app) startListen() error {
 // stopListen 停止监听.
 func (a *app) stopListen() {
 	if err := a.listener.Close(); err != nil {
-		logger.GetLogger().Errorf("close listener failed, %v", err)
+		logger.Get().Errorf("close listener failed, %v", err)
 	}
 }
 
@@ -56,14 +56,14 @@ func (a *app) handleConn(conn net.Conn) {
 	// 交换密钥
 	sessionKey, err := a.exchangeSecretKey(conn)
 	if err != nil {
-		logger.GetLogger().Errorf("exchange secret key failed, remote=%s, %v", conn.RemoteAddr().String(), err)
+		logger.Get().Errorf("exchange secret key failed, remote=%s, %v", conn.RemoteAddr().String(), err)
 		conn.Close()
 		return
 	}
 
 	// 启动agent
 	if err := internal.StartAgent(conn, sessionKey, false); err != nil {
-		logger.GetLogger().Errorf("start agent failed, remote=%s, %v", conn.RemoteAddr().String(), err)
+		logger.Get().Errorf("start agent failed, remote=%s, %v", conn.RemoteAddr().String(), err)
 		conn.Close()
 		return
 	}

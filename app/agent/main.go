@@ -1,8 +1,8 @@
 package main
 
 import (
-	_ "github.com/godyy/ggs/app/agent/internal/agent"
 	"github.com/godyy/ggs/app/agent/internal/app"
+	_ "github.com/godyy/ggs/app/agent/internal/infra/agent"
 	"github.com/godyy/ggs/internal/utils"
 )
 

@@ -5,11 +5,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/gactor"
+	"github.com/godyy/ggs/app/internal/infra/actors"
 	"github.com/godyy/ggs/app/platform/internal/app"
+	"github.com/godyy/ggs/app/platform/internal/base/db/repo"
 	"github.com/godyy/ggs/app/platform/internal/base/models/httpproto"
-	"github.com/godyy/ggs/app/platform/internal/data/repository"
-	"github.com/godyy/ggs/internal/base/actor"
-	dbmodels "github.com/godyy/ggs/internal/base/models/db"
+	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
 	"github.com/godyy/ggs/internal/utils/ginutils"
 )
 
@@ -34,18 +34,18 @@ func (s *serverHandler) setupRoutes(root *gin.RouterGroup, version string) {
 
 func (s *serverHandler) handleServerCreate(c *gin.Context, req *httpproto.ServerCreateReq) error {
 	// 创建服务器.
-	server := &dbmodels.Server{
+	server := &mongomodels.Server{
 		ID:     req.ID,
 		Name:   req.Name,
 		NodeId: req.NodeId,
 	}
-	if err := repository.Server.CreateServer(context.Background(), server); err != nil {
+	if err := repo.Server.CreateServer(context.Background(), server); err != nil {
 		return err
 	}
 
 	// 创建ActorMeta信息.
 	serverActorMeta := &gactor.Meta{
-		Category:   actor.CategoryServer.Uint16(),
+		Category:   actors.CategoryServer.ActorCategory(),
 		ID:         server.ID,
 		Deployment: gactor.NewDeploymentOnNode(server.NodeId),
 	}

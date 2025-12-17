@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/db/mongo"
-	"github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/logger"
-	"github.com/godyy/ggs/internal/libs/pprof"
-	"github.com/godyy/ggs/internal/libs/probe"
+	"github.com/godyy/ggs/app/internal/base/consts"
+	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/pprof"
+	"github.com/godyy/ggs/internal/infra/probe"
 )
 
 func (a *app) startHttp() {
@@ -33,11 +33,11 @@ func (a *app) startHttp() {
 	}
 
 	go func() {
-		logger.GetLogger().Infof("http server listening at :%d", port)
+		logger.Get().Infof("http server listening at :%d", port)
 		if err := a.httpServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
-			logger.GetLogger().Info("http server closed.")
+			logger.Get().Info("http server closed.")
 		} else {
-			logger.GetLogger().Errorf("http server closed with error: %v", err)
+			logger.Get().Errorf("http server closed with error: %v", err)
 		}
 	}()
 }
@@ -50,7 +50,7 @@ func (a *app) stopHttp() {
 
 		// 优雅关闭服务器
 		if err := a.httpServer.Shutdown(ctx); err != nil {
-			logger.GetLogger().Error("http server shutdown with error: %v", err)
+			logger.Get().Error("http server shutdown with error: %v", err)
 		}
 	}
 }
@@ -61,10 +61,10 @@ func (a *app) registerHttpProbe(mux *http.ServeMux) {
 		probe.WithReadinessCacheTTL(5*time.Second),
 		probe.WithReadinessTimeout(5*time.Second),
 		probe.WithReadinessChecker("mongo", func(ctx context.Context) error {
-			return mongo.Inst().Ping(ctx, nil)
+			return mongocli.Get().Ping(ctx, nil)
 		}),
 		probe.WithReadinessChecker("redis", func(ctx context.Context) error {
-			return redis.Inst().Ping(ctx).Err()
+			return rediscli.Get().Ping(ctx).Err()
 		}),
 	)
 

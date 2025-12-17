@@ -2,9 +2,9 @@ package player
 
 import (
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/game/internal/actors"
-	"github.com/godyy/ggs/app/game/internal/base/models/player"
 	"github.com/godyy/ggs/app/game/internal/handlers"
+	"github.com/godyy/ggs/app/internal/infra/actors"
+	"github.com/godyy/ggs/app/internal/infra/actors/models/player"
 	pbcs "github.com/godyy/ggs/internal/proto/pb/c2s"
 )
 

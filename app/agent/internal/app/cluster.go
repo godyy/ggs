@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/logger"
-	"github.com/godyy/ggs/internal/modules/cluster"
+	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/cluster"
 	"github.com/godyy/ggs/internal/utils"
 )
 
@@ -26,7 +26,7 @@ func (a *app) startCluster() error {
 		Core:    &a.config.Cluster.Core,
 		Self:    node,
 		Handler: a,
-		Logger:  logger.GetLogger(),
+		Logger:  logger.Get(),
 	}
 	if Env().Debug() {
 		clusterCfg.DefCtxTimeout = time.Hour * 1

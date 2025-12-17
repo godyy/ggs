@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/base/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
 	"google.golang.org/protobuf/proto"
 )
 

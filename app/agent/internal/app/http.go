@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/logger"
-	"github.com/godyy/ggs/internal/libs/pprof"
+	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/pprof"
 )
 
 func (a *app) startHttp() {
@@ -28,11 +28,11 @@ func (a *app) startHttp() {
 	}
 
 	go func() {
-		logger.GetLogger().Infof("http server listening at :%d", port)
+		logger.Get().Infof("http server listening at :%d", port)
 		if err := a.httpServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
-			logger.GetLogger().Info("http server closed.")
+			logger.Get().Info("http server closed.")
 		} else {
-			logger.GetLogger().Errorf("http server closed with error: %v", err)
+			logger.Get().Errorf("http server closed with error: %v", err)
 		}
 	}()
 }
@@ -45,7 +45,7 @@ func (a *app) stopHttp() {
 
 		// 优雅关闭服务器
 		if err := a.httpServer.Shutdown(ctx); err != nil {
-			logger.GetLogger().Error("http server shutdown with error: %v", err)
+			logger.Get().Error("http server shutdown with error: %v", err)
 		}
 	}
 }

@@ -21,9 +21,9 @@ gen_user_token:
 			\"uid\": \"yy01\" \
 		}"
 		
-create_indexes: mongo_uri:=mongodb://localhost:27017
-create_indexes:
-	go run internal/tools/db/create_indexes/main.go \
+migrate: mongo_uri:=mongodb://localhost:27017
+migrate:
+	go run internal/tools/migrate/main.go \
 		-mongo-uri "$(mongo_uri)"
 
 run_client: login_url_root := http://localhost:8080/api/v1

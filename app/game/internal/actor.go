@@ -4,21 +4,20 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/game/internal/actors"
 	hplayer "github.com/godyy/ggs/app/game/internal/handlers/player"
 	hserver "github.com/godyy/ggs/app/game/internal/handlers/server"
-	"github.com/godyy/ggs/internal/base/actor"
-	actordefine "github.com/godyy/ggs/internal/base/actor/define"
+	"github.com/godyy/ggs/app/internal/infra/actors"
+	actorsdefine "github.com/godyy/ggs/app/internal/infra/actors/define"
 )
 
 // initActorDefineList 初始化Actor定义列表.
 func initActorDefineList() {
-	actordefine.RegisterDefine(
+	actorsdefine.RegisterDefine(
 		// server.
 		&gactor.ActorDefine{
 			ActorDefineCommon: &gactor.ActorDefineCommon{
-				Name:                       actor.Category(actor.CategoryServer).String(),
-				Category:                   actor.CategoryServer.Uint16(),
+				Name:                       actors.CategoryServer.String(),
+				Category:                   actors.CategoryServer.ActorCategory(),
 				Priority:                   0,
 				MessageBoxSize:             1000,
 				MaxTriggeredTimerAmount:    10,
@@ -34,8 +33,8 @@ func initActorDefineList() {
 		// player.
 		&gactor.CActorDefine{
 			ActorDefineCommon: &gactor.ActorDefineCommon{
-				Name:                       actor.Category(actor.CategoryPlayer).String(),
-				Category:                   actor.CategoryPlayer.Uint16(),
+				Name:                       actors.CategoryPlayer.String(),
+				Category:                   actors.CategoryPlayer.ActorCategory(),
 				Priority:                   99,
 				MessageBoxSize:             10,
 				MaxTriggeredTimerAmount:    10,

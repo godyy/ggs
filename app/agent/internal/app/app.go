@@ -9,13 +9,13 @@ import (
 	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
 	applifecycle "github.com/godyy/ggs/app/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/crypto"
+	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
 	"github.com/godyy/ggs/internal/base/env"
-	"github.com/godyy/ggs/internal/libs/db/mongo"
-	"github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/flags"
-	"github.com/godyy/ggs/internal/libs/logger"
-	"github.com/godyy/ggs/internal/modules/actor"
-	"github.com/godyy/ggs/internal/modules/cluster"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/cluster"
+	"github.com/godyy/gutils/flags"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -46,7 +46,7 @@ func Start() {
 
 	// 解析flag
 	flags.Parse()
-	defer flags.Clear()
+	defer flags.Reset()
 
 	// 加载配置表
 	cfg, err := config.Load(configPath())
@@ -62,33 +62,33 @@ func Start() {
 	applifecycle.BeforeStart()
 
 	// 初始化 redis.
-	if err := redis.Init(cfg.DB.Redis); err != nil {
-		logger.GetLogger().Fatalf("init redis failed, %v", err)
+	if err := rediscli.Init(cfg.DB.Redis); err != nil {
+		logger.Get().Fatalf("init redis failed, %v", err)
 	}
 
 	// 初始化 mongo.
-	if err := mongo.Init(cfg.DB.Mongo); err != nil {
-		logger.GetLogger().Fatalf("init mongo failed, %v", err)
+	if err := mongocli.Init(cfg.DB.Mongo); err != nil {
+		logger.Get().Fatalf("init mongo failed, %v", err)
 	}
 
 	// 初始化加密工具
 	if err := appInst.initCrypto(); err != nil {
-		logger.GetLogger().Fatalf("init crypto failed, %v", err)
+		logger.Get().Fatalf("init crypto failed, %v", err)
 	}
 
 	// 启动 Actor 服务.
 	if err := appInst.startActor(); err != nil {
-		logger.GetLogger().Fatalf("start actor failed, %v", err)
+		logger.Get().Fatalf("start actor failed, %v", err)
 	}
 
 	// 启动 cluster.
 	if err := appInst.startCluster(); err != nil {
-		logger.GetLogger().Fatalf("start cluster failed, %v", err)
+		logger.Get().Fatalf("start cluster failed, %v", err)
 	}
 
 	// 启动对 c 端监听服务.
 	if err := appInst.startListen(); err != nil {
-		logger.GetLogger().Fatalf("start listening failed, %v", err)
+		logger.Get().Fatalf("start listening failed, %v", err)
 	}
 
 	// 启动 http 服务.

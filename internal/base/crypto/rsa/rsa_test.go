@@ -169,7 +169,7 @@ func TestEncryptDecrypt_SmallAndLarge(t *testing.T) {
 	enc := NewRSAEncryptor(pub)
 	dec := NewRSADecryptor(priv)
 
-	// small data
+	// small db
 	small := []byte("hello world!")
 	cipherSmall, err := enc.Encrypt(small)
 	if err != nil {
@@ -180,10 +180,10 @@ func TestEncryptDecrypt_SmallAndLarge(t *testing.T) {
 		t.Fatalf("Decrypt small error: %v", err)
 	}
 	if !bytes.Equal(plainSmall, small) {
-		t.Fatalf("small data mismatch")
+		t.Fatalf("small db mismatch")
 	}
 
-	// large data (multiple chunks)
+	// large db (multiple chunks)
 	large := make([]byte, 5000)
 	for i := range large {
 		large[i] = byte(i % 251)
@@ -197,7 +197,7 @@ func TestEncryptDecrypt_SmallAndLarge(t *testing.T) {
 		t.Fatalf("Decrypt large error: %v", err)
 	}
 	if !bytes.Equal(plainLarge, large) {
-		t.Fatalf("large data mismatch")
+		t.Fatalf("large db mismatch")
 	}
 }
 
@@ -237,6 +237,6 @@ func TestSignVerify(t *testing.T) {
 
 	tampered := []byte("sign this!")
 	if err := verifier.Verify(tampered, sig); err == nil {
-		t.Fatalf("expected verify failure for tampered data")
+		t.Fatalf("expected verify failure for tampered db")
 	}
 }

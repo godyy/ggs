@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/godyy/ggs/internal/libs/config"
+	"github.com/godyy/ggs/internal/base/config"
 )
 
 func init() {

@@ -2,9 +2,9 @@ package handlers
 
 import (
 	"github.com/godyy/gactor"
+	"github.com/godyy/ggs/internal/infra/actor"
 
 	"github.com/godyy/ggs/app/game/internal/base/errs"
-	"github.com/godyy/ggs/internal/base/actor"
 	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
 	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/proto/pb/common"

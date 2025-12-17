@@ -3,13 +3,12 @@ package main
 import (
 	"github.com/godyy/ggs/app/client/internal/conf"
 	"github.com/godyy/ggs/app/client/internal/mode"
-	"github.com/godyy/ggs/internal/libs/flags"
-	"github.com/godyy/ggs/internal/libs/logger"
-	"github.com/godyy/ggs/internal/utils"
-	"github.com/godyy/glog"
-
 	_ "github.com/godyy/ggs/app/client/internal/mode/client"
 	_ "github.com/godyy/ggs/app/client/internal/mode/robot"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/utils"
+	"github.com/godyy/glog"
+	"github.com/godyy/gutils/flags"
 )
 
 func main() {
@@ -26,7 +25,7 @@ func main() {
 
 	mode := mode.CreateMode(conf.Mode)
 	mode.Start()
-	flags.Clear()
+	flags.Reset()
 	utils.ListenShutdown()
 	mode.Stop()
 }

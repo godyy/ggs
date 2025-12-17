@@ -35,7 +35,7 @@ func (e *Encryptor) EncryptedLen(dataLen int) int {
 // Encrypt 使用公钥加密数据（支持大数据分块加密）
 func (e *Encryptor) Encrypt(data []byte) ([]byte, error) {
 	if len(data) == 0 {
-		return nil, pkgerrors.New("rsa: empty data")
+		return nil, pkgerrors.New("rsa: empty db")
 	}
 
 	keySize := e.pubKey.Size()

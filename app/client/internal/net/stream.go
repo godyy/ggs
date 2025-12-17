@@ -4,10 +4,10 @@ import (
 	"net"
 	"sync/atomic"
 
+	"github.com/godyy/ggs/app/internal/base/consts"
 	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
-	"github.com/godyy/ggs/internal/base/consts"
+	inet "github.com/godyy/ggs/app/internal/base/net"
 	"github.com/godyy/ggs/internal/base/crypto/aes"
-	inet "github.com/godyy/ggs/internal/net"
 	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
 	pkgerrors "github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"

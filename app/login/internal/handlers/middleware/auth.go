@@ -11,14 +11,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/ggs/app/login/internal/app"
 	"github.com/godyy/ggs/app/login/internal/base/consts"
+	"github.com/godyy/ggs/app/login/internal/base/db/repo"
 	"github.com/godyy/ggs/app/login/internal/base/errs"
 	"github.com/godyy/ggs/app/login/internal/base/models"
-	"github.com/godyy/ggs/app/login/internal/data/repository"
 	"github.com/godyy/ggs/app/login/internal/utils/ginutils"
 	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
+	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
+	"github.com/godyy/ggs/internal/base/logger"
 	bmodels "github.com/godyy/ggs/internal/base/models"
-	dbmodels "github.com/godyy/ggs/internal/base/models/db"
-	"github.com/godyy/ggs/internal/libs/logger"
 	"github.com/godyy/ggs/internal/utils/ctxutils"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
 	pkgerrors "github.com/pkg/errors"
@@ -34,7 +34,7 @@ func getAuthSecret() any {
 	authSecretOnce.Do(func() {
 		pubKey, err := authjwt.LoadPubKey(app.Config().AuthKeyPath)
 		if err != nil {
-			logger.GetLogger().Errorf("load auth secret key, %v", err)
+			logger.Get().Errorf("load auth secret key, %v", err)
 			return
 		}
 		authPub = pubKey
@@ -118,9 +118,9 @@ func parseToken(token string) (*bmodels.UserInfo, error) {
 }
 
 // getOrCreateAccount 根据用户信息获取或创建账号
-func getOrCreateAccount(ctx context.Context, userInfo *bmodels.UserInfo) (*dbmodels.Account, error) {
+func getOrCreateAccount(ctx context.Context, userInfo *bmodels.UserInfo) (*mongomodels.Account, error) {
 	// 获取账号.
-	account, err := repository.Account.GetAccountByUID(ctx, userInfo.UID)
+	account, err := repo.Account.GetAccountByUID(ctx, userInfo.UID)
 	if err == nil {
 		return account, err
 	}
@@ -130,17 +130,17 @@ func getOrCreateAccount(ctx context.Context, userInfo *bmodels.UserInfo) (*dbmod
 	}
 
 	// 生成账号ID
-	accountID, err := repository.IDGenerator.GenAccountID(ctx)
+	accountID, err := repo.IDGenerator.GenAccountID(ctx)
 	if err != nil {
 		return nil, pkgerrors.WithMessage(err, "gen account id")
 	}
 
 	// 创建账号
-	account = &dbmodels.Account{
+	account = &mongomodels.Account{
 		ID:  accountID,
 		UID: userInfo.UID,
 	}
-	if account, err = repository.Account.CreateOrGetAccount(ctx, account); err != nil {
+	if account, err = repo.Account.CreateOrGetAccount(ctx, account); err != nil {
 		return nil, err
 	}
 

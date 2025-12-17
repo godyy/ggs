@@ -3,11 +3,10 @@ package systems
 import (
 	"fmt"
 
-	"github.com/godyy/ggs/app/game/internal/actors"
-	"github.com/godyy/ggs/app/game/internal/base/consts"
-	"github.com/godyy/ggs/app/game/internal/base/models/player"
-	"github.com/godyy/ggs/internal/base/actor"
-	"github.com/godyy/ggs/internal/base/actor/lifecycle"
+	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/app/internal/infra/actors"
+	"github.com/godyy/ggs/app/internal/infra/actors/lifecycle"
+	"github.com/godyy/ggs/app/internal/infra/actors/models/player"
 )
 
 type playerModule struct{}
@@ -15,7 +14,7 @@ type playerModule struct{}
 var Player = &playerModule{}
 
 func init() {
-	lifecycle.RegisterCHandler(actor.CategoryPlayer, Player)
+	lifecycle.RegisterCHandler[*actors.Player](actors.CategoryPlayer.ActorCategory(), Player)
 }
 
 // OnStart Player OnStart回调.

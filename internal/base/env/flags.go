@@ -1,7 +1,7 @@
 package env
 
 import (
-	"github.com/godyy/ggs/internal/libs/flags"
+	"github.com/godyy/gutils/flags"
 )
 
 // FlagName 返回flag选项名.

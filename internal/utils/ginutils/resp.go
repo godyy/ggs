@@ -9,9 +9,9 @@ import (
 
 // commonResp 通用响应
 type commonResp struct {
-	Code int    `json:"code"`           // 响应代码.
-	Msg  string `json:"msg"`            // 响应消息.
-	Data any    `json:"data,omitempty"` // 响应数据.
+	Code int    `json:"code"`         // 响应代码.
+	Msg  string `json:"msg"`          // 响应消息.
+	Data any    `json:"db,omitempty"` // 响应数据.
 }
 
 // AbortWithStatusError 终止请求, 返回指定的状态码以及携带错误信息的json响应体.

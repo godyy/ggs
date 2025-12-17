@@ -5,33 +5,43 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/base/actor"
-	actordefine "github.com/godyy/ggs/internal/base/actor/define"
-	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/logger"
-	mactor "github.com/godyy/ggs/internal/modules/actor"
-	"github.com/godyy/ggs/internal/modules/cluster"
+	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/app/internal/infra/actors"
+	actorsdefine "github.com/godyy/ggs/app/internal/infra/actors/define"
+	"github.com/godyy/ggs/app/internal/infra/actors/persist"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/cluster"
+	pbs2s "github.com/godyy/ggs/internal/proto/pb/s2s"
 	"github.com/godyy/gtimewheel"
 	pkgerrors "github.com/pkg/errors"
+	"go.uber.org/zap"
 )
 
 // ActorService 返回 Actor 服务.
-func ActorService() *mactor.Service {
+func ActorService() *actor.Service {
 	return appInst.actorService
 }
 
 func (a *app) startActor() error {
+	// 初始化 actors.
+	actors.Init(&actors.InitConfig{
+		Persist:           &persist.InitConfig{BD: a.mongobd},
+		DB:                a.env.DB(),
+		AsyncSaveCallback: a.actorAsyncSaveCallback,
+	})
+
 	// 创建meta数据驱动.
-	a.actorMetaDriver = mactor.NewMetaDriver(redis.Inst())
+	a.actorMetaDriver = actor.NewMetaDriver(rediscli.Get())
 
 	// 创建Actor服务.
-	actorConfig := &mactor.ServiceConfig{
+	actorConfig := &actor.ServiceConfig{
 		Core: &gactor.ServiceConfig{
 			NodeId: cluster.MakeNodeID(consts.NodeGame, a.config.Cluster.NodeName),
 			ActorConfig: gactor.ActorConfig{
-				ActorDefines:        actordefine.GetDefineList(),
-				ClientActorCategory: actor.CategoryPlayer.Uint16(),
+				ActorDefines:        actorsdefine.GetDefineList(),
+				ClientActorCategory: actors.CategoryPlayer.ActorCategory(),
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: []gtimewheel.LevelConfig{
@@ -50,13 +60,13 @@ func (a *app) startActor() error {
 			MaxRTT:  50,
 			Handler: a,
 		},
-		Logger: logger.GetLogger(),
+		Logger: logger.Get(),
 	}
 	if a.env.Debug() {
 		actorConfig.Core.DefCtxTimeout = time.Hour * 1
 		actorConfig.Core.DefRPCTimeout = time.Hour * 1
 	}
-	a.actorService = mactor.NewService(actorConfig)
+	a.actorService = actor.NewService(actorConfig)
 
 	// 启动actor服务
 	if err := a.actorService.Start(); err != nil {
@@ -78,7 +88,7 @@ func (a *app) startGlobalActors() error {
 
 	// 启动Server
 	if err := a.actorService.StartActor(ctx, gactor.ActorUID{
-		Category: actor.CategoryServer.Uint16(),
+		Category: actors.CategoryServer.ActorCategory(),
 		ID:       a.env.ServerID(),
 	}); err != nil {
 		return pkgerrors.WithMessage(err, "start server actor")
@@ -89,6 +99,20 @@ func (a *app) startGlobalActors() error {
 
 func (a *app) stopActor() {
 	a.actorService.Stop()
+}
+
+func (a *app) actorAsyncSaveCallback(uid gactor.ActorUID, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), consts.ActorCastTimeout)
+	defer cancel()
+	if err := a.actorService.Cast(ctx, uid, &pbs2s.ActorSaveResult{
+		Success: err == nil,
+	}); err != nil {
+		logger.Get().ErrorFields("cast persist result to actor",
+			zap.String("category", actors.Category(uid.Category).String()),
+			zap.Int64("id", uid.ID),
+			zap.NamedError("error", err),
+		)
+	}
 }
 
 // GetMetaDriver 获取 Meta 数据驱动.

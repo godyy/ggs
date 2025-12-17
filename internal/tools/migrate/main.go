@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/godyy/ggs/internal/data/migrate"
+	mongomigrate "github.com/godyy/ggs/internal/base/db/mongo/migrate"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -26,7 +26,7 @@ func migrateMongo(uri string) {
 	}
 	defer cli.Disconnect(context.Background())
 
-	if err := migrate.Mongo(context.Background(), cli); err != nil {
+	if err := mongomigrate.Migrate(context.Background(), cli); err != nil {
 		log.Fatalf("migrate mongo failed, err: %v", err)
 	}
 }

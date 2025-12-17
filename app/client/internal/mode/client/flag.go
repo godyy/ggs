@@ -3,7 +3,7 @@ package client
 import (
 	"log"
 
-	"github.com/godyy/ggs/internal/libs/flags"
+	"github.com/godyy/gutils/flags"
 )
 
 var (

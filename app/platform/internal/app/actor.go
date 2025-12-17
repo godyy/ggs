@@ -1,8 +1,8 @@
 package app
 
 import (
-	libredis "github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/modules/actor"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/infra/actor"
 )
 
 var (
@@ -10,7 +10,7 @@ var (
 )
 
 func startActor() error {
-	actorMetaDriver = actor.NewMetaDriver(libredis.Inst())
+	actorMetaDriver = actor.NewMetaDriver(rediscli.Get())
 	return nil
 }
 

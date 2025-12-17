@@ -10,19 +10,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/gactor"
+	"github.com/godyy/ggs/app/internal/infra/actors"
 	"github.com/godyy/ggs/app/login/httpproto"
 	"github.com/godyy/ggs/app/login/internal/app"
 	"github.com/godyy/ggs/app/login/internal/base/consts"
+	"github.com/godyy/ggs/app/login/internal/base/db/repo"
 	"github.com/godyy/ggs/app/login/internal/base/errs"
-	"github.com/godyy/ggs/app/login/internal/data/repository"
 	"github.com/godyy/ggs/app/login/internal/utils/ginutils"
-	"github.com/godyy/ggs/internal/base/actor"
 	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
+	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/db/redis/dlock"
+	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/models"
-	dbmodels "github.com/godyy/ggs/internal/base/models/db"
-	libredis "github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/db/redis/dlock"
-	"github.com/godyy/ggs/internal/libs/logger"
 	"github.com/godyy/ggs/internal/utils/ctxutils"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
 	pkgerrors "github.com/pkg/errors"
@@ -59,7 +59,7 @@ func (h *characterHandler) handleCharacterList(c *gin.Context, req *httpproto.Ge
 
 	// 查询角色列表
 	ctx := c.Request.Context()
-	characters, err := repository.Character.GetAllCharactersByAccountID(ctx, accountInfo.AccountID)
+	characters, err := repo.Character.GetAllCharactersByAccountID(ctx, accountInfo.AccountID)
 	if err != nil {
 		return errs.InernalErrorWithErr(err)
 	}
@@ -89,14 +89,14 @@ func (h *characterHandler) handleCharacterCreate(c *gin.Context, req *httpproto.
 	// 分布式加锁
 	dlock, err := h.lockAccountCharacters(accountInfo.AccountID)
 	if err != nil {
-		logger.GetLogger().Errorf("handler [CreateCharacter], lock failed, %v", err)
+		logger.Get().Errorf("handler [CreateCharacter], lock failed, %v", err)
 		return errs.ErrCodeInternalError
 	}
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), consts.DefaultTimeout)
 		defer cancel()
 		if err := dlock.Unlock(ctx); err != nil {
-			logger.GetLogger().Errorf("handler [CreateCharacter], unlock failed, %v", err)
+			logger.Get().Errorf("handler [CreateCharacter], unlock failed, %v", err)
 		}
 	}()
 
@@ -107,7 +107,7 @@ func (h *characterHandler) handleCharacterCreate(c *gin.Context, req *httpproto.
 
 	// 刷新分布式锁
 	if err := h.refreshAccountCharactersLock(dlock); err != nil {
-		logger.GetLogger().Errorf("handler [CreateCharacter], refresh lock after check, %v", err)
+		logger.Get().Errorf("handler [CreateCharacter], refresh lock after check, %v", err)
 		return errs.ErrCodeInternalError
 	}
 
@@ -147,7 +147,7 @@ func (h *characterHandler) handleCharacterLogin(c *gin.Context, req *httpproto.C
 	}
 	token, err := h.genLoginAgentToken(tokenInfo)
 	if err != nil {
-		logger.GetLogger().Errorf("handler [CharacterLogin], gen login agent token failed, %v", err)
+		logger.Get().Errorf("handler [CharacterLogin], gen login agent token failed, %v", err)
 		return errs.ErrCodeInternalError
 	}
 	resp.Token = token
@@ -159,7 +159,7 @@ func (h *characterHandler) handleCharacterLogin(c *gin.Context, req *httpproto.C
 func (h *characterHandler) checkServerAvailable(serverID int64) error {
 	ctx, cancel := ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
 	defer cancel()
-	server, err := repository.Server.GetServer(ctx, serverID)
+	server, err := repo.Server.GetServer(ctx, serverID)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errs.ErrCodeServerUnavailable
@@ -174,7 +174,7 @@ func (h *characterHandler) checkServerAvailable(serverID int64) error {
 
 // lockAccountCharacters 分布式锁定账号下的角色.
 func (h *characterHandler) lockAccountCharacters(accountId int64) (*dlock.Lock, error) {
-	lock := libredis.NewDLock(fmt.Sprintf("account_characters_lock:%d", accountId), "", &dlock.Options{
+	lock := rediscli.NewDLock(fmt.Sprintf("account_characters_lock:%d", accountId), "", &dlock.Options{
 		Expiry:     10 * time.Second,
 		RetryDelay: 200 * time.Millisecond,
 	})
@@ -205,14 +205,14 @@ func (h *characterHandler) checkCreateCharacter(c *gin.Context, req *httpproto.C
 	// 检查角色数量
 	ctx, cancel := ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout*2)
 	defer cancel()
-	total, err := repository.Character.GetCharacterCountByAccountID(ctx, accountInfo.AccountID)
+	total, err := repo.Character.GetCharacterCountByAccountID(ctx, accountInfo.AccountID)
 	if err != nil {
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "get character count of account"))
 	}
 	if total >= consts.MaxCharacterCountPerAccount {
 		return errs.ErrCodeCharacterCountLimited
 	}
-	serverCount, err := repository.Character.GetCharacterCountByAccounIDServerID(ctx, accountInfo.AccountID, req.ServerID)
+	serverCount, err := repo.Character.GetCharacterCountByAccounIDServerID(ctx, accountInfo.AccountID, req.ServerID)
 	if err != nil {
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "get character count of account server"))
 	}
@@ -234,7 +234,7 @@ func (h *characterHandler) createCharacter(c *gin.Context, req *httpproto.Create
 
 	// 生成角色ID
 	ctx, cancel = ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
-	characterID, err := repository.IDGenerator.GenCharacterID(ctx)
+	characterID, err := repo.IDGenerator.GenCharacterID(ctx)
 	if err != nil {
 		cancel()
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "gen character id"))
@@ -244,21 +244,21 @@ func (h *characterHandler) createCharacter(c *gin.Context, req *httpproto.Create
 	// 创建角色
 	ctx, cancel = ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
 	defer cancel()
-	character := &dbmodels.Character{
+	character := &mongomodels.Character{
 		ID:        characterID,
 		AccountID: accountInfo.AccountID,
 		ServerID:  req.ServerID,
 	}
-	if err := repository.Character.CreateCharacter(ctx, character); err != nil {
+	if err := repo.Character.CreateCharacter(ctx, character); err != nil {
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "create character"))
 	}
 
 	// 添加角色的ActorMeta信息
 	if err := app.ActorMetaDriver().AddMeta(&gactor.Meta{
-		Category: actor.CategoryPlayer.Uint16(),
+		Category: actors.CategoryPlayer.ActorCategory(),
 		ID:       characterID,
 		Deployment: gactor.NewDeploymentFollow(gactor.ActorUID{
-			Category: actor.CategoryServer.Uint16(),
+			Category: actors.CategoryServer.ActorCategory(),
 			ID:       req.ServerID,
 		}),
 	}); err != nil {
@@ -270,10 +270,10 @@ func (h *characterHandler) createCharacter(c *gin.Context, req *httpproto.Create
 }
 
 // getCharacter 获取角色.
-func (h *characterHandler) getCharacter(characterId int64) (*dbmodels.Character, error) {
+func (h *characterHandler) getCharacter(characterId int64) (*mongomodels.Character, error) {
 	ctx, cancel := ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
 	defer cancel()
-	character, err := repository.Character.GetCharacter(ctx, characterId)
+	character, err := repo.Character.GetCharacter(ctx, characterId)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errs.ErrCodeCharacterNotExist
@@ -287,7 +287,7 @@ func (h *characterHandler) getCharacter(characterId int64) (*dbmodels.Character,
 func (h *characterHandler) checkCharacterAvailable(accountId int64, characterId int64) error {
 	ctx, cancel := ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
 	defer cancel()
-	character, err := repository.Character.GetCharacter(ctx, characterId)
+	character, err := repo.Character.GetCharacter(ctx, characterId)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errs.ErrCodeCharacterNotExist
@@ -321,7 +321,7 @@ func (h *characterHandler) getSignKey() any {
 	h.onceLoadSignKey.Do(func() {
 		priKey, err := authjwt.LoadPrivKey(app.Config().SignKeyPath)
 		if err != nil {
-			logger.GetLogger().Errorf("load sign key, %v", err)
+			logger.Get().Errorf("load sign key, %v", err)
 			return
 		}
 		h.signKey = priKey

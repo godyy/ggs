@@ -1,6 +1,8 @@
 package app
 
-import "github.com/godyy/ggs/internal/libs/flags"
+import (
+	"github.com/godyy/gutils/flags"
+)
 
 func init() {
 	flags.String("config-path", "./configs/dev.toml", "config path")

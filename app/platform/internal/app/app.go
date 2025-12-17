@@ -3,11 +3,12 @@ package app
 import (
 	applifecycle "github.com/godyy/ggs/app/internal/base/lifecycle"
 	"github.com/godyy/ggs/app/platform/internal/base/config"
+	dbrepo "github.com/godyy/ggs/app/platform/internal/base/db/repo"
+	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
+	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
 	"github.com/godyy/ggs/internal/base/env"
-	"github.com/godyy/ggs/internal/libs/db/mongo"
-	"github.com/godyy/ggs/internal/libs/db/redis"
-	"github.com/godyy/ggs/internal/libs/flags"
-	"github.com/godyy/ggs/internal/libs/logger"
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/gutils/flags"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -19,7 +20,7 @@ var (
 func Start() {
 	// 解析flag
 	flags.Parse()
-	defer flags.Clear()
+	defer flags.Reset()
 
 	// 加载配置.
 	if c, err := config.Load(configPath()); err != nil {
@@ -35,21 +36,21 @@ func Start() {
 	applifecycle.BeforeStart()
 
 	// 初始化 redis.
-	if err := redis.Init(cfg.DB.Redis); err != nil {
-		logger.GetLogger().Fatalf("init redis failed, %v", err)
+	if err := rediscli.Init(cfg.DB.Redis); err != nil {
+		logger.Get().Fatalf("init redis failed, %v", err)
 	}
 
 	// 初始化 mongo.
-	if err := mongo.Init(cfg.DB.Mongo); err != nil {
-		logger.GetLogger().Fatalf("init mongo failed, %v", err)
+	if err := mongocli.Init(cfg.DB.Mongo); err != nil {
+		logger.Get().Fatalf("init mongo failed, %v", err)
 	}
 
-	// 初始化数据库后回调.
-	applifecycle.AfterInitDatabase()
+	// 初始化 db dbrepo.
+	dbrepo.Init()
 
 	// 启动 Actor
 	if err := startActor(); err != nil {
-		logger.GetLogger().Fatalf("start actor failed, %v", err)
+		logger.Get().Fatalf("start actor failed, %v", err)
 	}
 
 	// 启动http服务.
