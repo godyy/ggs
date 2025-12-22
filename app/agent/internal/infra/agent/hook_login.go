@@ -71,9 +71,7 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		return
 	}
 	defer func() {
-		if lock != nil {
-			lock.Unlock(ctx)
-		}
+		lock.Unlock(ctx)
 	}()
 
 	// 停止当前的anothor
@@ -90,13 +88,18 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		return
 	}
 	if !playerMeta.IsNodeValid() {
-		serverMeta, err := getServerMeta(serverId)
-		if err != nil {
-			a.errorFields("get server meta failed", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldError(err))
+		// 选择节点.
+		nodeIds := app.NodeSelector().PickGame(serverId, playerId, 1)
+		if len(nodeIds) == 0 {
+			a.errorFields("pick game node failed", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId))
 			a.Stop(pbc2s.DisconnectPush_SystemError)
 			return
 		}
-		playerMeta.UpdateNode(serverMeta.NodeId)
+
+		a.infoFields("pick game node", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId), log.FldNodeId(nodeIds[0]))
+
+		// 更新节点信息.
+		playerMeta.UpdateNode(nodeIds[0])
 		if err := updateMeta(playerMeta); err != nil {
 			a.errorFields("update player meta failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
 			a.Stop(pbc2s.DisconnectPush_SystemError)
@@ -134,13 +137,13 @@ func parseLoginToken(a *Agent, token string) (*models.TokenInfo, pbc2s.ErrCode) 
 	// 解析token
 	claims, err := authjwt.ParseToken(tokenKey, token)
 	if err != nil {
-		a.InfoFields("parse token failed", zap.String("token", token), zap.NamedError("error", err))
+		a.infoFields("parse token failed", zap.String("token", token), zap.NamedError("error", err))
 		return nil, pbc2s.ErrCode_ECInvalidToken
 	}
 
 	// 验证issuer
 	if !claims.VerifyIssuer(app.Env().Stage(), true) {
-		a.InfoFields("token issuer error", zap.String("token", token))
+		a.infoFields("token issuer error", zap.String("token", token))
 		return nil, pbc2s.ErrCode_ECInvalidToken
 	}
 
@@ -148,7 +151,7 @@ func parseLoginToken(a *Agent, token string) (*models.TokenInfo, pbc2s.ErrCode) 
 	ti := &models.TokenInfo{}
 	sub, _ := authjwt.GetSub(claims)
 	if err := json.Unmarshal([]byte(sub), ti); err != nil {
-		a.InfoFields("unmarshal token subject error", zap.String("token", token), zap.NamedError("error", err))
+		a.infoFields("unmarshal token subject error", zap.String("token", token), zap.NamedError("error", err))
 		return nil, pbc2s.ErrCode_ECInvalidToken
 	}
 

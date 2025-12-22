@@ -32,7 +32,7 @@ func (a *Agent) DebugFields(f string, fields ...zap.Field) {
 	loggerInsideAgent.DebugFields(f, a.getLogFields(fields...)...)
 }
 
-func (a *Agent) InfoFields(f string, fields ...zap.Field) {
+func (a *Agent) infoFields(f string, fields ...zap.Field) {
 	loggerInsideAgent.InfoFields(f, a.getLogFields(fields...)...)
 }
 

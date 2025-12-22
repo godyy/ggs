@@ -18,6 +18,9 @@ type ServiceConfig struct {
 	// Self 本地节点信息.
 	Self *Node
 
+	// CenterListener 中心监听器.
+	CenterListener CenterListener
+
 	// Handler 集群代理处理函数.
 	Handler gcluster.AgentHandler
 
@@ -42,6 +45,7 @@ func NewService(cfg *ServiceConfig) (*Service, error) {
 		Root:        cfg.Core.EtcdRoot,
 		WatchPrefix: cfg.Core.EtcdWatchPrefix,
 		Self:        cfg.Self,
+		Listener:    cfg.CenterListener,
 		Log:         cfg.Logger.Named("cluster-center"),
 	})
 	if err != nil {

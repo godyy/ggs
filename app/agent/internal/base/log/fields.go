@@ -33,3 +33,7 @@ func FldPid(pid uint16) zap.Field {
 func FldSessionId(sessionId uint32) zap.Field {
 	return zap.Uint32("sessionId", sessionId)
 }
+
+func FldNodeId(nodeId string) zap.Field {
+	return zap.String("nodeId", nodeId)
+}

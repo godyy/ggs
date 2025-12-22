@@ -14,8 +14,13 @@ func (e *Env) applyFlags() {
 	} else {
 		panic("env: env-server-id is required and must > 0")
 	}
+
+	if master, ok := env.GetFlagValue[bool]("master"); ok {
+		e.master = master
+	}
 }
 
 func init() {
 	env.AddFlag("server-id", int64(0), "server id")
+	env.AddFlag("master", false, "is master node")
 }

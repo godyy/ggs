@@ -6,6 +6,7 @@ import (
 
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/base/config"
+	"github.com/godyy/ggs/app/agent/internal/infra/router"
 	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
 	applifecycle "github.com/godyy/ggs/app/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/crypto"
@@ -15,6 +16,7 @@ import (
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/cluster"
+	baserouter "github.com/godyy/ggs/internal/infra/router"
 	"github.com/godyy/gutils/flags"
 	pkgerrors "github.com/pkg/errors"
 )
@@ -27,6 +29,9 @@ type app struct {
 
 	// cluster.
 	cluster *cluster.Service
+
+	// nodeSelector.
+	nodeSelector *router.NodeSelector
 
 	// actor.
 	actorMetaDriver *actor.MetaDriver
@@ -80,6 +85,9 @@ func Start() {
 	if err := appInst.startActor(); err != nil {
 		logger.Get().Fatalf("start actor failed, %v", err)
 	}
+
+	// 初始化节点路由选择器.
+	appInst.nodeSelector = router.NewNodeSelector(baserouter.NewRendezvousSelector())
 
 	// 启动 cluster.
 	if err := appInst.startCluster(); err != nil {
@@ -136,6 +144,11 @@ func Config() *config.Config {
 // Env 获取环境变量.
 func Env() env.Env {
 	return env.Get()
+}
+
+// NodeSelector 获取节点路由选择器.
+func NodeSelector() *router.NodeSelector {
+	return appInst.nodeSelector
 }
 
 // ActorMetaDriver 获取 Actor Meta 驱动.

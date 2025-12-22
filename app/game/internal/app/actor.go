@@ -83,6 +83,10 @@ func (a *app) startActor() error {
 
 // startGlobalActors 启动全局Actor.
 func (a *app) startGlobalActors() error {
+	if !a.env.Master() {
+		return nil
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*1)
 	defer cancel()
 

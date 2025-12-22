@@ -24,6 +24,7 @@ type Node struct {
 	Category string `json:"category"` // 节点种类.
 	Name     string `json:"name"`     // 名称.
 	Addr     string `json:"addr"`     // 节点集群内通信地址.
+	ServerId int64  `json:"serverId"` // 节点服务ID.
 }
 
 // NewNode 创建节点信息.
@@ -106,6 +107,9 @@ type CenterConfig struct {
 	// Self 自身节点信息.
 	Self *Node
 
+	// CenterListener 监听器.
+	Listener CenterListener
+
 	// 日志工具.
 	Log glog.Logger
 }
@@ -131,6 +135,10 @@ func (c *CenterConfig) init() error {
 		return pkgerrors.WithMessage(err, "self node invalid")
 	}
 
+	if c.Listener == nil {
+		return errors.New("no Listener")
+	}
+
 	if c.Log == nil {
 		return errors.New("no Log")
 	}
@@ -152,6 +160,28 @@ func normalizePath(r string) string {
 		r = strings.ReplaceAll(r, "//", "/")
 	}
 	return r
+}
+
+// NodeEventType 节点事件类型.
+type NodeEventType int8
+
+const (
+	NodeEventAdd NodeEventType = iota // 节点新增
+	NodeEventDel                      // 节点删除
+)
+
+// NodeEvent 节点变更事件.
+type NodeEvent struct {
+	Type NodeEventType // 节点类型.
+	Node *Node         // 节点信息.
+}
+
+// CenterListener Center监听器.
+type CenterListener interface {
+	// OnNodesSync 节点列表同步事件.
+	OnNodesSync(nodes []*Node)
+	// OnNodeEvents 节点变更事件批量通知.
+	OnNodeEvents(events []NodeEvent)
 }
 
 // Center Center 负责管理和维护集群中的节点信息.
@@ -379,7 +409,8 @@ func (c *Center) syncNodes(ctx context.Context, withTimeout bool) (int64, error)
 		return 0, err
 	}
 
-	nodes := make(map[string]*Node)
+	nodeMap := make(map[string]*Node, len(resp.Kvs))
+	nodeList := make([]*Node, 0, len(resp.Kvs))
 	for _, kv := range resp.Kvs {
 		n, id, err := parseNode(c.cfg.Root, string(kv.Key), kv.Value)
 		if err != nil {
@@ -389,13 +420,16 @@ func (c *Center) syncNodes(ctx context.Context, withTimeout bool) (int64, error)
 		if id == c.selfNodeId {
 			continue
 		}
-		nodes[id] = n
+		nodeMap[id] = n
+		nodeList = append(nodeList, n)
 		c.getLog().Infof("syncNodes: add node %s", n)
 	}
 
 	c.mu.Lock()
-	c.nodes = nodes
+	c.nodes = nodeMap
 	c.mu.Unlock()
+
+	c.cfg.Listener.OnNodesSync(nodeList)
 
 	return resp.Header.Revision, nil
 }
@@ -403,21 +437,24 @@ func (c *Center) syncNodes(ctx context.Context, withTimeout bool) (int64, error)
 // addNode 添加节点.
 func (c *Center) addNode(id string, n *Node) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.nodes[id] = n
+	c.mu.Unlock()
 	c.getLog().Infof("addNode: %s", n)
 }
 
 // delNode 删除节点.
-func (c *Center) delNode(nodeId string) {
+func (c *Center) delNode(nodeId string) *Node {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if _, ok := c.nodes[nodeId]; !ok {
+	n, ok := c.nodes[nodeId]
+	if !ok {
+		c.mu.Unlock()
 		c.getLog().Errorf("delNode: node %s not found", nodeId)
-		return
+		return nil
 	}
 	delete(c.nodes, nodeId)
+	c.mu.Unlock()
 	c.getLog().Infof("delNode: %s", nodeId)
+	return n
 }
 
 // keepAlive 保持租约活跃.
@@ -550,6 +587,9 @@ func (c *Center) watch(ctx context.Context, startRev int64) {
 				}
 				// 正常事件，处理并更新最新修订
 				lastRev = wresp.Header.Revision
+
+				// 处理事件
+				events := make([]NodeEvent, 0, len(wresp.Events))
 				for _, ev := range wresp.Events {
 					switch ev.Type {
 					case etcdv3.EventTypePut:
@@ -562,14 +602,20 @@ func (c *Center) watch(ctx context.Context, startRev int64) {
 							continue
 						}
 						c.addNode(id, n)
+						events = append(events, NodeEvent{Type: NodeEventAdd, Node: n})
 					case etcdv3.EventTypeDelete:
 						nodeId, ok := parseNodeKey(c.cfg.Root, string(ev.Kv.Key))
 						if !ok {
 							c.getLog().Errorf("watch: del: invalid node key %s", string(ev.Kv.Key))
 							continue
 						}
-						c.delNode(nodeId)
+						if n := c.delNode(nodeId); n != nil {
+							events = append(events, NodeEvent{Type: NodeEventDel, Node: n})
+						}
 					}
+				}
+				if len(events) > 0 {
+					c.cfg.Listener.OnNodeEvents(events)
 				}
 			}
 		}

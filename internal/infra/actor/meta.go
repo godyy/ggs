@@ -32,7 +32,7 @@ func (m *Meta) GetNodeId() string {
 
 // IsNodeValid 返回 Meta 的节点信息是否有效.
 func (m *Meta) IsNodeValid() bool {
-	return m.NodeId != ""
+	return false
 }
 
 // UpdateNode 更新 Actor Meta 的节点信息.

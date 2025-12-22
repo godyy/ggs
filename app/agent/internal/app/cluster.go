@@ -23,10 +23,11 @@ func (a *app) startCluster() error {
 	}
 	node := cluster.NewNode(consts.NodeAgent, a.config.Cluster.NodeName, fmt.Sprintf("%s:%d", ip, port))
 	clusterCfg := &cluster.ServiceConfig{
-		Core:    &a.config.Cluster.Core,
-		Self:    node,
-		Handler: a,
-		Logger:  logger.Get(),
+		Core:           &a.config.Cluster.Core,
+		Self:           node,
+		CenterListener: a,
+		Handler:        a,
+		Logger:         logger.Get(),
 	}
 	if Env().Debug() {
 		clusterCfg.DefCtxTimeout = time.Hour * 1
@@ -54,4 +55,14 @@ func (a *app) stopCluster() {
 // 当节点字节数据到达时，会调用此方法.
 func (a *app) OnNodeBytes(remoteNodeId string, data []byte) error {
 	return a.actorClient.HandlePacket(remoteNodeId, data)
+}
+
+// OnNodeEvents 处理节点变更事件.
+func (a *app) OnNodeEvents(events []cluster.NodeEvent) {
+	a.nodeSelector.UpdateEvents(events)
+}
+
+// OnNodesSync 处理节点全量同步事件.
+func (a *app) OnNodesSync(nodes []*cluster.Node) {
+	a.nodeSelector.SetNodes(nodes, true)
 }
