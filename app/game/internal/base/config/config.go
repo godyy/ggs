@@ -1,11 +1,11 @@
 package config
 
 import (
-	"github.com/godyy/ggs/internal/base/config"
-	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
-	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/cluster"
+	"github.com/godyy/ggskit/base/config"
+	"github.com/godyy/ggskit/base/db/mongo"
+	"github.com/godyy/ggskit/base/db/redis"
+	"github.com/godyy/ggskit/base/logger"
+	"github.com/godyy/ggskit/infra/cluster"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -13,9 +13,6 @@ import (
 type Config struct {
 	// Cluster 集群配置.
 	Cluster struct {
-		// NodeName 集群节点名称.
-		NodeName string
-
 		// Port 集群端口.
 		Port int
 
@@ -26,10 +23,10 @@ type Config struct {
 	// DB 数据库配置.
 	DB struct {
 		// Redis 配置.
-		Redis *rediscli.Config
+		Redis *redis.Config
 
 		// Mongo 配置.
-		Mongo *mongocli.Config
+		Mongo *mongo.Config
 	}
 
 	// HttpPort HTTP端口.

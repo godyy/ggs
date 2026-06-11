@@ -2,14 +2,14 @@ package handlers
 
 import (
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggskit/infra/actor"
 
 	"github.com/godyy/ggs/app/game/internal/base/errs"
-	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
-	pbcommon "github.com/godyy/ggs/internal/proto/pb/common"
-	pbs2s "github.com/godyy/ggs/internal/proto/pb/s2s"
-	"github.com/godyy/ggs/internal/proto/types"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
+	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	protoreg "github.com/godyy/ggs/internal/protocol/registry"
+	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -54,7 +54,7 @@ func replyC2S(ctx *gactor.Context, resp proto.Message) {
 		Pt:  codecc2s.PtResp,
 		Seq: reqPayload.Seq,
 	}
-	pid, ok := types.C2S.GetPid(resp)
+	pid, ok := protoreg.C2S.GetPid(resp)
 	if !ok {
 		loggerInst.Errorf("replyC2S: pid not found for resp %T", resp)
 		return
@@ -84,7 +84,7 @@ func replyC2SError(ctx *gactor.Context, err error) {
 // replyS2S 回复S2S请求.
 func replyS2S(ctx *gactor.Context, resp proto.Message) {
 	respPayload := actor.S2SPayload{}
-	pid, ok := types.S2S.GetPid(resp)
+	pid, ok := protoreg.S2S.GetPid(resp)
 	if !ok {
 		loggerInst.Errorf("replyS2S: pid not found for resp %T", resp)
 		return

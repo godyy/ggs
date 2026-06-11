@@ -5,12 +5,12 @@ import (
 
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/app"
-	"github.com/godyy/ggs/app/internal/base/consts"
-	"github.com/godyy/ggs/app/internal/base/crypto"
-	"github.com/godyy/ggs/app/internal/base/lifecycle"
-	inet "github.com/godyy/ggs/app/internal/base/net"
-	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
-	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggs/internal/base/crypto"
+	"github.com/godyy/ggs/internal/base/lifecycle"
+	inet "github.com/godyy/ggs/internal/base/net"
+	authjwt "github.com/godyy/ggskit/base/auth/jwt"
+	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
 )
 
 var (

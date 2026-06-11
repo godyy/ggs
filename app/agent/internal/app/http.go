@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/pprof"
+	"github.com/godyy/ggs/internal/infra/monitor"
 )
 
 func (a *app) startHttp() {
@@ -19,7 +19,7 @@ func (a *app) startHttp() {
 
 	mux := http.NewServeMux()
 	if a.config.EnablePProf {
-		pprof.RegisterHTTP(mux, "")
+		monitor.RegisterPProfHttp(mux, "")
 	}
 
 	a.httpServer = &http.Server{

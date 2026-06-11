@@ -5,7 +5,6 @@ HttpPort = 23088
 EnablePProf = false
 
 [Cluster]
-NodeName = "1" # 集群节点名称
 Port = 23002 # 集群端口
 
 # 集群核心配置（严格匹配结构体字段名）

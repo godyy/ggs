@@ -4,8 +4,8 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/handlers"
 	"github.com/godyy/ggs/app/game/internal/systems"
-	"github.com/godyy/ggs/app/internal/infra/actors"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
+	"github.com/godyy/ggs/internal/infra/actors"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 )
 
 // handleLoginCharacter 处理登录角色请求.

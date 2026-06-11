@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/godyy/ggs/app/platform/internal/app"
 	_ "github.com/godyy/ggs/app/platform/internal/handlers"
-	"github.com/godyy/ggs/internal/utils"
+	"github.com/godyy/ggskit/utils"
 )
 
 func main() {

@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/ggs/app/login/httpproto"
 	"github.com/godyy/ggs/app/login/internal/base/consts"
-	"github.com/godyy/ggs/app/login/internal/base/db/repo"
-	"github.com/godyy/ggs/internal/utils/ctxutils"
+	"github.com/godyy/ggs/app/login/internal/infra/repo"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
+	"github.com/godyy/ggskit/utils/ctxutils"
 )
 
 type serverHandler struct{}

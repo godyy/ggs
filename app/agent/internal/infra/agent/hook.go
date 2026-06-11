@@ -1,7 +1,7 @@
 package agent
 
 import (
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	"google.golang.org/protobuf/proto"
 )
 

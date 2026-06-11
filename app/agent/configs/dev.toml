@@ -14,7 +14,6 @@ EnablePProf = true
 
 # 集群配置（严格匹配结构体字段名）
 [Cluster]
-NodeName = "1" # 集群节点名称
 Port = 22002 # 集群端口
 
 # 集群核心配置（严格匹配结构体字段名）
@@ -59,21 +58,6 @@ MinIdleConns = 5
 MaxIdleConns = 10
 MaxActiveConns = 100
 ConnMaxIdleTime = "30m"
-
-# MongoDB配置
-[DB.Mongo]
-URI = "mongodb://localhost:27017/?readPreference=primary"
-ConnectTimeout = "10s"
-MaxPoolSize = 100
-MinPoolSize = 5
-MaxConnIdleTime = "30m"
-ServerSelectionTimeout = "5s"
-HeartbeatInterval = "10s"
-RetryWrites = true
-RetryReads = true
-Direct = false
-ReplicaSet = ""
-MaxConnecting = 10
 
 # 日志配置
 [Log]

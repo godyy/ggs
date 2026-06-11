@@ -3,8 +3,8 @@ package utils
 import (
 	"context"
 
-	"github.com/godyy/ggs/app/internal/utils/httputils"
 	"github.com/godyy/ggs/app/login/httpproto"
+	"github.com/godyy/ggs/internal/utils/httputils"
 )
 
 func GetCharacterList(ctx context.Context, urlRoot string, token string) ([]httpproto.CharacterInfo, error) {

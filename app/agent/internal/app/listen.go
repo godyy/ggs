@@ -6,10 +6,10 @@ import (
 	"net"
 
 	"github.com/godyy/ggs/app/agent/internal"
-	"github.com/godyy/ggs/app/internal/base/consts"
-	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
-	inet "github.com/godyy/ggs/app/internal/base/net"
+	"github.com/godyy/ggs/internal/base/consts"
+	icrypto "github.com/godyy/ggs/internal/base/crypto"
 	"github.com/godyy/ggs/internal/base/logger"
+	inet "github.com/godyy/ggs/internal/base/net"
 	pkgerrors "github.com/pkg/errors"
 )
 

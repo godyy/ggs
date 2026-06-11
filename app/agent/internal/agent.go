@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/godyy/gactor"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 )
 
 // Agent 内部 Agent 接口.

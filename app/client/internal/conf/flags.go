@@ -3,7 +3,7 @@ package conf
 import (
 	"log"
 
-	"github.com/godyy/gutils/flags"
+	"github.com/godyy/ggskit/base/flags"
 )
 
 func applyFlags() {

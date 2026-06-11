@@ -13,13 +13,13 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/godyy/ggs/app/client/internal/conf"
 	"github.com/godyy/ggs/app/client/internal/mode/internal/utils"
-	"github.com/godyy/ggs/app/internal/base/consts"
 	"github.com/godyy/ggs/app/login/httpproto"
-	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
-	"github.com/godyy/ggs/internal/base/env"
-	"github.com/godyy/ggs/internal/base/models"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
-	"github.com/godyy/ggs/internal/utils/ctxutils"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggs/internal/models"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	authjwt "github.com/godyy/ggskit/base/auth/jwt"
+	"github.com/godyy/ggskit/base/env"
+	"github.com/godyy/ggskit/utils/ctxutils"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -160,11 +160,11 @@ func (s *statePlayLogic) run(c *Client) {
 	go c.tick()
 
 	// 构造自动补全
-	completers := make([]readline.PrefixCompleterInterface, len(cmdList))
-	for i, cmd := range cmdList {
-		completers[i] = cmd.autoCompleter
+	cmdAutoCompleters := make([]readline.PrefixCompleterInterface, 0, len(getCmdNameAll()))
+	for _, name := range getCmdNameAll() {
+		cmdAutoCompleters = append(cmdAutoCompleters, readline.PcItem(name))
 	}
-	s.autoCompleter = readline.NewPrefixCompleter(completers...)
+	s.autoCompleter = readline.NewPrefixCompleter(cmdAutoCompleters...)
 
 	// 构造readline配置
 	cfg := &readline.Config{
@@ -227,10 +227,10 @@ func (s *statePlayLogic) exec(cli *Client, line string) bool {
 	}
 
 	// 获取并执行命令
-	c := cmdMap[cmd]
+	c := getCmdExec(cmd)
 	if c == nil {
 		log.Printf("unknown command: %s", cmd)
 		return false
 	}
-	return c.exec(c, cli, args)
+	return c(cli, args)
 }

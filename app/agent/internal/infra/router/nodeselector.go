@@ -4,27 +4,23 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
-	"github.com/godyy/ggs/internal/infra/cluster"
-	"github.com/godyy/ggs/internal/infra/router"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggskit/infra/cluster"
+	"github.com/godyy/ggskit/infra/noderouter"
 )
 
 // NodeSelector Agent 专用的节点选择封装，内部组合通用的 router.Selector。
 // 负责：
-//   - 将节点按 Agent 规则分组（Game 节点使用 Category/ServerId 分组，其它使用 Category）
+//   - 仅接收和维护 Game 节点，并按 Category/ServerId 分组
 //   - 承接 Center 的增量/全量事件并更新路由
 //   - 提供面向业务的查询方法（如按 serverId 选 Game 节点）
-//
-// 分组规则：
-//   - Game:   fmt.Sprintf("%s/%d", consts.NodeGame, node.ServerId)
-//   - Others: node.Category
 type NodeSelector struct {
-	base router.Selector
+	base noderouter.Selector
 }
 
 // NewNodeSelector 创建 NodeSelector。
 // base 为通用路由实现（如 RendezvousSelector）。
-func NewNodeSelector(base router.Selector) *NodeSelector {
+func NewNodeSelector(base noderouter.Selector) *NodeSelector {
 	return &NodeSelector{base: base}
 }
 
@@ -33,6 +29,9 @@ func NewNodeSelector(base router.Selector) *NodeSelector {
 func (s *NodeSelector) SetNodes(nodes []*cluster.Node, all bool) {
 	groups := make(map[string][]string)
 	for _, n := range nodes {
+		if !acceptNode(n) {
+			continue
+		}
 		g := makeGroup(n.Category, n.ServerId)
 		groups[g] = append(groups[g], n.GetNodeId())
 	}
@@ -42,15 +41,18 @@ func (s *NodeSelector) SetNodes(nodes []*cluster.Node, all bool) {
 // UpdateEvents 接收 Center 的批量有序事件，按分组聚合为 UpdateOp 并调用底层路由的 Update。
 // 要求同一分组内保持事件顺序。
 func (s *NodeSelector) UpdateEvents(events []cluster.NodeEvent) {
-	updates := make(map[string][]router.UpdateOp)
+	updates := make(map[string][]noderouter.UpdateOp)
 	for _, ev := range events {
+		if !acceptNode(ev.Node) {
+			continue
+		}
 		g := makeGroup(ev.Node.Category, ev.Node.ServerId)
 		id := ev.Node.GetNodeId()
 		switch ev.Type {
 		case cluster.NodeEventAdd:
-			updates[g] = append(updates[g], router.UpdateOp{Type: router.UpdateAdd, IDs: []string{id}})
+			updates[g] = append(updates[g], noderouter.UpdateOp{Type: noderouter.UpdateAdd, IDs: []string{id}})
 		case cluster.NodeEventDel:
-			updates[g] = append(updates[g], router.UpdateOp{Type: router.UpdateRemove, IDs: []string{id}})
+			updates[g] = append(updates[g], noderouter.UpdateOp{Type: noderouter.UpdateRemove, IDs: []string{id}})
 		}
 	}
 	if len(updates) > 0 {
@@ -66,10 +68,8 @@ func (s *NodeSelector) PickGame(serverId, playerId int64, n int) []string {
 	return s.base.Pick(group, key[:], n)
 }
 
-// PickByCategory 按 Category 选择前 n 个候选节点ID；适用于非 Game 类节点。
-func (s *NodeSelector) PickByCategory(category string, key []byte, n int) []string {
-	group := makeGroup(category, 0)
-	return s.base.Pick(group, key, n)
+func acceptNode(node *cluster.Node) bool {
+	return node != nil && node.Category == consts.NodeGame
 }
 
 // makeGroup 组名生成：Game 使用 Category/ServerId，其它使用 Category。

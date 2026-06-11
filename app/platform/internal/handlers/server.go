@@ -5,13 +5,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/internal/infra/actors"
 	"github.com/godyy/ggs/app/platform/internal/app"
-	"github.com/godyy/ggs/app/platform/internal/base/db/repo"
-	"github.com/godyy/ggs/app/platform/internal/base/models/httpproto"
-	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
-	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/app/platform/internal/infra/repo"
+	"github.com/godyy/ggs/app/platform/internal/models/httpproto"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggs/internal/base/nodeutil"
+	"github.com/godyy/ggs/internal/infra/actors"
+	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
 	"github.com/godyy/ggs/internal/utils/ginutils"
+	"github.com/godyy/ggskit/infra/cluster"
 )
 
 type serverHandler struct{}
@@ -34,25 +36,27 @@ func (s *serverHandler) setupRoutes(root *gin.RouterGroup, version string) {
 }
 
 func (s *serverHandler) handleServerCreate(c *gin.Context, req *httpproto.ServerCreateReq) error {
+	nodeId := cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(req.ID))
+
 	// 创建服务器.
 	server := &mongomodels.Server{
 		ID:     req.ID,
 		Name:   req.Name,
-		NodeId: req.NodeId,
+		NodeId: nodeId,
 	}
 	if err := repo.Server.CreateServer(context.Background(), server); err != nil {
 		return err
 	}
 
-	// 创建ActorMeta信息.
-	serverActorMeta := actor.NewMetaOnNode(
-		gactor.ActorUID{
+	// 预注册服务器 Actor.
+	if _, err := app.ActorRegistry().RegisterActor(gactor.ActorRegisterParams{
+		UID: gactor.ActorUID{
 			Category: actors.CategoryServer.ActorCategory(),
 			ID:       server.ID,
 		},
-		server.NodeId,
-	)
-	if err := app.ActorMetaDriver().AddActor(serverActorMeta); err != nil {
+		NodeId:  server.NodeId,
+		LeaseId: app.ActorRegistry().MakeLeaseID(),
+	}); err != nil {
 		return err
 	}
 	return nil

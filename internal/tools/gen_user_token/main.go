@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/godyy/ggs/internal/base/auth/jwt"
+	"github.com/godyy/ggskit/base/auth/jwt"
 )
 
 func main() {

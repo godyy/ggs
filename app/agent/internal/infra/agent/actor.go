@@ -1,43 +1,41 @@
 package agent
 
 import (
-	"context"
 	"time"
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal/app"
-	"github.com/godyy/ggs/app/internal/infra/actors"
-	"github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/utils/ctxutils"
+	"github.com/godyy/ggs/internal/infra/actors"
 )
 
 const (
-	actorRequestTimeout = 5 * time.Second
+	actorRequestTimeout  = 5 * time.Second
+	playerPreRegisterTTL = int64(30)
 )
 
-// getMeta 获取 Actor Meta.
-func getMeta(uid gactor.ActorUID) (*actor.Meta, error) {
-	return app.ActorMetaDriver().GetActor(uid)
+func checkLocation(location gactor.ActorLocation) bool {
+	return location.NodeId != "" && (location.ExpireAt <= 0 || location.ExpireAt > time.Now().Unix())
 }
 
-// updateMeta 更新 Actor Meta.
-func updateMeta(meta *actor.Meta) error {
-	return app.ActorMetaDriver().AddActor(meta)
+// updatePlayerLocation 更新玩家 Actor 位置信息.
+func updatePlayerLocation(playerId int64, nodeId string) error {
+	_, err := app.ActorRegistry().RegisterActor(gactor.ActorRegisterParams{
+		UID: gactor.ActorUID{
+			Category: actors.CategoryPlayer.ActorCategory(),
+			ID:       playerId,
+		},
+		NodeId:  nodeId,
+		LeaseId: app.ActorRegistry().MakeLeaseID(),
+		TTL:     playerPreRegisterTTL,
+	})
+	return err
 }
 
-// getPlayerMeta 获取玩家 Actor Meta.
-func getPlayerMeta(playerId int64) (*actor.Meta, error) {
-	return getMeta(gactor.ActorUID{
+// getPlayerLocation 获取玩家 Actor 位置信息.
+func getPlayerLocation(playerId int64) (gactor.ActorLocation, error) {
+	return app.ActorRegistry().GetActorLocation(gactor.ActorUID{
 		Category: actors.CategoryPlayer.ActorCategory(),
 		ID:       playerId,
-	})
-}
-
-// getServerMeta 获取服务器 Actor Meta.
-func getServerMeta(serverId int64) (*actor.Meta, error) {
-	return getMeta(gactor.ActorUID{
-		Category: actors.CategoryServer.ActorCategory(),
-		ID:       serverId,
 	})
 }
 
@@ -48,25 +46,20 @@ func genSessionId() uint32 {
 
 // connect2Player 连接到指定玩家.
 func connect2Player(playerId int64, sessionId uint32) error {
-	ctx, cancel := ctxutils.WithTimeout(context.Background(), actorRequestTimeout)
-	defer cancel()
-	return app.ActorClient().Connect(ctx, playerId, sessionId)
+	return app.ActorClient().Connect(playerId, sessionId)
 }
 
 // disconnectPlayer 断开与指定玩家的连接.
 func disconnectPlayer(playerId int64, sessionId uint32) error {
-	ctx, cancel := ctxutils.WithTimeout(context.Background(), actorRequestTimeout)
-	defer cancel()
-	return app.ActorClient().Disconnect(ctx, playerId, sessionId)
+	return app.ActorClient().Disconnect(playerId, sessionId)
 }
 
 // forwardPacket2Player 向指定玩家转发数据包.
 func forwardPacket2Player(playerId int64, sessionId uint32, p []byte) error {
-	ctx, cancel := ctxutils.WithTimeout(context.Background(), actorRequestTimeout)
-	defer cancel()
-	return app.ActorClient().SendRequest(ctx, gactor.ClientRequest{
+	return app.ActorClient().SendRequest(gactor.ClientRequest{
 		ID:      playerId,
 		SID:     sessionId,
+		Timeout: actorRequestTimeout,
 		Payload: p,
 	})
 }

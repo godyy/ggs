@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/godyy/gutils/flags"
+	"github.com/godyy/ggskit/base/flags"
 )
 
 func init() {

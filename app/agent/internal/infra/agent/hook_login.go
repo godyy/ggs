@@ -3,19 +3,20 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/app"
 	"github.com/godyy/ggs/app/agent/internal/base/log"
-	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
-	"github.com/godyy/ggs/internal/base/db/redis/dlock"
-	"github.com/godyy/ggs/internal/base/models"
-	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
-	pbcommon "github.com/godyy/ggs/internal/proto/pb/common"
+	"github.com/godyy/ggs/internal/models"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
+	authjwt "github.com/godyy/ggskit/base/auth/jwt"
+	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
+	"github.com/godyy/ggskit/base/db/redis"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,14 +26,14 @@ const (
 	loginLockRetryDelay = 500 * time.Millisecond
 )
 
-var loginLockOpts = &dlock.Options{
+var loginLockOpts = &redis.DLockOpts{
 	Expiry:     loginLockExpiry,
 	RetryDelay: loginLockRetryDelay,
 }
 
 // getLoginLock 获取登录锁.
-func getLoginLock(uid string) *dlock.Lock {
-	return rediscli.NewDLock(fmt.Sprintf("agent_login_lock:%s", uid), "", loginLockOpts)
+func getLoginLock(uid string) *redis.DLock {
+	return redis.NewDLock(app.RedisClient(), fmt.Sprintf("agent_login_lock:%s", uid), "", loginLockOpts)
 }
 
 // handleLoginReq 处理登录请求.
@@ -80,14 +81,14 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		anothor.Stop(pbc2s.DisconnectPush_AnotherLogin)
 	}
 
-	// 获取玩家 Actor Meta, 并按需更新节点信息.
-	playerMeta, err := getPlayerMeta(playerId)
-	if err != nil {
-		a.errorFields("get player meta failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
+	// 获取玩家 Actor 位置信息, 并按需更新节点信息.
+	playerLocation, err := getPlayerLocation(playerId)
+	if err != nil && !errors.Is(err, gactor.ErrActorNotExists) {
+		a.errorFields("get player location failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
 		a.Stop(pbc2s.DisconnectPush_SystemError)
 		return
 	}
-	if !playerMeta.IsNodeValid() {
+	if errors.Is(err, gactor.ErrActorNotExists) || !checkLocation(playerLocation) {
 		// 选择节点.
 		nodeIds := app.NodeSelector().PickGame(serverId, playerId, 1)
 		if len(nodeIds) == 0 {
@@ -99,9 +100,8 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 		a.infoFields("pick game node", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId), log.FldNodeId(nodeIds[0]))
 
 		// 更新节点信息.
-		playerMeta.UpdateNode(nodeIds[0])
-		if err := updateMeta(playerMeta); err != nil {
-			a.errorFields("update player meta failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
+		if err := updatePlayerLocation(playerId, nodeIds[0]); err != nil {
+			a.errorFields("update player location failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
 			a.Stop(pbc2s.DisconnectPush_SystemError)
 			return
 		}

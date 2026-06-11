@@ -4,11 +4,12 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
-	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
-	inet "github.com/godyy/ggs/app/internal/base/net"
-	"github.com/godyy/ggs/internal/base/crypto/aes"
-	codecc2s "github.com/godyy/ggs/internal/proto/codec/c2s"
+	"github.com/godyy/ggs/internal/base/consts"
+	icrypto "github.com/godyy/ggs/internal/base/crypto"
+	inet "github.com/godyy/ggs/internal/base/net"
+	protoreg "github.com/godyy/ggs/internal/protocol/registry"
+	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
+	"github.com/godyy/ggskit/base/crypto/aes"
 	pkgerrors "github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
@@ -58,7 +59,7 @@ func NewStream(conn net.Conn, sessionKey []byte, handler Handler) (*Stream, erro
 
 // SendReq 发送请求包
 func (s *Stream) SendReq(seq uint32, msg proto.Message) error {
-	p, err := codecc2s.EncodeReqPacket(seq, msg)
+	p, err := codecc2s.EncodeReqPacket(protoreg.C2S.Registry, seq, msg)
 	if err != nil {
 		return err
 	}
@@ -87,7 +88,7 @@ func (s *Stream) readLoop() {
 			Pt:  codecc2s.HeadGetPt(p),
 			Seq: codecc2s.HeadGetSeq(p),
 		}
-		respMsg, err := codecc2s.DecodeMessage(p)
+		respMsg, err := codecc2s.DecodeMessage(protoreg.C2S.Registry, p)
 		if err != nil {
 			s.close(pkgerrors.WithMessagef(err, "decode pt:%v seq:%v", m.Pt, m.Seq))
 			return

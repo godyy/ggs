@@ -4,25 +4,29 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/base/config"
+	"github.com/godyy/ggs/app/agent/internal/base/env"
 	"github.com/godyy/ggs/app/agent/internal/infra/router"
-	icrypto "github.com/godyy/ggs/app/internal/base/crypto"
-	applifecycle "github.com/godyy/ggs/app/internal/base/lifecycle"
-	"github.com/godyy/ggs/internal/base/crypto"
-	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
-	"github.com/godyy/ggs/internal/base/env"
+	icrypto "github.com/godyy/ggs/internal/base/crypto"
+	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/infra/cluster"
-	baserouter "github.com/godyy/ggs/internal/infra/router"
-	"github.com/godyy/gutils/flags"
+	"github.com/godyy/ggskit/base/crypto"
+	"github.com/godyy/ggskit/base/db/redis"
+	"github.com/godyy/ggskit/base/flags"
+	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggskit/infra/cluster"
+	"github.com/godyy/ggskit/infra/noderouter"
 	pkgerrors "github.com/pkg/errors"
 )
 
 type app struct {
 	config *config.Config // 配置
+
+	env *env.Env // 环境变量管理器
+
+	redisClient redis.Client // redis 客户端
 
 	// 对接 c 端
 	listener net.Listener
@@ -34,8 +38,8 @@ type app struct {
 	nodeSelector *router.NodeSelector
 
 	// actor.
-	actorMetaDriver *actor.MetaDriver
-	actorClient     *actor.Client
+	actorRegistry gactor.ActorRegistry
+	actorClient   *actor.Client
 
 	// crypto.
 	secretDecryptor crypto.Decryptor
@@ -60,6 +64,10 @@ func Start() {
 	}
 	appInst.config = cfg
 
+	// 初始化环境变量.
+	appInst.env = env.NewEnv()
+	appInst.env.Init()
+
 	// 初始化日志工具.
 	logger.Init(cfg.Log)
 
@@ -67,14 +75,11 @@ func Start() {
 	applifecycle.BeforeStart()
 
 	// 初始化 redis.
-	if err := rediscli.Init(cfg.DB.Redis); err != nil {
+	redisClient, err := redis.NewClient(cfg.DB.Redis)
+	if err != nil {
 		logger.Get().Fatalf("init redis failed, %v", err)
 	}
-
-	// 初始化 mongo.
-	if err := mongocli.Init(cfg.DB.Mongo); err != nil {
-		logger.Get().Fatalf("init mongo failed, %v", err)
-	}
+	appInst.redisClient = redisClient
 
 	// 初始化加密工具
 	if err := appInst.initCrypto(); err != nil {
@@ -87,7 +92,7 @@ func Start() {
 	}
 
 	// 初始化节点路由选择器.
-	appInst.nodeSelector = router.NewNodeSelector(baserouter.NewRendezvousSelector())
+	appInst.nodeSelector = router.NewNodeSelector(noderouter.NewRendezvousSelector())
 
 	// 启动 cluster.
 	if err := appInst.startCluster(); err != nil {
@@ -119,6 +124,12 @@ func Stop() {
 
 	// 停止 cluster.
 	appInst.stopCluster()
+
+	if appInst.redisClient != nil {
+		if err := appInst.redisClient.Close(); err != nil {
+			logger.Get().Errorf("close redis failed, %v", err)
+		}
+	}
 }
 
 // initCrypto 初始化加密工具.
@@ -142,8 +153,8 @@ func Config() *config.Config {
 }
 
 // Env 获取环境变量.
-func Env() env.Env {
-	return env.Get()
+func Env() *env.Env {
+	return appInst.env
 }
 
 // NodeSelector 获取节点路由选择器.
@@ -151,12 +162,17 @@ func NodeSelector() *router.NodeSelector {
 	return appInst.nodeSelector
 }
 
-// ActorMetaDriver 获取 Actor Meta 驱动.
-func ActorMetaDriver() *actor.MetaDriver {
-	return appInst.actorMetaDriver
+// ActorRegistry 获取 Actor 注册表.
+func ActorRegistry() gactor.ActorRegistry {
+	return appInst.actorRegistry
 }
 
 // ActorClient 获取 Actor 客户端.
 func ActorClient() *actor.Client {
 	return appInst.actorClient
+}
+
+// RedisClient 获取 redis 客户端.
+func RedisClient() redis.Client {
+	return appInst.redisClient
 }

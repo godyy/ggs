@@ -6,9 +6,10 @@ import (
 	_ "github.com/godyy/ggs/app/client/internal/mode/client"
 	_ "github.com/godyy/ggs/app/client/internal/mode/robot"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/utils"
+	"github.com/godyy/ggskit/base/flags"
+	baselogger "github.com/godyy/ggskit/base/logger"
+	"github.com/godyy/ggskit/utils"
 	"github.com/godyy/glog"
-	"github.com/godyy/gutils/flags"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 	flags.Parse()
 
 	// 初始化 logger
-	logger.Init(&logger.Config{
+	logger.Init(&baselogger.Config{
 		Level:       glog.DebugLevel,
 		Caller:      true,
 		Development: true,

@@ -3,8 +3,8 @@ package player
 import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/handlers"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
-	pbs2s "github.com/godyy/ggs/internal/proto/pb/s2s"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
 )
 
 var (

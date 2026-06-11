@@ -7,12 +7,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
-	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/pprof"
-	"github.com/godyy/ggs/internal/infra/probe"
+	"github.com/godyy/ggs/internal/infra/monitor"
+	"github.com/godyy/ggskit/infra/monitor/probe"
 )
 
 func (a *app) startHttp() {
@@ -24,7 +22,7 @@ func (a *app) startHttp() {
 	mux := http.NewServeMux()
 	a.registerHttpProbe(mux)
 	if a.config.EnablePProf {
-		pprof.RegisterHTTP(mux, "")
+		monitor.RegisterPProfHttp(mux, "")
 	}
 
 	a.httpServer = &http.Server{
@@ -56,18 +54,17 @@ func (a *app) stopHttp() {
 }
 
 func (a *app) registerHttpProbe(mux *http.ServeMux) {
-	probe.Init(
+	monitor.InitProbeHttp(mux, "/probe",
 		probe.WithReadinessPolicy(probe.Cached),
 		probe.WithReadinessCacheTTL(5*time.Second),
 		probe.WithReadinessTimeout(5*time.Second),
 		probe.WithReadinessChecker("mongo", func(ctx context.Context) error {
-			return mongocli.Get().Ping(ctx, nil)
+			return a.mongoClient.Ping(ctx, nil)
 		}),
 		probe.WithReadinessChecker("redis", func(ctx context.Context) error {
-			return rediscli.Get().Ping(ctx).Err()
+			return a.redisClient.Ping(ctx).Err()
 		}),
 	)
 
 	probe.SetReady(true)
-	probe.RegisterHTTP(mux, "/healthz", "/readyz")
 }

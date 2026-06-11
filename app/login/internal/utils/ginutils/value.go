@@ -2,7 +2,7 @@ package ginutils
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/godyy/ggs/app/login/internal/base/models"
+	"github.com/godyy/ggs/app/login/internal/models"
 )
 
 // GetValue 获取上下文值

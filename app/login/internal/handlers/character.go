@@ -10,22 +10,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/internal/infra/actors"
 	"github.com/godyy/ggs/app/login/httpproto"
 	"github.com/godyy/ggs/app/login/internal/app"
 	"github.com/godyy/ggs/app/login/internal/base/consts"
-	"github.com/godyy/ggs/app/login/internal/base/db/repo"
 	"github.com/godyy/ggs/app/login/internal/base/errs"
+	"github.com/godyy/ggs/app/login/internal/infra/repo"
 	"github.com/godyy/ggs/app/login/internal/utils/ginutils"
-	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
-	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
-	"github.com/godyy/ggs/internal/base/db/redis/dlock"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/base/models"
-	"github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/utils/ctxutils"
+	"github.com/godyy/ggs/internal/infra/actors"
+	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
+	"github.com/godyy/ggs/internal/models"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
+	authjwt "github.com/godyy/ggskit/base/auth/jwt"
+	"github.com/godyy/ggskit/base/db/redis"
+	"github.com/godyy/ggskit/utils/ctxutils"
 	pkgerrors "github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -174,8 +172,8 @@ func (h *characterHandler) checkServerAvailable(serverID int64) error {
 }
 
 // lockAccountCharacters 分布式锁定账号下的角色.
-func (h *characterHandler) lockAccountCharacters(accountId int64) (*dlock.Lock, error) {
-	lock := rediscli.NewDLock(fmt.Sprintf("account_characters_lock:%d", accountId), "", &dlock.Options{
+func (h *characterHandler) lockAccountCharacters(accountId int64) (*redis.DLock, error) {
+	lock := redis.NewDLock(app.RedisClient(), fmt.Sprintf("account_characters_lock:%d", accountId), "", &redis.DLockOpts{
 		Expiry:     10 * time.Second,
 		RetryDelay: 200 * time.Millisecond,
 	})
@@ -190,7 +188,7 @@ func (h *characterHandler) lockAccountCharacters(accountId int64) (*dlock.Lock, 
 }
 
 // refreshAccountCharactersLock 刷新账号角色分布式锁
-func (h *characterHandler) refreshAccountCharactersLock(lock *dlock.Lock) error {
+func (h *characterHandler) refreshAccountCharactersLock(lock *redis.DLock) error {
 	ctx, cancel := ctxutils.WithTimeout(context.Background(), consts.DefaultTimeout)
 	defer cancel()
 	if err := lock.Refresh(ctx); err != nil {
@@ -250,19 +248,17 @@ func (h *characterHandler) createCharacter(c *gin.Context, req *httpproto.Create
 		AccountID: accountInfo.AccountID,
 		ServerID:  req.ServerID,
 	}
-	if err := repo.Character.CreateCharacter(ctx, character); err != nil {
+	err = repo.Character.CreateCharacter(ctx, character)
+	if err != nil {
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "create character"))
 	}
 
-	// 添加角色的ActorMeta信息
-	characterMeta := actor.NewMeta(
-		gactor.ActorUID{
-			Category: actors.CategoryPlayer.ActorCategory(),
-			ID:       characterID,
-		},
-	)
-	if err := app.ActorMetaDriver().AddActor(characterMeta); err != nil {
-		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "add actor meta"))
+	// 设置角色服务器.
+	if err := app.ActorServerStore().SetActorServer(gactor.ActorUID{
+		Category: actors.CategoryPlayer.ActorCategory(),
+		ID:       characterID,
+	}, req.ServerID); err != nil {
+		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "set actor server"))
 	}
 
 	resp.CharacterID = characterID

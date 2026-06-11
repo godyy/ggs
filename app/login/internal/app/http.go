@@ -7,8 +7,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/godyy/ggs/app/internal/base/consts"
 	"github.com/godyy/ggs/app/login/internal"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 )
 

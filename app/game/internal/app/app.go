@@ -1,21 +1,23 @@
 package app
 
 import (
+	"context"
 	"net/http"
 	"runtime"
 	"time"
 
+	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/base/config"
 	"github.com/godyy/ggs/app/game/internal/base/env"
-	applifecycle "github.com/godyy/ggs/app/internal/base/lifecycle"
-	imongobd "github.com/godyy/ggs/app/internal/infra/mongobd"
-	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/infra/cluster"
-	"github.com/godyy/ggs/internal/infra/mongobd"
-	"github.com/godyy/gutils/flags"
+	imongobd "github.com/godyy/ggs/internal/infra/mongobd"
+	"github.com/godyy/ggskit/base/db/mongo"
+	"github.com/godyy/ggskit/base/db/redis"
+	"github.com/godyy/ggskit/base/flags"
+	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggskit/infra/cluster"
+	"github.com/godyy/ggskit/infra/mongobd"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -24,13 +26,17 @@ type app struct {
 
 	env *env.Env // 环境变量管理器.
 
-	mongobd *imongobd.BD // mongo 后台.
+	redisClient redis.Client  // redis 客户端.
+	mongoClient *mongo.Client // mongo 客户端.
+	mongobd     *imongobd.BD  // mongo 后台.
 
 	cluster *cluster.Service // cluster.
 
-	actorCodec      actor.Codec       // actor编解码
-	actorMetaDriver *actor.MetaDriver // actor Meta驱动
-	actorService    *actor.Service    // actor 服务
+	actorCodec       *actor.Codec         // actor编解码
+	actorRegistry    gactor.ActorRegistry // actor 注册表
+	actorServerStore *actor.ServerStore   // actor 所属服务器存储
+	actorRouter      *actor.Router        // actor 节点路由
+	actorService     *actor.Service       // actor 服务
 
 	httpServer *http.Server // http 服务
 }
@@ -62,19 +68,23 @@ func Start() {
 	applifecycle.BeforeStart()
 
 	// 初始化 redis.
-	if err := rediscli.Init(cfg.DB.Redis); err != nil {
+	redisClient, err := redis.NewClient(cfg.DB.Redis)
+	if err != nil {
 		logger.Get().Fatalf("init redis failed, %v", err)
 	}
+	appInst.redisClient = redisClient
 
 	// 初始化 mongo.
-	if err := mongocli.Init(cfg.DB.Mongo); err != nil {
-		logger.Get().Fatalf("init mongo failed, %v", err)
+	mongoClient, mongoErr := mongo.Connect(cfg.DB.Mongo)
+	if mongoErr != nil {
+		logger.Get().Fatalf("init mongo failed, %v", mongoErr)
 	}
+	appInst.mongoClient = mongoClient
 
 	// 启动mongo后台.
 	mongobd, err := imongobd.New(imongobd.Config{
 		BDConfig: mongobd.BDConfig{
-			Client:         mongocli.Get(),
+			Client:         appInst.mongoClient,
 			Wokers:         runtime.NumCPU(),
 			MaxWorkerOps:   1000,
 			DefExecTimeout: time.Second * 5,
@@ -111,6 +121,17 @@ func Stop() {
 
 	// 停止 mongo 后台.
 	appInst.mongobd.Stop()
+	if appInst.mongoClient != nil {
+		if err := appInst.mongoClient.Disconnect(context.Background()); err != nil {
+			logger.Get().Errorf("disconnect mongo failed, %v", err)
+		}
+	}
+
+	if appInst.redisClient != nil {
+		if err := appInst.redisClient.Close(); err != nil {
+			logger.Get().Errorf("close redis failed, %v", err)
+		}
+	}
 
 	// 停止 cluster.
 	appInst.stopCluster()

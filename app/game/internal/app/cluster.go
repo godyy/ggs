@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/cluster"
-	"github.com/godyy/ggs/internal/utils"
+	"github.com/godyy/ggs/internal/base/nodeutil"
+	"github.com/godyy/ggskit/infra/cluster"
+	"github.com/godyy/ggskit/utils"
 )
 
 // startCluster 启动集群相关.
@@ -21,8 +22,7 @@ func (a *app) startCluster() error {
 	if port == 0 {
 		return errors.New("cluster port not specified")
 	}
-	node := cluster.NewNode(consts.NodeGame, a.config.Cluster.NodeName, fmt.Sprintf("%s:%d", ip, port))
-	node.ServerId = a.env.ServerID()
+	node := selfNode(fmt.Sprintf("%s:%d", ip, port))
 	clusterCfg := &cluster.ServiceConfig{
 		Core:           &a.config.Cluster.Core,
 		Self:           node,
@@ -59,8 +59,23 @@ func (a *app) OnNodeBytes(remoteNodeId string, data []byte) error {
 
 // OnNodeEvents 处理节点变更事件.
 func (a *app) OnNodeEvents(events []cluster.NodeEvent) {
+	if a.actorRouter == nil {
+		return
+	}
+	a.actorRouter.UpdateEvents(events)
 }
 
 // OnNodesSync 处理节点全量同步事件.
 func (a *app) OnNodesSync(nodes []*cluster.Node) {
+	if a.actorRouter == nil {
+		return
+	}
+	allNodes := append([]*cluster.Node{
+		selfNode(""),
+	}, nodes...)
+	a.actorRouter.SetNodes(allNodes, true)
+}
+
+func selfNode(addr string) *cluster.Node {
+	return nodeutil.NewServerNode(consts.NodeGame, Env().ServerID(), addr)
 }

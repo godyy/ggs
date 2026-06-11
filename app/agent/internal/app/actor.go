@@ -1,29 +1,33 @@
 package app
 
 import (
-	"context"
 	"time"
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/base/log"
-	"github.com/godyy/ggs/app/internal/base/consts"
-	"github.com/godyy/ggs/app/internal/infra/actors"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/infra/cluster"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
+	"github.com/godyy/ggs/internal/base/nodeutil"
+	"github.com/godyy/ggs/internal/infra/actors"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggskit/infra/cluster"
+	pkgerrors "github.com/pkg/errors"
 )
 
 func (a *app) startActor() error {
-	// 创建meta数据驱动.
-	a.actorMetaDriver = actor.NewMetaDriver(rediscli.Get())
+	// 创建注册表.
+	var err error
+	a.actorRegistry, err = actor.NewRegistry(a.redisClient)
+	if err != nil {
+		return pkgerrors.WithMessage(err, "new actor registry")
+	}
 
 	// 创建 actor 客户端.
 	clientCfg := &actor.ClientConfig{
 		Core: &gactor.ClientConfig{
-			NodeId:            cluster.MakeNodeID(consts.NodeAgent, a.config.Cluster.NodeName),
+			NodeId:            cluster.MakeNodeID(consts.NodeAgent, nodeutil.MakeServerNodeName(Env().ServerID())),
 			ActorCategory:     actors.CategoryPlayer.ActorCategory(),
 			DefRequestTimeout: time.Second * 10,
 			Handler:           a,
@@ -42,9 +46,9 @@ func (a *app) stopActor() {
 	a.actorClient.Stop()
 }
 
-// GetMetaDriver 获取 Meta 数据驱动.
-func (a *app) GetMetaDriver() gactor.MetaDriver {
-	return a.actorMetaDriver
+// GetActorRegistry 获取 Actor 注册表.
+func (a *app) GetActorRegistry() gactor.ActorRegistry {
+	return a.actorRegistry
 }
 
 // GetNetAgent 获取网络代理.
@@ -58,8 +62,8 @@ func (a *app) GetBytesManager() gactor.BytesManager {
 }
 
 // Send2Node 向集群中 nodeId 指向的节点发送字节数据.
-func (a *app) Send2Node(ctx context.Context, nodeId string, b []byte) error {
-	return a.cluster.Send2Node(ctx, nodeId, b)
+func (a *app) Send2Node(nodeId string, b []byte) error {
+	return a.cluster.Send2Node(nodeId, b)
 }
 
 func (a *app) GetBytes(cap int) []byte {
@@ -75,8 +79,8 @@ func (a *app) HandleResponse(resp gactor.ClientResponse) {
 		return
 	}
 
-	if resp.Err != nil {
-		logger.Get().ErrorFields("handle actor response error", log.FldPlayerId(resp.ID), log.FldError(resp.Err))
+	if resp.ErrCode != gactor.ErrCodeOK {
+		logger.Get().ErrorFields("handle actor response error", log.FldPlayerId(resp.ID), log.FldError(resp.ErrCode))
 		agent.Stop(pbc2s.DisconnectPush_SystemError)
 		return
 	}

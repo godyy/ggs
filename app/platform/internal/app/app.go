@@ -1,19 +1,24 @@
 package app
 
 import (
-	applifecycle "github.com/godyy/ggs/app/internal/base/lifecycle"
+	"context"
+
 	"github.com/godyy/ggs/app/platform/internal/base/config"
-	dbrepo "github.com/godyy/ggs/app/platform/internal/base/db/repo"
-	mongocli "github.com/godyy/ggs/internal/base/db/mongo/cli"
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
-	"github.com/godyy/ggs/internal/base/env"
+	"github.com/godyy/ggs/app/platform/internal/infra/repo"
+	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/gutils/flags"
+	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
+	"github.com/godyy/ggskit/base/db/mongo"
+	"github.com/godyy/ggskit/base/db/redis"
+	"github.com/godyy/ggskit/base/env"
+	"github.com/godyy/ggskit/base/flags"
 	pkgerrors "github.com/pkg/errors"
 )
 
 var (
-	cfg *config.Config // 配置
+	cfg         *config.Config // 配置
+	redisClient redis.Client   // redis 客户端
+	mongoClient *mongo.Client  // mongo 客户端
 )
 
 // Start 启动.
@@ -36,17 +41,24 @@ func Start() {
 	applifecycle.BeforeStart()
 
 	// 初始化 redis.
-	if err := rediscli.Init(cfg.DB.Redis); err != nil {
+	redisCli, err := redis.NewClient(cfg.DB.Redis)
+	if err != nil {
 		logger.Get().Fatalf("init redis failed, %v", err)
 	}
+	redisClient = redisCli
 
 	// 初始化 mongo.
-	if err := mongocli.Init(cfg.DB.Mongo); err != nil {
+	cli, err := mongo.Connect(cfg.DB.Mongo)
+	if err != nil {
 		logger.Get().Fatalf("init mongo failed, %v", err)
 	}
+	mongoClient = cli
+	if err := ensureMongoIndexes(); err != nil {
+		logger.Get().Fatalf("ensure mongo indexes failed, %v", err)
+	}
 
-	// 初始化 db dbrepo.
-	dbrepo.Init()
+	// 初始化 repo.
+	repo.Init(mongoClient)
 
 	// 启动 Actor
 	if err := startActor(); err != nil {
@@ -60,6 +72,16 @@ func Start() {
 // Stop 停机.
 func Stop() {
 	stopHttp()
+	if mongoClient != nil {
+		if err := mongoClient.Disconnect(context.Background()); err != nil {
+			logger.Get().Errorf("disconnect mongo failed, %v", err)
+		}
+	}
+	if redisClient != nil {
+		if err := redisClient.Close(); err != nil {
+			logger.Get().Errorf("close redis failed, %v", err)
+		}
+	}
 }
 
 // Config 返回配置.
@@ -70,4 +92,10 @@ func Config() *config.Config {
 // Env 返回环境变量.
 func Env() env.Env {
 	return env.Get()
+}
+
+// ensureMongoIndexes 确保 mongo 索引存在.
+func ensureMongoIndexes() error {
+	return mongomodels.EnsureIndexes(context.Background(), mongoClient, mongomodels.DBPlatform,
+		mongomodels.CollAccount, mongomodels.CollCharacter, mongomodels.CollServer, mongomodels.CollIDGenerator)
 }

@@ -1,7 +1,7 @@
 package errs
 
 import (
-	"github.com/godyy/ggs/internal/base/errs"
+	"github.com/godyy/ggskit/base/errs"
 )
 
 // WithErrCodeMsg 创建包含错误码及错误信息的 Error

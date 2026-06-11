@@ -3,9 +3,9 @@ package handlers
 import (
 	"github.com/godyy/gactor"
 	_ "github.com/godyy/ggs/app/game/internal/systems"
-	"github.com/godyy/ggs/internal/infra/actor"
-	pbc2s "github.com/godyy/ggs/internal/proto/pb/c2s"
-	pbs2s "github.com/godyy/ggs/internal/proto/pb/s2s"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	"github.com/godyy/ggskit/infra/actor"
 )
 
 // Handler 消息处理器基础实现.

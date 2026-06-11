@@ -7,32 +7,53 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/chzyer/readline"
-	prototypes "github.com/godyy/ggs/internal/proto/types"
+	protoreg "github.com/godyy/ggs/internal/protocol/registry"
 )
 
+type cmdExecFunc func(c *cmd, cli *Client, args string) bool
+
+type cmdExec func(cli *Client, args string) bool
+
 type cmd struct {
-	name          string                                      // 命令名称
-	desc          string                                      // 描述
-	usage         string                                      // 用法
-	autoCompleter *readline.PrefixCompleter                   // 自动补全
-	exec          func(c *cmd, cli *Client, args string) bool // 执行逻辑
+	name  string      // 命令名称
+	desc  string      // 描述
+	usage string      // 用法
+	exec  cmdExecFunc // 执行逻辑
+}
+
+func (c *cmd) execute(cli *Client, args string) bool {
+	return c.exec(c, cli, args)
 }
 
 var (
-	cmdList []*cmd
-	cmdMap  map[string]*cmd
+	cmdList    []*cmd
+	cmdExecMap map[string]cmdExec
+	cmdNameAll []string
 )
+
+const cmdNameSep = "|"
 
 func registerCmd(c ...*cmd) {
 	for _, c := range c {
-		if _, ok := cmdMap[c.name]; ok {
-			panic("cmd " + c.name + " already registered!")
+		names := strings.Split(c.name, cmdNameSep)
+		for _, name := range names {
+			if _, ok := cmdExecMap[name]; ok {
+				panic("cmd " + name + " already registered!")
+			}
+			cmdExecMap[name] = c.execute
 		}
 
 		cmdList = append(cmdList, c)
-		cmdMap[c.name] = c
+		cmdNameAll = append(cmdNameAll, names...)
 	}
+}
+
+func getCmdNameAll() []string {
+	return cmdNameAll
+}
+
+func getCmdExec(name string) func(cli *Client, args string) bool {
+	return cmdExecMap[name]
 }
 
 func cmdAllUsage() {
@@ -47,21 +68,19 @@ func cmdUsage(c *cmd) {
 }
 
 func init() {
-	cmdMap = make(map[string]*cmd)
+	cmdExecMap = make(map[string]cmdExec)
 	registerCmd(
 		&cmd{
-			name:          "help",
-			desc:          "print commands",
-			autoCompleter: readline.PcItem("help"),
+			name: "help|h|?",
+			desc: "print commands",
 			exec: func(_ *cmd, c *Client, args string) bool {
 				cmdAllUsage()
 				return false
 			},
 		},
 		&cmd{
-			name:          "exit",
-			desc:          "exit client",
-			autoCompleter: readline.PcItem("exit"),
+			name: "exit|quit|q",
+			desc: "exit client",
 			exec: func(_ *cmd, c *Client, args string) bool {
 				return true
 			},
@@ -70,8 +89,7 @@ func init() {
 			name: "sendreq",
 			desc: "send request message to server",
 			// usage:         "sendreq msgname[Req]" + cmdSendReqArgsSp + "msgjsonbody",
-			usage:         `sendreq msgname {"key1":value1[,"key2":value2,...]}`,
-			autoCompleter: readline.PcItem("sendreq"),
+			usage: `sendreq msgname {"key1":value1[,"key2":value2,...]}`,
 			exec: func(c *cmd, cli *Client, args string) bool {
 				// parts := strings.Split(args, cmdSendReqArgsSp)
 				// if len(parts) < 2 {
@@ -92,7 +110,7 @@ func init() {
 					msg = msg + "Req"
 				}
 
-				req, _, err := prototypes.C2S.CreateByName(msg)
+				req, _, err := protoreg.C2S.CreateByName(msg)
 				if err != nil {
 					log.Println(err)
 					return false

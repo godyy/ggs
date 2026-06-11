@@ -3,10 +3,10 @@ package systems
 import (
 	"fmt"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
-	"github.com/godyy/ggs/app/internal/infra/actors"
-	"github.com/godyy/ggs/app/internal/infra/actors/lifecycle"
-	"github.com/godyy/ggs/app/internal/infra/actors/models/player"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actors/lifecycle"
+	"github.com/godyy/ggs/internal/infra/actors/models/player"
 )
 
 type playerModule struct{}

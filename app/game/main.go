@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/godyy/ggs/app/game/internal/app"
-	"github.com/godyy/ggs/internal/utils"
+	"github.com/godyy/ggskit/utils"
 
 	_ "github.com/godyy/ggs/app/game/internal"
 )

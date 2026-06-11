@@ -3,15 +3,15 @@ package router
 import (
 	"testing"
 
-	"github.com/godyy/ggs/app/internal/base/consts"
-	"github.com/godyy/ggs/internal/infra/cluster"
-	"github.com/godyy/ggs/internal/infra/router"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggskit/infra/cluster"
+	"github.com/godyy/ggskit/infra/noderouter"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNodeSelector_SetNodes(t *testing.T) {
 	// 准备基础 Selector (使用真实的 RendezvousSelector)
-	baseSelector := router.NewRendezvousSelector()
+	baseSelector := noderouter.NewRendezvousSelector()
 	selector := NewNodeSelector(baseSelector)
 
 	// 准备测试节点数据
@@ -39,16 +39,10 @@ func TestNodeSelector_SetNodes(t *testing.T) {
 	candidates = selector.PickGame(102, 12345, 10)
 	assert.Equal(t, 1, len(candidates))
 	assert.Equal(t, cluster.MakeNodeID(consts.NodeGame, "game3"), candidates[0])
-
-	// 验证非 Game 节点 (gate)
-	// PickByCategory 应该能选到 gate1
-	candidates = selector.PickByCategory("gate", []byte("key"), 10)
-	assert.Equal(t, 1, len(candidates))
-	assert.Equal(t, cluster.MakeNodeID("gate", "gate1"), candidates[0])
 }
 
 func TestNodeSelector_PickGame_FaultTolerance(t *testing.T) {
-	baseSelector := router.NewRendezvousSelector()
+	baseSelector := noderouter.NewRendezvousSelector()
 	selector := NewNodeSelector(baseSelector)
 
 	// 模拟 3 个副本
@@ -70,4 +64,23 @@ func TestNodeSelector_PickGame_FaultTolerance(t *testing.T) {
 func TestMakeGroup(t *testing.T) {
 	assert.Equal(t, consts.NodeGame+"/100", makeGroup(consts.NodeGame, 100))
 	assert.Equal(t, "gate", makeGroup("gate", 100))
+}
+
+func TestNodeSelector_UpdateEventsIgnoreNonGame(t *testing.T) {
+	baseSelector := noderouter.NewRendezvousSelector()
+	selector := NewNodeSelector(baseSelector)
+
+	selector.UpdateEvents([]cluster.NodeEvent{
+		{
+			Type: cluster.NodeEventAdd,
+			Node: &cluster.Node{Category: "gate", Name: "gate1", Addr: "addr1"},
+		},
+		{
+			Type: cluster.NodeEventAdd,
+			Node: &cluster.Node{Category: consts.NodeGame, Name: "game1", ServerId: 101, Addr: "addr2"},
+		},
+	})
+
+	candidates := selector.PickGame(101, 12345, 10)
+	assert.Equal(t, []string{cluster.MakeNodeID(consts.NodeGame, "game1")}, candidates)
 }

@@ -1,56 +1,32 @@
 package logger
 
 import (
-	"github.com/godyy/glog"
+	"sync"
+
+	"github.com/godyy/ggskit/base/logger"
 )
 
-// Config 日志配置
-type Config struct {
-	// Level 日志等级
-	Level glog.Level
+type Logger = logger.Logger
 
-	// Caller 是否记录调用者
-	Caller bool
+type Config = logger.Config
 
-	// CallerSkip 调用者跳过层数
-	CallerSkip int
+// _logger 日志实例.
+var _logger Logger
 
-	// Development 是否开发模式
-	Development bool
+// once 日志初始化一次.
+var once sync.Once
 
-	// EnableStd 是否启用标准输出
-	EnableStd bool
-
-	// FileParams 日志文件输出相关 Core 配置参数
-	FileParams *glog.FileCoreParams
-}
-
-type Logger = glog.Logger
-
-// logger 日志实例.
-var logger glog.Logger
-
-// Init 初始化日志.
+// Init 初始化
 func Init(cfg *Config) {
-	glogCfg := &glog.Config{
-		Level:        cfg.Level,
-		EnableCaller: cfg.Caller,
-		CallerSkip:   cfg.CallerSkip,
-		Development:  cfg.Development,
-	}
-	if cfg.EnableStd {
-		glogCfg.Cores = append(glogCfg.Cores, glog.NewStdCoreConfig())
-	}
-	if cfg.FileParams != nil {
-		glogCfg.Cores = append(glogCfg.Cores, glog.NewFileCoreConfig(cfg.FileParams))
-	}
-	logger = glog.NewLogger(glogCfg)
-	invokeAfterInitFuncs()
+	once.Do(func() {
+		_logger = logger.CreateLogger(cfg)
+		invokeAfterInitFuncs()
+	})
 }
 
 // Get 获取日志实例.
-func Get() glog.Logger {
-	return logger
+func Get() Logger {
+	return _logger
 }
 
 // AfterInitFunc 日志初始化后回调函数.
@@ -67,6 +43,6 @@ func RegisterAfterInitFunc(f AfterInitFunc) {
 // invokeAfterInitFuncs 日志初始化后回调.
 func invokeAfterInitFuncs() {
 	for _, f := range afterInitFuncs {
-		f(logger)
+		f(_logger)
 	}
 }

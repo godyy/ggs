@@ -1,7 +1,7 @@
-.PHONY: all protos secret_key
+.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform
 
 protos:
-	cd internal/proto && make protos
+	cd internal/protocol && make protos
 
 secret_key: secret_key_alg := Ed25519
 secret_key:
@@ -21,11 +21,6 @@ gen_user_token:
 			\"uid\": \"yy01\" \
 		}"
 		
-migrate: mongo_uri:=mongodb://localhost:27017
-migrate:
-	go run internal/tools/migrate/main.go \
-		-mongo-uri "$(mongo_uri)"
-
 run_client: login_url_root := http://localhost:8080/api/v1
 run_client: agent_addr := localhost:22001
 run_client: uid := yy01
@@ -38,3 +33,27 @@ run_client:
         -mode client \
         -client-uid "$(uid)" \
         -client-server-id "$(server_id)"
+
+run_game: config_path := ./app/game/configs/dev.toml
+run_game: server_id := 1
+run_game:
+	go run github.com/godyy/ggs/app/game \
+		-config-path "$(config_path)" \
+		-env-server-id "$(server_id)"
+
+run_agent: config_path := ./app/agent/configs/dev.toml
+run_agent: server_id := 1
+run_agent:
+	go run github.com/godyy/ggs/app/agent \
+		-config-path "$(config_path)" \
+		-env-server-id "$(server_id)"
+
+run_login: config_path := ./app/login/configs/dev.toml
+run_login:
+	go run github.com/godyy/ggs/app/login \
+		-config-path "$(config_path)"
+
+run_platform: config_path := ./app/platform/configs/dev.toml
+run_platform:
+	go run github.com/godyy/ggs/app/platform \
+		-config-path "$(config_path)"

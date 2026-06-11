@@ -1,19 +1,33 @@
 package app
 
 import (
-	rediscli "github.com/godyy/ggs/internal/base/db/redis/cli"
-	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/gactor"
+	"github.com/godyy/ggskit/infra/actor"
+	pkgerrors "github.com/pkg/errors"
 )
 
 var (
-	actorMetaDriver *actor.MetaDriver
+	actorRegistry    gactor.ActorRegistry
+	actorServerStore *actor.ServerStore
 )
 
 func startActor() error {
-	actorMetaDriver = actor.NewMetaDriver(rediscli.Get())
+	var err error
+	actorRegistry, err = actor.NewRegistry(redisClient)
+	if err != nil {
+		return pkgerrors.WithMessage(err, "new actor registry")
+	}
+	actorServerStore, err = actor.NewServerStore(redisClient)
+	if err != nil {
+		return pkgerrors.WithMessage(err, "new actor server store")
+	}
 	return nil
 }
 
-func ActorMetaDriver() *actor.MetaDriver {
-	return actorMetaDriver
+func ActorRegistry() gactor.ActorRegistry {
+	return actorRegistry
+}
+
+func ActorServerStore() *actor.ServerStore {
+	return actorServerStore
 }

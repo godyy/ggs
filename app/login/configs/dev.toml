@@ -2,10 +2,10 @@
 Port = 8080
 
 # 鉴权密钥文件路径
-AuthKeyPath = "../../configs/secret_key/auth_pub.pem"
+AuthKeyPath = "./configs/secret_key/auth_pub.pem"
 
 # 令牌签名密钥文件路径
-TokenSignKeyPath = "../../configs/secret_key/auth_priv.pem"
+SignKeyPath = "./configs/secret_key/auth_priv.pem"
 
 # 数据库配置
 [DB]

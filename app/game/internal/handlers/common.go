@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/internal/base/consts"
-	"github.com/godyy/ggs/app/internal/infra/actors"
-	"github.com/godyy/ggs/internal/infra/actor"
-	pbs2s "github.com/godyy/ggs/internal/proto/pb/s2s"
+	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggs/internal/infra/actors"
+	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	"github.com/godyy/ggskit/infra/actor"
 )
 
 func OnActorSaveResult(ctx *gactor.Context, result *pbs2s.ActorSaveResult) {

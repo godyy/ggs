@@ -11,16 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/godyy/ggs/app/login/internal/app"
 	"github.com/godyy/ggs/app/login/internal/base/consts"
-	"github.com/godyy/ggs/app/login/internal/base/db/repo"
 	"github.com/godyy/ggs/app/login/internal/base/errs"
-	"github.com/godyy/ggs/app/login/internal/base/models"
+	"github.com/godyy/ggs/app/login/internal/infra/repo"
+	"github.com/godyy/ggs/app/login/internal/models"
 	"github.com/godyy/ggs/app/login/internal/utils/ginutils"
-	authjwt "github.com/godyy/ggs/internal/base/auth/jwt"
-	mongomodels "github.com/godyy/ggs/internal/base/db/mongo/models"
 	"github.com/godyy/ggs/internal/base/logger"
-	bmodels "github.com/godyy/ggs/internal/base/models"
-	"github.com/godyy/ggs/internal/utils/ctxutils"
+	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
+	sharedmodels "github.com/godyy/ggs/internal/models"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
+	authjwt "github.com/godyy/ggskit/base/auth/jwt"
+	"github.com/godyy/ggskit/utils/ctxutils"
 	pkgerrors "github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -90,7 +90,7 @@ func Auth(c *gin.Context) {
 }
 
 // parseToken 解析token并返回用户信息
-func parseToken(token string) (*bmodels.UserInfo, error) {
+func parseToken(token string) (*sharedmodels.UserInfo, error) {
 	// 解析token
 	claims, err := authjwt.ParseToken(getAuthSecret(), token)
 	if err != nil {
@@ -109,7 +109,7 @@ func parseToken(token string) (*bmodels.UserInfo, error) {
 	}
 
 	// 解析subject
-	userInfo := &bmodels.UserInfo{}
+	userInfo := &sharedmodels.UserInfo{}
 	if err := json.Unmarshal([]byte(sub), userInfo); err != nil {
 		return nil, pkgerrors.WithMessage(err, "unmarshal subject")
 	}
@@ -118,7 +118,7 @@ func parseToken(token string) (*bmodels.UserInfo, error) {
 }
 
 // getOrCreateAccount 根据用户信息获取或创建账号
-func getOrCreateAccount(ctx context.Context, userInfo *bmodels.UserInfo) (*mongomodels.Account, error) {
+func getOrCreateAccount(ctx context.Context, userInfo *sharedmodels.UserInfo) (*mongomodels.Account, error) {
 	// 获取账号.
 	account, err := repo.Account.GetAccountByUID(ctx, userInfo.UID)
 	if err == nil {

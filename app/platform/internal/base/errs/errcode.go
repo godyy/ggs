@@ -3,7 +3,7 @@ package errs
 import (
 	"fmt"
 
-	"github.com/godyy/ggs/internal/base/errs"
+	"github.com/godyy/ggskit/base/errs"
 )
 
 // ErrCode 错误码

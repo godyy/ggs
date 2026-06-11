@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/godyy/ggs/internal/base/errs"
+	"github.com/godyy/ggskit/base/errs"
 )
 
 // commonResp 通用响应
