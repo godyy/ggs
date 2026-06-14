@@ -11,6 +11,7 @@ import (
 	"github.com/godyy/ggs/app/game/internal/base/env"
 	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/gdconf"
 	imongobd "github.com/godyy/ggs/internal/infra/mongobd"
 	"github.com/godyy/ggskit/base/db/mongo"
 	"github.com/godyy/ggskit/base/db/redis"
@@ -19,6 +20,8 @@ import (
 	"github.com/godyy/ggskit/infra/cluster"
 	"github.com/godyy/ggskit/infra/mongobd"
 	pkgerrors "github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
 )
 
 type app struct {
@@ -97,6 +100,13 @@ func Start() {
 		logger.Get().Fatalf("start mongobd failed, %v", err)
 	}
 	appInst.mongobd = mongobd
+
+	// 配置表加载.
+	gdconfDB := mongoClient.Database("gdconf", options.Database().SetReadConcern(readconcern.Majority()))
+	if err := gdconf.Load(gdconfDB); err != nil {
+		logger.Get().Fatalf("load gdconf failed, %v", err)
+	}
+	logger.Get().Info("load gdconf success")
 
 	// 启动 Actor 服务.
 	if err := appInst.startActor(); err != nil {

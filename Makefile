@@ -1,4 +1,4 @@
-.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform
+.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gen_gdconf
 
 protos:
 	cd internal/protocol && make protos
@@ -20,6 +20,16 @@ gen_user_token:
 		-user-info "{ \
 			\"uid\": \"yy01\" \
 		}"
+
+gen_gdconf: excel_path := ../ggs_excels
+gen_gdconf: mongo_uri := mongodb://localhost:27017
+gen_gdconf: mongo_db := gdconf
+gen_gdconf:
+	go run internal/tools/gen_gdconf/main.go \
+		-excel-path "$(excel_path)" \
+		-code-path "./internal/gdconf" \
+		-mongo-db "$(mongo_db)" \
+		-mongo-uri "$(mongo_uri)"
 		
 run_client: login_url_root := http://localhost:8080/api/v1
 run_client: agent_addr := localhost:22001
