@@ -21,6 +21,7 @@ func initC2SHandler() {
 	registerC2SFunc(pbc2s.PID_PLoginCharacterReq, false, handlers.WrapC2SFunc(handleLoginCharacter))
 	registerC2SFunc(pbc2s.PID_PHeartbeatReq, true, handlers.WrapC2SFunc(handleHeartbeat))
 	registerC2SFunc(pbc2s.PID_PModifyNameReq, true, handlers.WrapC2SFunc(handleModifyName))
+	registerC2SFunc(pbc2s.PID_PUseItemReq, true, handlers.WrapC2SFunc(handleUseItem))
 }
 
 func initS2SHandler() {

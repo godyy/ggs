@@ -7,6 +7,10 @@ option go_package = "github.com/godyy/ggs/internal/protocol/pb/c2s";
 
 // PID 协议ID.
 // 如果协议消息结构来common, 可在其注释中添加 /from_common 标识.
+//
+// 分段约定：
+//   - [0, 99]  基础/通用协议
+//   - [100, 199] 道具系统
 enum PID {
     PUnknown = 0;
     PError = 1; // 通用错误. /from_common.
@@ -19,4 +23,8 @@ enum PID {
     PHeartbeatResp = 8; // 心跳响应.
     PModifyNameReq = 9; // 修改名称请求.
     PModifyNameResp = 10; // 修改名称响应.
+
+    // 道具系统 [100, 199]
+    PUseItemReq = 100; // 使用道具请求.
+    PUseItemResp = 101; // 使用道具响应.
 }

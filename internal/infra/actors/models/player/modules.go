@@ -14,4 +14,5 @@ var moduleRegistry = actor.NewModuleRegistry()
 func init() {
 	// 注册模块
 	actor.RegisterModule[*BaseInfo](moduleRegistry)
+	actor.RegisterModule[*Items](moduleRegistry)
 }

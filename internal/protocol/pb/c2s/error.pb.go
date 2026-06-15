@@ -22,6 +22,10 @@ const (
 )
 
 // 错误码.
+//
+// 分段约定：
+//   - [0, 999]   基础/通用错误
+//   - [1000, 1999] 道具系统
 type ErrCode int32
 
 const (
@@ -30,16 +34,19 @@ const (
 	ErrCode_ECInvalidPacket ErrCode = 2 // 无效的数据包.
 	ErrCode_ECInvalidToken  ErrCode = 3 // 无效的令牌.
 	ErrCode_ECLoginTimeout  ErrCode = 4 // 登陆超时.
+	// 道具系统 [1000, 1999]
+	ErrCode_ECItemNotEnough ErrCode = 1000 // 道具数量不足.
 )
 
 // Enum value maps for ErrCode.
 var (
 	ErrCode_name = map[int32]string{
-		0: "ECSuccess",
-		1: "ECInternalError",
-		2: "ECInvalidPacket",
-		3: "ECInvalidToken",
-		4: "ECLoginTimeout",
+		0:    "ECSuccess",
+		1:    "ECInternalError",
+		2:    "ECInvalidPacket",
+		3:    "ECInvalidToken",
+		4:    "ECLoginTimeout",
+		1000: "ECItemNotEnough",
 	}
 	ErrCode_value = map[string]int32{
 		"ECSuccess":       0,
@@ -47,6 +54,7 @@ var (
 		"ECInvalidPacket": 2,
 		"ECInvalidToken":  3,
 		"ECLoginTimeout":  4,
+		"ECItemNotEnough": 1000,
 	}
 )
 
@@ -81,13 +89,14 @@ var File_c2s_error_proto protoreflect.FileDescriptor
 
 const file_c2s_error_proto_rawDesc = "" +
 	"\n" +
-	"\x0fc2s/error.proto\x12\x03c2s*j\n" +
+	"\x0fc2s/error.proto\x12\x03c2s*\x80\x01\n" +
 	"\aErrCode\x12\r\n" +
 	"\tECSuccess\x10\x00\x12\x13\n" +
 	"\x0fECInternalError\x10\x01\x12\x13\n" +
 	"\x0fECInvalidPacket\x10\x02\x12\x12\n" +
 	"\x0eECInvalidToken\x10\x03\x12\x12\n" +
-	"\x0eECLoginTimeout\x10\x04B/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
+	"\x0eECLoginTimeout\x10\x04\x12\x14\n" +
+	"\x0fECItemNotEnough\x10\xe8\aB/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
 
 var (
 	file_c2s_error_proto_rawDescOnce sync.Once

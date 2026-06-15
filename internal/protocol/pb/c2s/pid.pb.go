@@ -23,6 +23,10 @@ const (
 
 // PID 协议ID.
 // 如果协议消息结构来common, 可在其注释中添加 /from_common 标识.
+//
+// 分段约定：
+//   - [0, 99]  基础/通用协议
+//   - [100, 199] 道具系统
 type PID int32
 
 const (
@@ -37,22 +41,27 @@ const (
 	PID_PHeartbeatResp      PID = 8  // 心跳响应.
 	PID_PModifyNameReq      PID = 9  // 修改名称请求.
 	PID_PModifyNameResp     PID = 10 // 修改名称响应.
+	// 道具系统 [100, 199]
+	PID_PUseItemReq  PID = 100 // 使用道具请求.
+	PID_PUseItemResp PID = 101 // 使用道具响应.
 )
 
 // Enum value maps for PID.
 var (
 	PID_name = map[int32]string{
-		0:  "PUnknown",
-		1:  "PError",
-		2:  "PLoginReq",
-		3:  "PLoginResp",
-		4:  "PLoginCharacterReq",
-		5:  "PLoginCharacterResp",
-		6:  "PDisconnectPush",
-		7:  "PHeartbeatReq",
-		8:  "PHeartbeatResp",
-		9:  "PModifyNameReq",
-		10: "PModifyNameResp",
+		0:   "PUnknown",
+		1:   "PError",
+		2:   "PLoginReq",
+		3:   "PLoginResp",
+		4:   "PLoginCharacterReq",
+		5:   "PLoginCharacterResp",
+		6:   "PDisconnectPush",
+		7:   "PHeartbeatReq",
+		8:   "PHeartbeatResp",
+		9:   "PModifyNameReq",
+		10:  "PModifyNameResp",
+		100: "PUseItemReq",
+		101: "PUseItemResp",
 	}
 	PID_value = map[string]int32{
 		"PUnknown":            0,
@@ -66,6 +75,8 @@ var (
 		"PHeartbeatResp":      8,
 		"PModifyNameReq":      9,
 		"PModifyNameResp":     10,
+		"PUseItemReq":         100,
+		"PUseItemResp":        101,
 	}
 )
 
@@ -100,7 +111,7 @@ var File_c2s_pid_proto protoreflect.FileDescriptor
 
 const file_c2s_pid_proto_rawDesc = "" +
 	"\n" +
-	"\rc2s/pid.proto\x12\x03c2s*\xd4\x01\n" +
+	"\rc2s/pid.proto\x12\x03c2s*\xf7\x01\n" +
 	"\x03PID\x12\f\n" +
 	"\bPUnknown\x10\x00\x12\n" +
 	"\n" +
@@ -115,7 +126,9 @@ const file_c2s_pid_proto_rawDesc = "" +
 	"\x0ePHeartbeatResp\x10\b\x12\x12\n" +
 	"\x0ePModifyNameReq\x10\t\x12\x13\n" +
 	"\x0fPModifyNameResp\x10\n" +
-	"B/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
+	"\x12\x0f\n" +
+	"\vPUseItemReq\x10d\x12\x10\n" +
+	"\fPUseItemResp\x10eB/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
 
 var (
 	file_c2s_pid_proto_rawDescOnce sync.Once

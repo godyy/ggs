@@ -19,4 +19,6 @@ func init() {
 	C2S.register(c2s.PID_PHeartbeatResp, &c2s.HeartbeatResp{})
 	C2S.register(c2s.PID_PModifyNameReq, &c2s.ModifyNameReq{})
 	C2S.register(c2s.PID_PModifyNameResp, &c2s.ModifyNameResp{})
+	C2S.register(c2s.PID_PUseItemReq, &c2s.UseItemReq{})
+	C2S.register(c2s.PID_PUseItemResp, &c2s.UseItemResp{})
 }
