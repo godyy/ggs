@@ -25,11 +25,15 @@ gen_gdconf: excel_path := ../ggs_excels
 gen_gdconf: mongo_uri := mongodb://localhost:27017
 gen_gdconf: mongo_db := gdconf
 gen_gdconf:
+	# 删除internal/gdconf下除了*_ext.go和gdconf.go之外的golang代码文件
+	find ./internal/gdconf -name "*.go" ! -name "*_ext.go" ! -name "gdconf.go" -delete
+
 	go run internal/tools/gen_gdconf/main.go \
 		-excel-path "$(excel_path)" \
 		-code-path "./internal/gdconf" \
 		-mongo-db "$(mongo_db)" \
 		-mongo-uri "$(mongo_uri)"
+	goimports -w ./internal/gdconf
 		
 run_client: login_url_root := http://localhost:8080/api/v1
 run_client: agent_addr := localhost:22001

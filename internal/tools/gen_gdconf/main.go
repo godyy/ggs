@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 
@@ -47,6 +48,9 @@ func main() {
 		log.Fatalf("connect mongo at %s failed: %v", *mongoURI, err)
 	}
 	mgoDB := mongoCli.Database(*mongoDB)
+	if err := mgoDB.Drop(context.Background()); err != nil {
+		log.Fatalf("drop mongo db %s failed: %v", *mongoDB, err)
+	}
 
 	parser, err := parse.Parse(*excelPath, &parse.Options{Tags: []gexcels.Tag{tag}})
 	if err != nil {

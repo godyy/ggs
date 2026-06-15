@@ -4,32 +4,83 @@
 package gdconf
 
 import (
+	"errors"
 	"fmt"
+	"slices"
+	"sort"
 	"sync/atomic"
+
+	pkgerrors "github.com/pkg/errors"
 )
 
 // Load 加载所有配置表
 func Load(db *MongoDB) error {
-	for _, f := range loadFuncs {
-		if err := f(db); err != nil {
+	if db == nil {
+		return errors.New("db is nil")
+	}
+
+	for _, info := range loadFuncs {
+		if err := runLoadFunc(info, db); err != nil {
 			return err
 		}
 	}
+
+	for _, info := range afterLoadFuncs {
+		if err := runAfterLoadFunc(info); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 // LoadTable 加载指定配置表
-func LoadTable(db *MongoDB, tableName string) error {
-	f, ok := loadFuncMap[tableName]
-	if !ok {
-		return fmt.Errorf("table[%s] load func not registered", tableName)
+func LoadTable(db *MongoDB, tableName ...string) error {
+	if db == nil {
+		return errors.New("db is nil")
 	}
-	return f(db)
+	if len(tableName) == 0 {
+		return errors.New("table name is empty")
+	}
+
+	loadFuncs := make([]*loadFuncInfo, 0, len(tableName))
+	afterLoadFuncs := make([]*afterLoadFuncInfo, 0, len(tableName))
+	for _, name := range tableName {
+		loadFunc, ok := loadFuncMap[name]
+		if !ok {
+			return fmt.Errorf("table[%s] load func not registered", name)
+		}
+		loadFuncs = append(loadFuncs, loadFunc)
+
+		afterLoadFunc, ok := afterLoadFuncMap[name]
+		if ok {
+			afterLoadFuncs = append(afterLoadFuncs, afterLoadFunc)
+		}
+	}
+
+	for _, loadFunc := range loadFuncs {
+		if err := runLoadFunc(loadFunc, db); err != nil {
+			return err
+		}
+	}
+
+	if len(afterLoadFuncs) > 0 {
+		sort.Slice(afterLoadFuncs, func(i, j int) bool {
+			return afterLoadFuncs[i].priority < afterLoadFuncs[j].priority
+		})
+		for _, afterLoadFunc := range afterLoadFuncs {
+			if err := runAfterLoadFunc(afterLoadFunc); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 var (
 	apGlobal  atomic.Pointer[global]  // 全局配置表
-	apTabItem atomic.Pointer[tabItem] // 道具
+	apTblItem atomic.Pointer[tblItem] // 道具
 )
 
 // Global 全局配置表
@@ -37,34 +88,52 @@ func Global() *global {
 	return apGlobal.Load()
 }
 
-// TabItem 道具
-func TabItem() *tabItem {
-	return apTabItem.Load()
+// TblItem 道具
+func TblItem() *tblItem {
+	return apTblItem.Load()
 }
 
 // loadFunc 配置表加载函数
 type loadFunc func(*MongoDB) error
 
+// loadFuncInfo 配置表加载函数信息
+type loadFuncInfo struct {
+	tableName string   // 配置表名称
+	f         loadFunc // 配置表加载函数
+}
+
 // loadFuncs 配置表加载函数列表
-var loadFuncs []loadFunc
+var loadFuncs []*loadFuncInfo
 
 // loadFuncMap 配置表加载函数映射
-var loadFuncMap map[string]loadFunc
+var loadFuncMap map[string]*loadFuncInfo
 
 // registerLoadFunc 注册配置表加载函数
 func registerLoadFunc(tableName string, f loadFunc) {
 	if _, ok := loadFuncMap[tableName]; ok {
 		panic(fmt.Errorf("table[%s] load func already registered", tableName))
 	}
-	loadFuncMap[tableName] = f
-	loadFuncs = append(loadFuncs, f)
+	info := &loadFuncInfo{
+		tableName: tableName,
+		f:         f,
+	}
+	loadFuncMap[tableName] = info
+	loadFuncs = append(loadFuncs, info)
+}
+
+// runLoadFunc 执行配置表加载函数
+func runLoadFunc(info *loadFuncInfo, db *MongoDB) error {
+	if err := info.f(db); err != nil {
+		return pkgerrors.WithMessagef(err, "table[%s] load", info.tableName)
+	}
+	return nil
 }
 
 // registerAllLoadFuncs 注册所有配置表加载函数
 func registerAllLoadFuncs() {
-	loadFuncs = make([]loadFunc, 0, 2)
-	loadFuncMap = make(map[string]loadFunc, 2)
-	registerLoadFunc("Global", func(db *MongoDB) error {
+	loadFuncs = make([]*loadFuncInfo, 0, 2)
+	loadFuncMap = make(map[string]*loadFuncInfo, 2)
+	registerLoadFunc(TblNameGlobal, func(db *MongoDB) error {
 		t := newGlobal()
 		if err := t.load(db); err != nil {
 			return err
@@ -72,16 +141,65 @@ func registerAllLoadFuncs() {
 		apGlobal.Store(t)
 		return nil
 	})
-	registerLoadFunc("Item", func(db *MongoDB) error {
-		t := newTabItem()
+	registerLoadFunc(TblNameItem, func(db *MongoDB) error {
+		t := newTblItem()
 		if err := t.load(db); err != nil {
 			return err
 		}
-		apTabItem.Store(t)
+		apTblItem.Store(t)
 		return nil
 	})
 }
 
 func init() {
 	registerAllLoadFuncs()
+}
+
+// afterLoadFunc 加载后处理函数
+type afterLoadFunc func() error
+
+// afterLoadFuncInfo 加载后处理函数信息
+type afterLoadFuncInfo struct {
+	tableName string        // 配置表名称
+	f         afterLoadFunc // 加载后处理函数
+	priority  int           // 优先级，数值越小越先执行
+}
+
+// afterLoadFuncs 加载后处理函数列表
+var afterLoadFuncs []*afterLoadFuncInfo
+
+// afterLoadFuncMap 加载后处理函数映射
+var afterLoadFuncMap map[string]*afterLoadFuncInfo
+
+// registerAfterLoadFunc 注册加载后处理函数
+func registerAfterLoadFunc(tableName string, f afterLoadFunc, priority int) {
+	if afterLoadFuncMap == nil {
+		afterLoadFuncMap = make(map[string]*afterLoadFuncInfo)
+	}
+
+	if _, ok := afterLoadFuncMap[tableName]; ok {
+		panic(fmt.Errorf("table[%s] after load func already registered", tableName))
+	}
+
+	info := &afterLoadFuncInfo{
+		tableName: tableName,
+		f:         f,
+		priority:  priority,
+	}
+	afterLoadFuncMap[tableName] = info
+
+	// 根据优先级二分查找插入位置，保证afterLoadFuncs按priority升序排列
+	pos := sort.Search(len(afterLoadFuncs), func(i int) bool {
+		return afterLoadFuncs[i].priority > info.priority
+	})
+	// 在找到的位置插入当前处理函数
+	afterLoadFuncs = slices.Insert(afterLoadFuncs, pos, info)
+}
+
+// runAfterLoadFunc 执行加载后处理函数
+func runAfterLoadFunc(info *afterLoadFuncInfo) error {
+	if err := info.f(); err != nil {
+		return pkgerrors.WithMessagef(err, "table[%s] after load", info.tableName)
+	}
+	return nil
 }

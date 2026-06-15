@@ -38,13 +38,13 @@ func loadNormal[Entry any](db *MongoDB, collName string, allEntries *[]Entry) er
 		cursor, err := coll.Find(ctx, bson.M{}, options.Find().SetSkip(skip).SetLimit(loadBatchSize))
 		if err != nil {
 			cancel()
-			return pkgerrors.WithMessagef(err, "[%s][%s] load failed at skip:%d limit:%d", db.Name(), collName, skip, loadBatchSize)
+			return pkgerrors.WithMessagef(err, "load failed, skip:%d limit:%d", skip, loadBatchSize)
 		}
 
 		var entries []Entry
 		if err := cursor.All(ctx, &entries); err != nil {
 			cancel()
-			return pkgerrors.WithMessagef(err, "[%s][%s] decode failed at skip:%d limit:%d", db.Name(), collName, skip, loadBatchSize)
+			return pkgerrors.WithMessagef(err, "decode failed, skip:%d limit:%d", skip, loadBatchSize)
 		}
 
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -71,7 +71,7 @@ func loadGlobal(db *MongoDB, tableName string, t any) error {
 	defer cancel()
 
 	if err := coll.FindOne(ctx, bson.M{"_id": tableName}).Decode(t); err != nil {
-		return pkgerrors.WithMessagef(err, "[%s][%s] load failed", db.Name(), tableName)
+		return pkgerrors.WithMessage(err, "load failed")
 	}
 
 	return nil

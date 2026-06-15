@@ -3,6 +3,8 @@
 
 package gdconf
 
+const TblNameItem = "Item"
+
 type Item struct {
 	ID    int32  `bson:"_id,omitempty"`   // ID
 	Name  string `bson:"name,omitempty"`  // 名称
@@ -10,37 +12,37 @@ type Item struct {
 	Level int32  `bson:"level,omitempty"` // level
 }
 
-// tabItem 道具
-type tabItem struct {
+// tblItem 道具
+type tblItem struct {
 	entries []*Item         // data entries
 	byID    map[int32]*Item // mapping by ID
 }
 
-func (t *tabItem) All() []*Item { return t.entries }
+func (t *tblItem) All() []*Item { return t.entries }
 
 // ByID mapping by ID
-func (t *tabItem) ByID(ID int32) *Item {
+func (t *tblItem) ByID(ID int32) *Item {
 	return t.byID[ID]
 }
 
 // load 加载数据
-func (t *tabItem) load(db *MongoDB) error {
-	if err := loadNormal(db, "Item", &t.entries); err != nil {
+func (t *tblItem) load(db *MongoDB) error {
+	if err := loadNormal(db, TblNameItem, &t.entries); err != nil {
 		return err
 	}
 	t.init()
 	return nil
 }
 
-func (t *tabItem) init() {
+func (t *tblItem) init() {
 	t.byID = make(map[int32]*Item, len(t.entries))
 	for _, e := range t.entries {
 		t.byID[e.ID] = e
 	}
 }
 
-func newTabItem() *tabItem {
-	return &tabItem{
+func newTblItem() *tblItem {
+	return &tblItem{
 		byID: map[int32]*Item{},
 	}
 }

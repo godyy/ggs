@@ -3,6 +3,8 @@
 
 package gdconf
 
+const TblNameGlobal = "Global"
+
 // global 全局配置表
 type global struct {
 	First  int32 `bson:"first,omitempty"`  // 测试1
@@ -11,7 +13,7 @@ type global struct {
 
 // load 加载数据
 func (t *global) load(db *MongoDB) error {
-	return loadGlobal(db, "Global", t)
+	return loadGlobal(db, TblNameGlobal, t)
 }
 
 func newGlobal() *global {
