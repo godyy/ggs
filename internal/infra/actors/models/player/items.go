@@ -11,7 +11,12 @@ type Item struct {
 // 用于集中维护玩家道具数据，并提供获取/增减等操作方法.
 type Items struct {
 	moduleBase[*Items]
-	Items map[int32]int64
+	Items map[int32]int64 `bson:"items"`
+}
+
+// OnInit 初始化道具模块.
+func (m *Items) OnInit() {
+	m.Items = make(map[int32]int64, 8)
 }
 
 // ModuleKey 模块关键字.
