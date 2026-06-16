@@ -9,6 +9,6 @@ import (
 )
 
 func init() {
-	S2S.register(s2s.PID_PError, &common.Error{})
-	S2S.register(s2s.PID_PActorSaveResult, &s2s.ActorSaveResult{})
+	registerS2S(s2s.PID_PError, &common.Error{})
+	registerS2S(s2s.PID_PActorSaveResult, &s2s.ActorSaveResult{})
 }

@@ -59,7 +59,7 @@ func NewStream(conn net.Conn, sessionKey []byte, handler Handler) (*Stream, erro
 
 // SendReq 发送请求包
 func (s *Stream) SendReq(seq uint32, msg proto.Message) error {
-	p, err := codecc2s.EncodeReqPacket(protoreg.C2S.Registry, seq, msg)
+	p, err := codecc2s.EncodeReqPacket(protoreg.Registry.C2S, seq, msg)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (s *Stream) readLoop() {
 			Pt:  codecc2s.HeadGetPt(p),
 			Seq: codecc2s.HeadGetSeq(p),
 		}
-		respMsg, err := codecc2s.DecodeMessage(protoreg.C2S.Registry, p)
+		respMsg, err := codecc2s.DecodeMessage(protoreg.Registry.C2S, p)
 		if err != nil {
 			s.close(pkgerrors.WithMessagef(err, "decode pt:%v seq:%v", m.Pt, m.Seq))
 			return

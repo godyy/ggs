@@ -177,7 +177,7 @@ func (a *Agent) pendingPacketLoopStop(active bool, reason pbc2s.DisconnectPush_R
 func (a *Agent) handleHookMsg(p []byte) (bool, error) {
 	pid := codecc2s.HeadGetPid(p)
 	if hook := getMsgHook(pid); hook != nil {
-		msg, err := codecc2s.DecodeMessage(protoreg.C2S.Registry, p)
+		msg, err := codecc2s.DecodeMessage(protoreg.Registry.C2S, p)
 		if err != nil {
 			return false, err
 		}
@@ -236,7 +236,7 @@ func (a *Agent) stop(reason pbc2s.DisconnectPush_Reason) {
 
 // sendMessage 发送消息.
 func (a *Agent) sendMessage(pt int8, seq uint32, m proto.Message) error {
-	p, err := codecc2s.EncodePacket(protoreg.C2S.Registry, pt, seq, m)
+	p, err := codecc2s.EncodePacket(protoreg.Registry.C2S, pt, seq, m)
 	if err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func (a *Agent) sendRespMessage(seq uint32, m proto.Message) error {
 
 // forwardReq2Player 转发请求到 Player.
 func (a *Agent) forwardReq2Player(seq uint32, m proto.Message) error {
-	p, err := codecc2s.EncodeReqPacket(protoreg.C2S.Registry, seq, m)
+	p, err := codecc2s.EncodeReqPacket(protoreg.Registry.C2S, seq, m)
 	if err != nil {
 		return err
 	}

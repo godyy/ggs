@@ -110,7 +110,7 @@ func init() {
 					msg = msg + "Req"
 				}
 
-				req, _, err := protoreg.C2S.CreateByName(msg)
+				req, _, err := protoreg.Registry.C2S.CreateByName(msg)
 				if err != nil {
 					log.Println(err)
 					return false

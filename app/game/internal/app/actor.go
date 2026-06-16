@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
-	hplayer "github.com/godyy/ggs/app/game/internal/handlers/player"
-	hserver "github.com/godyy/ggs/app/game/internal/handlers/server"
+	"github.com/godyy/ggs/app/game/internal"
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
@@ -67,7 +66,7 @@ func (a *app) startActor() error {
 			ActorConfig: gactor.ActorConfig{
 				ActorDefines:        actorsdefine.GetDefineList(),
 				ClientActorCategory: actors.CategoryPlayer.ActorCategory(),
-				Handler:             a.handleActorRequest,
+				Handler:             internal.ActorHandler,
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: []gtimewheel.LevelConfig{
@@ -86,8 +85,8 @@ func (a *app) startActor() error {
 			MaxRTT:  50,
 			Handler: a,
 		},
-		Logger:      logger.Get(),
-		S2SProtoReg: protoreg.S2S.Registry,
+		Logger:        logger.Get(),
+		ProtoRegistry: protoreg.Registry,
 	}
 	if a.env.Debug() {
 		actorConfig.Core.DefRPCTimeout = time.Hour * 1
@@ -97,8 +96,7 @@ func (a *app) startActor() error {
 		return pkgerrors.WithMessage(err, "new actor service")
 	}
 	a.actorCodec, err = actor.NewCodec(&actor.CodecConfig{
-		C2SProtoReg: protoreg.C2S.Registry,
-		S2SProtoReg: protoreg.S2S.Registry,
+		ProtoRegistry: protoreg.Registry,
 	})
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor codec")
@@ -138,9 +136,7 @@ func (a *app) stopActor() {
 }
 
 func (a *app) actorAsyncSaveCallback(uid gactor.ActorUID, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), consts.ActorCastTimeout)
-	defer cancel()
-	if castErr := a.actorService.Cast(ctx, uid, &pbs2s.ActorSaveResult{
+	if castErr := a.actorService.Cast(uid, &pbs2s.ActorSaveResult{
 		Success: err == nil,
 	}); castErr != nil {
 		logger.Get().ErrorFields("cast persist result to actor",
@@ -184,17 +180,6 @@ func (a *app) GetMonitor() gactor.ServiceMonitor {
 // Send2Node 发送字节数据 b 到 nodeId 指定的节点.
 func (a *app) Send2Node(nodeId string, b []byte) error {
 	return a.cluster.Send2Node(nodeId, b)
-}
-
-func (a *app) handleActorRequest(ctx *gactor.Context) {
-	switch actors.Category(ctx.Actor().Category()) {
-	case actors.CategoryServer:
-		hserver.Handle(ctx)
-	case actors.CategoryPlayer:
-		hplayer.Handle(ctx)
-	default:
-		ctx.Abort()
-	}
 }
 
 // getNodeGroup 获取节点分组.

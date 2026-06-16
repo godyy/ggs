@@ -13,9 +13,7 @@ import (
 
 // Player 玩家Actor
 type Player struct {
-	gactor.CActor // 集成Actor
-	*player.Model // model
-	persistor     // 集成持久化辅助结构
+	CActorWithModel[*player.Model] // 集成携带数据模型的Actor封装
 
 	isLogin           bool           // 是否已登录.
 	heartbeatTimerId  gactor.TimerId // 心跳定时器ID.
@@ -23,16 +21,11 @@ type Player struct {
 }
 
 // NewPlayer 构造玩家Actor.
-func NewPlayer(actor gactor.CActor) *Player {
+func NewPlayer(actor actor.CActor) *Player {
 	p := &Player{
-		CActor: actor,
+		CActorWithModel: NewCActorWithModel[*player.Model](actor),
 	}
 	return p
-}
-
-// GetActor 获取 Actor.
-func (p *Player) GetActor() gactor.Actor {
-	return p.CActor
 }
 
 // OnStart 启动行为.
@@ -44,7 +37,7 @@ func (p *Player) OnStart() error {
 	if exists, err := LoadModel(p); err != nil {
 		return err
 	} else if !exists {
-		p.SetDirtyAll()
+		p.Model.SetDirtyAll()
 	}
 
 	// 调用生命周期回调的
@@ -74,11 +67,6 @@ func (p *Player) OnStop() error {
 	return nil
 }
 
-// GetCActor 获取 CActor.
-func (p *Player) GetCActor() gactor.CActor {
-	return p.CActor
-}
-
 // OnConnected 已连接行为.
 func (p *Player) OnConnected() {
 	lifecycle.OnConnected(p)
@@ -87,17 +75,6 @@ func (p *Player) OnConnected() {
 // OnDisconnected 已断开连接行为.
 func (p *Player) OnDisconnected() {
 	lifecycle.OnDisconnected(p)
-}
-
-func (p *Player) GetModel() actor.Model {
-	return p.Model
-}
-
-func (p *Player) OnModelDirty() {
-	if ok, _ := p.Model.IsDirty(); !ok {
-		return
-	}
-	DelaySave(p, ActorSaveDelay)
 }
 
 func (p *Player) GetModuleContainer() actor.ModuleContainer {

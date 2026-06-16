@@ -3,10 +3,10 @@ package player
 import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/base/errs"
-	"github.com/godyy/ggs/app/game/internal/handlers"
 	"github.com/godyy/ggs/app/game/internal/systems"
 	"github.com/godyy/ggs/internal/infra/actors"
 	pbcs "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	"github.com/godyy/ggskit/infra/actor"
 )
 
 func handleUseItem(c *gactor.Context, req *pbcs.UseItemReq) (*pbcs.UseItemResp, error) {
@@ -14,7 +14,7 @@ func handleUseItem(c *gactor.Context, req *pbcs.UseItemReq) (*pbcs.UseItemResp, 
 		return nil, errs.WithC2SPbError(pbcs.ErrCode_ECInvalidPacket)
 	}
 
-	p := handlers.GetActor[*actors.Player](c)
+	p := actor.CtxActor[*actors.Player](c)
 	left, ok := systems.Items.UseItem(p, req.ItemId, req.Num)
 	if !ok {
 		return nil, errs.WithC2SPbError(pbcs.ErrCode_ECItemNotEnough)

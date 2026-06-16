@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/godyy/gactor"
 	_ "github.com/godyy/ggs/app/game/internal/systems"
+	"github.com/godyy/ggs/internal/infra/actors"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
 	"github.com/godyy/ggskit/infra/actor"
@@ -10,28 +11,24 @@ import (
 
 // Handler 消息处理器基础实现.
 type Handler struct {
-	funcs map[uint16]gactor.HandlerFunc // 协议ID到处理函数的映射
+	hm actor.HandlerMap
 }
 
 // NewHandler 创建一个新的 Handler.
 func NewHandler() *Handler {
 	return &Handler{
-		funcs: make(map[uint16]gactor.HandlerFunc),
+		hm: make(actor.HandlerMap),
 	}
 }
 
 // RegisterFunc 注册消息处理函数.
 func (h *Handler) RegisterFunc(pid uint16, funcs ...gactor.HandlerFunc) bool {
-	if _, ok := h.funcs[pid]; ok {
-		return false
-	}
-	h.funcs[pid] = gactor.NewHandlersChain(funcs...).Handle
-	return true
+	return h.hm.Register(pid, funcs...)
 }
 
 // getFunc 获取PID对应的处理函数.
 func (h *Handler) getFunc(pid uint16) gactor.HandlerFunc {
-	return h.funcs[pid]
+	return h.hm[pid]
 }
 
 // Handle 处理请求.
@@ -46,17 +43,18 @@ func (h *Handler) Handle(ctx *gactor.Context) {
 // handleC2S 处理C2S请求.
 func (h *Handler) handleC2S(ctx *gactor.Context) {
 	// 解码负载数据
-	var payload actor.C2SPayload
-	if err := ctx.Decode(&payload); err != nil {
+	pid, msg, err := actors.CtxDecode(ctx)
+	if err != nil {
 		ctx.ReplyDecodeError()
 		ctx.Abort()
 		return
 	}
+	actors.CtxSetMsg(ctx, msg)
 
 	// todo 熔断逻辑
 
 	// 获取处理函数
-	f := h.getFunc(payload.PID)
+	f := h.getFunc(pid)
 	if f == nil {
 		// todo
 		ctx.Abort()
@@ -64,22 +62,22 @@ func (h *Handler) handleC2S(ctx *gactor.Context) {
 	}
 
 	// 调用处理函数
-	setC2SPayload(ctx, payload)
 	f(ctx)
 }
 
 // handleS2S 处理S2S请求.
 func (h *Handler) handleS2S(ctx *gactor.Context) {
 	// 解码负载数据
-	var payload actor.S2SPayload
-	if err := ctx.Decode(&payload); err != nil {
+	pid, msg, err := actors.CtxDecode(ctx)
+	if err != nil {
 		ctx.ReplyDecodeError()
 		ctx.Abort()
 		return
 	}
+	actors.CtxSetMsg(ctx, msg)
 
 	// 获取处理函数
-	f := h.getFunc(payload.PID)
+	f := h.getFunc(pid)
 	if f == nil {
 		// todo
 		ctx.Abort()
@@ -87,7 +85,6 @@ func (h *Handler) handleS2S(ctx *gactor.Context) {
 	}
 
 	// 调用处理函数
-	setS2SPayload(ctx, payload)
 	f(ctx)
 }
 
