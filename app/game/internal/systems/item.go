@@ -2,7 +2,8 @@ package systems
 
 import (
 	"github.com/godyy/ggs/internal/infra/actors"
-	"github.com/godyy/ggs/internal/infra/actors/models/player"
+	"github.com/godyy/ggs/internal/infra/actors/model/player"
+	"github.com/godyy/ggskit/infra/actor"
 )
 
 type itemsModule struct{}
@@ -13,6 +14,12 @@ func (m *itemsModule) UseItem(p *actors.Player, itemId int32, num int64) (left i
 	if itemId == 0 || num <= 0 {
 		return 0, false
 	}
-	items := actors.GetModule[*player.Items](p, true)
-	return items.Sub(itemId, num)
+
+	items := actor.GetActorModule[*player.Items](p, true)
+	left, ok = items.Sub(itemId, num)
+	if ok {
+		p.SetDirtyModules(items)
+	}
+
+	return
 }

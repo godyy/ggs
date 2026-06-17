@@ -3,14 +3,14 @@ package server
 import (
 	"fmt"
 
-	"github.com/godyy/ggs/internal/infra/actors/models"
+	"github.com/godyy/ggs/internal/infra/actors/model"
 	"github.com/godyy/ggskit/infra/actor"
 )
 
 // Model server 数据模型.
 type Model struct {
-	*actor.ModelDirtyAll   `bson:"-"`
-	models.FieldID[string] `bson:",inline"` // 集成通用ID字段
+	model.Dirty           `bson:"-"`       // 集成脏标记位
+	model.FieldID[string] `bson:",inline"` // 集成通用ID字段
 
 	serverId int64
 
@@ -21,9 +21,8 @@ type Model struct {
 // New 创建server 数据模型.
 func New(a actor.ActorWithModel, serverId int64) *Model {
 	m := &Model{
-		ModelDirtyAll: actor.NewModelDirtyAll(a),
-		serverId:      serverId,
-		ServerName:    fmt.Sprintf("server%d", serverId),
+		serverId:   serverId,
+		ServerName: fmt.Sprintf("server%d", serverId),
 	}
 	m.ID = fmt.Sprintf("server_%d", serverId)
 	return m
@@ -36,5 +35,5 @@ func (m *Model) GetHashKey() any {
 
 // GetCollection 存储Model的集合名称.
 func (m *Model) GetCollection() string {
-	return models.CollSingleton
+	return model.CollSingleton
 }

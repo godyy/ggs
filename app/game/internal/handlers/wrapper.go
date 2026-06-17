@@ -20,7 +20,7 @@ func WrapC2SFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req) (
 			replyC2SError(ctx, err)
 			return
 		}
-		actors.CtxReply(ctx, resp)
+		actors.SugarContext(ctx).Reply(resp)
 	}
 }
 
@@ -33,7 +33,7 @@ func WrapS2SRPCFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req
 			replyS2SError(ctx, err)
 			return
 		}
-		actors.CtxReply(ctx, resp)
+		actors.SugarContext(ctx).Reply(resp)
 	}
 }
 
@@ -57,7 +57,7 @@ func replyC2SError(ctx *gactor.Context, err error) {
 		respErr = &pbcommon.Error{Code: int32(pbc2s.ErrCode_ECInternalError)}
 	}
 
-	actors.CtxReply(ctx, respErr)
+	actors.SugarContext(ctx).Reply(respErr)
 }
 
 // replyS2SError 回复S2S错误.
@@ -70,5 +70,5 @@ func replyS2SError(ctx *gactor.Context, err error) {
 		loggerInst.Errorf("replyS2SError: none PbError, %v", err)
 		respErr = &pbcommon.Error{Code: int32(pbs2s.ErrCode_ECInternalError)}
 	}
-	actors.CtxReply(ctx, respErr)
+	actors.SugarContext(ctx).Reply(respErr)
 }

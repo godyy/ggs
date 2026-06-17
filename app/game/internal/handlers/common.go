@@ -14,7 +14,7 @@ func OnActorSaveResult(ctx *gactor.Context, result *pbs2s.ActorSaveResult) {
 		if !ok {
 			return
 		}
-		model, ok := a.GetModel().(actor.ModelWithDirty)
+		model, ok := a.GetModel().(actor.ModelDirty)
 		if !ok {
 			return
 		}

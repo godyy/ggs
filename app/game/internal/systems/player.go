@@ -6,7 +6,8 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/infra/actors"
 	"github.com/godyy/ggs/internal/infra/actors/lifecycle"
-	"github.com/godyy/ggs/internal/infra/actors/models/player"
+	"github.com/godyy/ggs/internal/infra/actors/model/player"
+	"github.com/godyy/ggskit/infra/actor"
 )
 
 type playerModule struct{}
@@ -43,10 +44,12 @@ func (m *playerModule) InitPlayer(p *actors.Player) error {
 		return nil
 	}
 
-	base := actors.GetModule[*player.BaseInfo](p, true)
+	base := actor.GetActorModule[*player.BaseInfo](p, true)
 	base.Name = fmt.Sprintf("player%d", p.ID())
 	p.Model.Version = consts.VersionInit
-	p.Model.SetDirtyAll()
+	p.SetAllDirty()
+	fmt.Println(p.Model.Version)
+	fmt.Println(p.Model.IsDirty())
 
 	return nil
 }

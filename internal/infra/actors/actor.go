@@ -1,60 +1,39 @@
 package actors
 
 import (
-	"context"
 	"time"
 
+	model1 "github.com/godyy/ggs/internal/infra/actors/model"
 	"github.com/godyy/ggskit/infra/actor"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
 	ActorSaveDelay = 5 * time.Second // Actor 存储延迟.
 )
 
-// Actor Actor基础封装.
-type Actor struct {
-	actor.Actor
+// model 模型接口.
+// 用于限制ActorWithModel的模型类型.
+type model interface {
+	comparable
+	model1.ModelDirty
 }
 
-func (a *Actor) GetActor() actor.Actor {
-	return a.Actor
-}
-
-func (a *Actor) Sugared() Sugared {
-	return Sugared{
-		Actor: a.Actor,
-	}
-}
-
-// CActor CActor基础封装.
-type CActor struct {
-	actor.CActor
-}
-
-func (a *CActor) GetActor() actor.Actor {
-	return a.CActor
-}
-
-func (a *CActor) GetCActor() actor.CActor {
-	return a.CActor
-}
-
-func (a *CActor) Sugared() CSugared {
-	return CSugared{
-		CActor: a.CActor,
-	}
+// modelWithModule 模型接口.
+// 用于限制ActorWithModule的模型类型.
+type modelWithModule interface {
+	comparable
+	model1.ModelWithModule
 }
 
 // ActorWithModel 携带数据模型的Actor基础封装.
-type ActorWithModel[Model actor.ModelWithDirty] struct {
-	Actor
+type ActorWithModel[Model model] struct {
+	ActorSugared
 	persistor
 	Model Model
 }
 
-func NewActorWithModel[Model actor.ModelWithDirty](actor actor.Actor) ActorWithModel[Model] {
-	return ActorWithModel[Model]{Actor: Actor{Actor: actor}}
+func NewActorWithModel[Model model](actor actor.Actor) ActorWithModel[Model] {
+	return ActorWithModel[Model]{ActorSugared: ActorSugared{Actor: actor}}
 }
 
 func (a *ActorWithModel[Model]) GetModel() actor.Model {
@@ -68,15 +47,122 @@ func (a *ActorWithModel[Model]) OnModelDirty() {
 	DelaySave(a, ActorSaveDelay)
 }
 
-// CActorWithModel 携带数据模型的CActor基础封装.
-type CActorWithModel[Model actor.ModelWithDirty] struct {
-	CActor
+func (a *ActorWithModel[Model]) onStart() error {
+	// 加载model数据
+	exists, err := LoadModel(a)
+	if err != nil {
+		return err
+	}
+
+	// 若数据不存在. 准备存储新数据.
+	if !exists {
+		a.Model.SetAllDirty()
+		a.OnModelDirty()
+	}
+
+	return nil
+}
+
+func (a *ActorWithModel[Model]) onStop() error {
+	// 持久化脏数据.
+	if ok, _ := a.Model.IsDirty(); ok {
+		if err := SaveModel(a); err != nil {
+			return err
+		}
+	}
+
+	// 释放model
+	var zeroModel Model
+	if zeroModel != a.Model {
+		a.Model.Release()
+	}
+
+	return nil
+}
+
+// ActorWithModule 携带模块的Actor基础封装.
+type ActorWithModule[Model modelWithModule] struct {
+	ActorSugared
 	persistor
 	Model Model
 }
 
-func NewCActorWithModel[Model actor.ModelWithDirty](actor actor.CActor) CActorWithModel[Model] {
-	return CActorWithModel[Model]{CActor: CActor{CActor: actor}}
+func NewActorWithModule[Model modelWithModule](actor actor.Actor) ActorWithModule[Model] {
+	return ActorWithModule[Model]{ActorSugared: ActorSugared{Actor: actor}}
+}
+
+func (a *ActorWithModule[Model]) GetModel() actor.Model {
+	return a.Model
+}
+
+func (a *ActorWithModule[Model]) GetModuleWithModule() actor.ModelWithModule {
+	return a.Model
+}
+
+func (a *ActorWithModule[Model]) OnModelDirty() {
+	if ok, _ := a.Model.IsDirty(); !ok {
+		return
+	}
+	DelaySave(a, ActorSaveDelay)
+}
+
+func (a *ActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
+	if len(mk) == 0 {
+		return
+	}
+	for _, m := range mk {
+		a.Model.SetDirtyModule(m)
+	}
+	a.OnModelDirty()
+}
+
+func (a *ActorWithModule[Model]) SetAllDirty() {
+	a.Model.SetAllDirty()
+	a.OnModelDirty()
+}
+
+func (a *ActorWithModule[Model]) onStart() error {
+	// 加载model数据
+	exists, err := LoadModel(a)
+	if err != nil {
+		return err
+	}
+
+	// 若数据不存在. 准备存储新数据.
+	if !exists {
+		a.Model.SetAllDirty()
+		a.OnModelDirty()
+	}
+
+	return nil
+}
+
+func (a *ActorWithModule[Model]) onStop() error {
+	// 持久化脏数据.
+	if ok, _ := a.Model.IsDirty(); ok {
+		if err := SaveModel(a); err != nil {
+			return err
+		}
+	}
+
+	// 释放model
+	var zeroModel Model
+	if zeroModel != a.Model {
+		a.Model.Release()
+	}
+
+	return nil
+}
+
+// CActorWithModel 携带数据模型的CActor基础封装.
+type CActorWithModel[Model model] struct {
+	CActorSugared
+	persistor
+	Model Model
+}
+
+func NewCActorWithModel[Model model](actor actor.CActor) CActorWithModel[Model] {
+	return CActorWithModel[Model]{CActorSugared: CActorSugared{CActor: actor}}
 }
 
 func (a *CActorWithModel[Model]) GetModel() actor.Model {
@@ -90,85 +176,109 @@ func (a *CActorWithModel[Model]) OnModelDirty() {
 	DelaySave(a, ActorSaveDelay)
 }
 
-// Sugared Actor 语法糖封装
-type Sugared struct {
-	actor.Actor
+func (a *CActorWithModel[Model]) onStart() error {
+	// 加载model数据
+	exists, err := LoadModel(a)
+	if err != nil {
+		return err
+	}
+
+	// 若数据不存在. 准备存储新数据.
+	if !exists {
+		a.Model.SetAllDirty()
+		a.OnModelDirty()
+	}
+
+	return nil
 }
 
-func (a Sugared) RPCWithDeadline(to actor.ActorUID, args proto.Message, deadline time.Time) (proto.Message, error) {
-	return actorHelper.RPCWithDeadline(a.Actor, to, args, deadline)
+func (a *CActorWithModel[Model]) onStop() error {
+	// 持久化脏数据.
+	if ok, _ := a.Model.IsDirty(); ok {
+		if err := SaveModel(a); err != nil {
+			return err
+		}
+	}
+
+	// 释放model
+	var zeroModel Model
+	if zeroModel != a.Model {
+		a.Model.Release()
+	}
+
+	return nil
 }
 
-func (a Sugared) RPCWithTimeout(to actor.ActorUID, args proto.Message, timeout time.Duration) (proto.Message, error) {
-	return actorHelper.RPCWithTimeout(a.Actor, to, args, timeout)
+// CActorWithModule 携带模块的CActor基础封装.
+type CActorWithModule[Model modelWithModule] struct {
+	CActorSugared
+	persistor
+	Model Model
 }
 
-func (a Sugared) RPC(to actor.ActorUID, args proto.Message) (proto.Message, error) {
-	return actorHelper.RPC(a.Actor, to, args)
+func NewCActorWithModule[Model modelWithModule](actor actor.CActor) CActorWithModule[Model] {
+	return CActorWithModule[Model]{CActorSugared: CActorSugared{CActor: actor}}
 }
 
-func (a Sugared) RPCWithContext(ctx context.Context, to actor.ActorUID, args proto.Message) (proto.Message, error) {
-	return actorHelper.RPCWithContext(ctx, a.Actor, to, args)
+func (a *CActorWithModule[Model]) GetModel() actor.Model {
+	return a.Model
 }
 
-func (a Sugared) AsyncRPCWithDeadline(to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback, deadline time.Time) error {
-	return actorHelper.AsyncRPCWithDeadline(a.Actor, to, args, callback, deadline)
+func (a *CActorWithModule[Model]) GetModelWithModule() actor.ModelWithModule {
+	return a.Model
 }
 
-func (a Sugared) AsyncRPCWithTimeout(to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback, timeout time.Duration) error {
-	return actorHelper.AsyncRPCWithTimeout(a.Actor, to, args, callback, timeout)
+func (a *CActorWithModule[Model]) OnModelDirty() {
+	if ok, _ := a.Model.IsDirty(); !ok {
+		return
+	}
+	DelaySave(a, ActorSaveDelay)
 }
 
-func (a Sugared) AsyncRPC(to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback) error {
-	return actorHelper.AsyncRPC(a.Actor, to, args, callback)
+func (a *CActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
+	if len(mk) == 0 {
+		return
+	}
+	for _, m := range mk {
+		a.Model.SetDirtyModule(m)
+	}
+	a.OnModelDirty()
 }
 
-func (a Sugared) AsyncRPCWithContext(ctx context.Context, to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback) error {
-	return actorHelper.AsyncRPCWithContext(ctx, a.Actor, to, args, callback)
+func (a *CActorWithModule[Model]) SetAllDirty() {
+	a.Model.SetAllDirty()
+	a.OnModelDirty()
 }
 
-// CSugared CActor 语法糖封装
-type CSugared struct {
-	actor.CActor
+func (a *CActorWithModule[Model]) onStart() error {
+	// 加载model数据
+	exists, err := LoadModel(a)
+	if err != nil {
+		return err
+	}
+
+	// 若数据不存在. 准备存储新数据.
+	if !exists {
+		a.Model.SetAllDirty()
+		a.OnModelDirty()
+	}
+
+	return nil
 }
 
-func (a CSugared) PushRawMessage(msg proto.Message) error {
-	return actorHelper.PushRawMessage(a.CActor, msg)
-}
+func (a *CActorWithModule[Model]) onStop() error {
+	// 持久化脏数据.
+	if ok, _ := a.Model.IsDirty(); ok {
+		if err := SaveModel(a); err != nil {
+			return err
+		}
+	}
 
-func (a CSugared) RPCWithDeadline(to actor.ActorUID, args proto.Message, deadline time.Time) (proto.Message, error) {
-	return actorHelper.RPCWithDeadline(a.CActor, to, args, deadline)
-}
+	// 释放model
+	var zeroModel Model
+	if zeroModel != a.Model {
+		a.Model.Release()
+	}
 
-func (a CSugared) RPCWithTimeout(to actor.ActorUID, args proto.Message, timeout time.Duration) (proto.Message, error) {
-	return actorHelper.RPCWithTimeout(a.CActor, to, args, timeout)
-}
-
-func (a CSugared) RPC(to actor.ActorUID, args proto.Message) (proto.Message, error) {
-	return actorHelper.RPC(a.CActor, to, args)
-}
-
-func (a CSugared) RPCWithContext(ctx context.Context, to actor.ActorUID, args proto.Message) (proto.Message, error) {
-	return actorHelper.RPCWithContext(ctx, a.CActor, to, args)
-}
-
-func (a CSugared) AsyncRPCWithDeadline(to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback, deadline time.Time) error {
-	return actorHelper.AsyncRPCWithDeadline(a.CActor, to, args, callback, deadline)
-}
-
-func (a CSugared) AsyncRPCWithTimeout(to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback, timeout time.Duration) error {
-	return actorHelper.AsyncRPCWithTimeout(a.CActor, to, args, callback, timeout)
-}
-
-func (a CSugared) AsyncRPC(to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback) error {
-	return actorHelper.AsyncRPC(a.CActor, to, args, callback)
-}
-
-func (a CSugared) AsyncRPCWithContext(ctx context.Context, to actor.ActorUID, args proto.Message, callback actor.ActorAsyncRPCCallback) error {
-	return actorHelper.AsyncRPCWithContext(ctx, a.CActor, to, args, callback)
-}
-
-// GetModule 通过actor获取模块的通用泛型封装.
-func GetModule[M actor.Module](a actor.ActorWithModule, autoCreate bool) M {
-	return actor.GetModuleOfActor[M](a, autoCreate)
+	return nil
 }

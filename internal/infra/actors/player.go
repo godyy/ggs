@@ -7,13 +7,13 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actors/lifecycle"
-	"github.com/godyy/ggs/internal/infra/actors/models/player"
+	"github.com/godyy/ggs/internal/infra/actors/model/player"
 	"github.com/godyy/ggskit/infra/actor"
 )
 
 // Player 玩家Actor
 type Player struct {
-	CActorWithModel[*player.Model] // 集成携带数据模型的Actor封装
+	CActorWithModule[*player.Model] // 集成携带数据模型的Actor封装
 
 	isLogin           bool           // 是否已登录.
 	heartbeatTimerId  gactor.TimerId // 心跳定时器ID.
@@ -23,7 +23,7 @@ type Player struct {
 // NewPlayer 构造玩家Actor.
 func NewPlayer(actor actor.CActor) *Player {
 	p := &Player{
-		CActorWithModel: NewCActorWithModel[*player.Model](actor),
+		CActorWithModule: NewCActorWithModule[*player.Model](actor),
 	}
 	return p
 }
@@ -31,21 +31,13 @@ func NewPlayer(actor actor.CActor) *Player {
 // OnStart 启动行为.
 func (p *Player) OnStart() error {
 	// 构造model
-	p.Model = player.New(p, p.ActorUID().ID)
+	p.Model = player.New(p.ActorUID().ID)
 
-	// 加载model数据
-	if exists, err := LoadModel(p); err != nil {
-		return err
-	} else if !exists {
-		p.Model.SetDirtyAll()
-	}
-
-	// 调用生命周期回调的
-	if err := lifecycle.OnStart(p); err != nil {
+	if err := p.onStart(); err != nil {
 		return err
 	}
 
-	return nil
+	return lifecycle.OnStart(p)
 }
 
 // OnStop 停机行为.
@@ -53,18 +45,7 @@ func (p *Player) OnStop() error {
 	// 调用生命周期回调
 	lifecycle.OnStop(p)
 
-	// 持久化脏数据.
-	if ok, _ := p.Model.IsDirty(); ok {
-		if err := SaveModel(p); err != nil {
-			// todo 日志
-		}
-	}
-
-	if p.Model != nil {
-		p.Model.Release()
-		p.Model = nil
-	}
-	return nil
+	return p.onStop()
 }
 
 // OnConnected 已连接行为.
@@ -77,13 +58,9 @@ func (p *Player) OnDisconnected() {
 	lifecycle.OnDisconnected(p)
 }
 
-func (p *Player) GetModuleContainer() actor.ModuleContainer {
-	return p.Model
-}
-
 // ID 获取玩家ID.
 func (p *Player) ID() int64 {
-	return p.CActor.ActorUID().ID
+	return p.CActorSugared.ActorUID().ID
 }
 
 // IsLogin 返回是否已登录.

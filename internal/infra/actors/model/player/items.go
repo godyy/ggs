@@ -10,7 +10,6 @@ type Item struct {
 // Items 道具模块.
 // 用于集中维护玩家道具数据，并提供获取/增减等操作方法.
 type Items struct {
-	moduleBase[*Items]
 	Items map[int32]int64 `bson:"items"`
 }
 
@@ -65,12 +64,10 @@ func (m *Items) Add(id int32, num int64) int64 {
 	after := m.Items[id] + num
 	if after <= 0 {
 		delete(m.Items, id)
-		m.SetDirty()
 		return 0
 	}
 
 	m.Items[id] = after
-	m.SetDirty()
 	return after
 }
 
@@ -99,10 +96,8 @@ func (m *Items) Sub(id int32, num int64) (after int64, ok bool) {
 	after = cur - num
 	if after == 0 {
 		delete(m.Items, id)
-		m.SetDirty()
 		return 0, true
 	}
 	m.Items[id] = after
-	m.SetDirty()
 	return after, true
 }

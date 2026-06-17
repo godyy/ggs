@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/infra/actors/models/server"
+	"github.com/godyy/ggs/internal/infra/actors/lifecycle"
+	"github.com/godyy/ggs/internal/infra/actors/model/server"
 )
 
 // Server 服务器Actor
@@ -25,17 +26,17 @@ func (s *Server) OnStart() error {
 	s.Model = server.New(s, s.ActorUID().ID)
 	s.ServerName = fmt.Sprintf("server-%d", s.ActorUID().ID)
 
-	// 加载model数据
-	if exists, err := LoadModel(s); err != nil {
+	if err := s.onStart(); err != nil {
 		return err
-	} else if !exists {
-		s.Model.SetDirty()
 	}
 
-	return nil
+	return lifecycle.OnStart(s)
 }
 
 // OnStop 停机行为.
 func (s *Server) OnStop() error {
-	return nil
+	// 调用生命周期回调
+	lifecycle.OnStop(s)
+
+	return s.onStop()
 }

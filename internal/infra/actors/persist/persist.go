@@ -51,7 +51,7 @@ func LoadModel(m actor.Model, db string) (exists bool, err error) {
 // 若model实现了ModelWithDirty接口,则根据是否全量更新来准备更新数据.
 // 若model未实现ModelWithDirty接口,则直接全量更新.
 func extractModelDirty(m actor.Model) (update []byte, upsert bool, err error) {
-	if modelDirty, ok := m.(actor.ModelWithDirty); ok {
+	if modelDirty, ok := m.(actor.ModelDirty); ok {
 		// 若model实现了ModelWithDirty接口,则根据是否全量更新来准备更新数据.
 		dirty, all := modelDirty.IsDirty()
 		if !dirty {
@@ -78,7 +78,7 @@ func extractModelDirty(m actor.Model) (update []byte, upsert bool, err error) {
 // clearModelDirty 清理Model的脏数据.
 // 若model实现了ModelWithDirty接口,则调用ClearDirty方法清理脏数据.
 func clearModelDirty(m actor.Model) {
-	if modelDirty, ok := m.(actor.ModelWithDirty); ok {
+	if modelDirty, ok := m.(actor.ModelDirty); ok {
 		modelDirty.ClearDirty()
 	}
 }

@@ -12,5 +12,5 @@ const (
 
 // getReq 获取当前上下文的请求消息.
 func getReq[Req proto.Message](ctx *gactor.Context) Req {
-	return actors.CtxGetMsg(ctx).(Req)
+	return actors.SugarContext(ctx).GetMsg().(Req)
 }

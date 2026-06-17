@@ -14,11 +14,9 @@ type InitConfig struct {
 }
 
 var (
-	initialized       bool                 // 是否初始化
-	db                string               // 数据库名
-	asyncSaveCallback AsyncSaveCallback    // 异步存储回调
-	actorHelper       *actor.ActorHelper   // Actor助手
-	contextHelper     *actor.ContextHelper // 上下文助手
+	initialized       bool              // 是否初始化
+	db                string            // 数据库名
+	asyncSaveCallback AsyncSaveCallback // 异步存储回调
 )
 
 // Init 初始化.
@@ -29,8 +27,8 @@ func Init(cfg *InitConfig) {
 	persist.Init(cfg.Persist)
 	db = cfg.DB
 	asyncSaveCallback = cfg.AsyncSaveCallback
-	actorHelper = actor.NewActorHelper(protoreg.Registry)
-	contextHelper = actor.NewContextHelper(protoreg.Registry)
+	actorSugarUtil = actor.NewActorHelper(protoreg.Registry)
+	contextSugarUtil = actor.NewContextHelper(protoreg.Registry)
 	initialized = true
 }
 

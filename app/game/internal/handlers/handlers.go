@@ -42,14 +42,16 @@ func (h *Handler) Handle(ctx *gactor.Context) {
 
 // handleC2S 处理C2S请求.
 func (h *Handler) handleC2S(ctx *gactor.Context) {
+	ctxSugared := actors.SugarContext(ctx)
+
 	// 解码负载数据
-	pid, msg, err := actors.CtxDecode(ctx)
+	pid, msg, err := ctxSugared.Decode()
 	if err != nil {
 		ctx.ReplyDecodeError()
 		ctx.Abort()
 		return
 	}
-	actors.CtxSetMsg(ctx, msg)
+	ctxSugared.SetMsg(msg)
 
 	// todo 熔断逻辑
 
@@ -67,14 +69,16 @@ func (h *Handler) handleC2S(ctx *gactor.Context) {
 
 // handleS2S 处理S2S请求.
 func (h *Handler) handleS2S(ctx *gactor.Context) {
+	ctxSugared := actors.SugarContext(ctx)
+
 	// 解码负载数据
-	pid, msg, err := actors.CtxDecode(ctx)
+	pid, msg, err := ctxSugared.Decode()
 	if err != nil {
 		ctx.ReplyDecodeError()
 		ctx.Abort()
 		return
 	}
-	actors.CtxSetMsg(ctx, msg)
+	ctxSugared.SetMsg(msg)
 
 	// 获取处理函数
 	f := h.getFunc(pid)

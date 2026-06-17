@@ -1,4 +1,4 @@
-package models
+package model
 
 const (
 	CollPlayer    = "players"    // 玩家数据集合
