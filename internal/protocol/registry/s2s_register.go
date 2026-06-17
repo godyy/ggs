@@ -11,4 +11,6 @@ import (
 func init() {
 	registerS2S(s2s.PID_PError, &common.Error{})
 	registerS2S(s2s.PID_PActorSaveResult, &s2s.ActorSaveResult{})
+	registerS2S(s2s.PID_PGetServerNameReq, &s2s.GetServerNameReq{})
+	registerS2S(s2s.PID_PGetServerNameResp, &s2s.GetServerNameResp{})
 }

@@ -14,7 +14,8 @@ type Model struct {
 
 	serverId int64
 
-	Version int32 `json:"version"` // 版本.
+	Version    int32  `bson:"version"`    // 版本.
+	ServerName string `bson:"serverName"` // 服务器名.
 }
 
 // New 创建server 数据模型.
@@ -22,6 +23,7 @@ func New(a actor.ActorWithModel, serverId int64) *Model {
 	m := &Model{
 		ModelDirtyAll: actor.NewModelDirtyAll(a),
 		serverId:      serverId,
+		ServerName:    fmt.Sprintf("server%d", serverId),
 	}
 	m.ID = fmt.Sprintf("server_%d", serverId)
 	return m

@@ -23,25 +23,36 @@ const (
 
 // PID 协议ID.
 // 如果协议消息结构来common, 可在其注释中添加 /from_common 标识.
+//
+// 分段约定：
+//   - [0, 99]    基础/通用协议
+//   - [100, 199] Server 信息
 type PID int32
 
 const (
 	PID_PUnknown         PID = 0  // 未知.
 	PID_PError           PID = 1  // 错误. /from_common
 	PID_PActorSaveResult PID = 99 // Actor 保存结果.
+	// Server 信息 [100, 199]
+	PID_PGetServerNameReq  PID = 100 // 获取服务器名请求.
+	PID_PGetServerNameResp PID = 101 // 获取服务器名响应.
 )
 
 // Enum value maps for PID.
 var (
 	PID_name = map[int32]string{
-		0:  "PUnknown",
-		1:  "PError",
-		99: "PActorSaveResult",
+		0:   "PUnknown",
+		1:   "PError",
+		99:  "PActorSaveResult",
+		100: "PGetServerNameReq",
+		101: "PGetServerNameResp",
 	}
 	PID_value = map[string]int32{
-		"PUnknown":         0,
-		"PError":           1,
-		"PActorSaveResult": 99,
+		"PUnknown":           0,
+		"PError":             1,
+		"PActorSaveResult":   99,
+		"PGetServerNameReq":  100,
+		"PGetServerNameResp": 101,
 	}
 )
 
@@ -76,12 +87,14 @@ var File_s2s_pid_proto protoreflect.FileDescriptor
 
 const file_s2s_pid_proto_rawDesc = "" +
 	"\n" +
-	"\rs2s/pid.proto\x12\x03s2s*5\n" +
+	"\rs2s/pid.proto\x12\x03s2s*d\n" +
 	"\x03PID\x12\f\n" +
 	"\bPUnknown\x10\x00\x12\n" +
 	"\n" +
 	"\x06PError\x10\x01\x12\x14\n" +
-	"\x10PActorSaveResult\x10cB/Z-github.com/godyy/ggs/internal/protocol/pb/s2sb\x06proto3"
+	"\x10PActorSaveResult\x10c\x12\x15\n" +
+	"\x11PGetServerNameReq\x10d\x12\x16\n" +
+	"\x12PGetServerNameResp\x10eB/Z-github.com/godyy/ggs/internal/protocol/pb/s2sb\x06proto3"
 
 var (
 	file_s2s_pid_proto_rawDescOnce sync.Once
