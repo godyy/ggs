@@ -10,9 +10,9 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
-	"github.com/godyy/ggs/internal/infra/actors"
-	actorsdefine "github.com/godyy/ggs/internal/infra/actors/define"
-	"github.com/godyy/ggs/internal/infra/actors/persist"
+	iactor "github.com/godyy/ggs/internal/infra/actor"
+	actordefine "github.com/godyy/ggs/internal/infra/actor/define"
+	"github.com/godyy/ggs/internal/infra/actor/persist"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
 	protoreg "github.com/godyy/ggs/internal/protocol/registry"
 	"github.com/godyy/ggskit/infra/actor"
@@ -31,7 +31,7 @@ func (a *app) startActor() error {
 	selfNodeId := cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(Env().ServerID()))
 
 	// 初始化 actors.
-	actors.Init(&actors.InitConfig{
+	iactor.Init(&iactor.InitConfig{
 		Persist:           &persist.InitConfig{BD: a.mongobd},
 		DB:                a.env.DB(),
 		AsyncSaveCallback: a.actorAsyncSaveCallback,
@@ -64,8 +64,8 @@ func (a *app) startActor() error {
 		Core: &gactor.ServiceConfig{
 			NodeId: selfNodeId,
 			ActorConfig: gactor.ActorConfig{
-				ActorDefines:        actorsdefine.GetDefineList(),
-				ClientActorCategory: actors.CategoryPlayer.ActorCategory(),
+				ActorDefines:        actordefine.GetDefineList(),
+				ClientActorCategory: iactor.CategoryPlayer.ActorCategory(),
 				Handler:             internal.ActorHandler,
 			},
 			TimerConfig: gactor.TimerConfig{
@@ -122,7 +122,7 @@ func (a *app) startGlobalActors() error {
 
 	// 启动Server
 	if err := a.actorService.StartActor(ctx, gactor.ActorUID{
-		Category: actors.CategoryServer.ActorCategory(),
+		Category: iactor.CategoryServer.ActorCategory(),
 		ID:       a.env.ServerID(),
 	}); err != nil {
 		return pkgerrors.WithMessage(err, "start server actor")
@@ -140,7 +140,7 @@ func (a *app) actorAsyncSaveCallback(uid gactor.ActorUID, err error) {
 		Success: err == nil,
 	}); castErr != nil {
 		logger.Get().ErrorFields("cast persist result to actor",
-			zap.String("category", actors.Category(uid.Category).String()),
+			zap.String("category", iactor.Category(uid.Category).String()),
 			zap.Int64("id", uid.ID),
 			zap.NamedError("error", castErr),
 		)
@@ -192,8 +192,8 @@ func getNodeGroup(node *cluster.Node) (string, bool) {
 
 // getActorFixedNode 获取 Actor 固定节点.
 func getActorFixedNode(uid gactor.ActorUID) (string, bool) {
-	switch actors.Category(uid.Category) {
-	case actors.CategoryServer:
+	switch iactor.Category(uid.Category) {
+	case iactor.CategoryServer:
 		return cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(uid.ID)), true
 	default:
 		return "", false
@@ -202,8 +202,8 @@ func getActorFixedNode(uid gactor.ActorUID) (string, bool) {
 
 // getActorNodeGroup 获取Actor节点分组.
 func getActorNodeGroup(uid gactor.ActorUID) (string, bool) {
-	switch actors.Category(uid.Category) {
-	case actors.CategoryPlayer:
+	switch iactor.Category(uid.Category) {
+	case iactor.CategoryPlayer:
 		serverID, ok := getActorServerID(uid)
 		if !ok {
 			return "", false
@@ -216,16 +216,16 @@ func getActorNodeGroup(uid gactor.ActorUID) (string, bool) {
 
 // getActorServerID 获取 Actor 所属服务器ID.
 func getActorServerID(uid gactor.ActorUID) (int64, bool) {
-	switch actors.Category(uid.Category) {
-	case actors.CategoryServer:
+	switch iactor.Category(uid.Category) {
+	case iactor.CategoryServer:
 		return uid.ID, true
-	case actors.CategoryPlayer:
+	case iactor.CategoryPlayer:
 		serverID, ok, err := appInst.actorServerStore.GetActorServer(uid)
 		if err != nil || !ok || serverID <= 0 {
 			// 打印错误日志，方便排查获取玩家Actor所属服务器ID失败的问题
 			if err != nil {
 				logger.Get().Error("get actor server failed",
-					zap.String("category", actors.Category(uid.Category).String()),
+					zap.String("category", iactor.Category(uid.Category).String()),
 					zap.Int64("actorId", uid.ID),
 					zap.Error(err))
 			}

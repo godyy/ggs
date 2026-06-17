@@ -4,8 +4,9 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/infra/actors"
-	actorsdefine "github.com/godyy/ggs/internal/infra/actors/define"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
+	actorsdefine "github.com/godyy/ggs/internal/infra/actor/define"
 )
 
 // initActorDefineList 初始化Actor定义列表.
@@ -13,8 +14,8 @@ func initActorDefineList() {
 	actorsdefine.RegisterDefine(
 		// server.
 		gactor.NewActorDefine(gactor.ActorDefineConfig{
-			Name:           actors.CategoryServer.String(),
-			Category:       actors.CategoryServer.ActorCategory(),
+			Name:           actor.CategoryServer.String(),
+			Category:       actor.CategoryServer.ActorCategory(),
 			Priority:       0,
 			MessageBoxSize: 1000,
 			BehaviorCreator: func(a gactor.Actor) gactor.ActorBehavior {
@@ -27,8 +28,8 @@ func initActorDefineList() {
 
 		// player.
 		gactor.NewCActorDefine(gactor.CActorDefineConfig{
-			Name:           actors.CategoryPlayer.String(),
-			Category:       actors.CategoryPlayer.ActorCategory(),
+			Name:           actor.CategoryPlayer.String(),
+			Category:       actor.CategoryPlayer.ActorCategory(),
 			Priority:       99,
 			MessageBoxSize: 10,
 			RecycleTime:    time.Minute * 30,

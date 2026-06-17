@@ -2,8 +2,8 @@ package player
 
 import (
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/infra/actors"
-	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
 )
 
 // mdCheckLogin 检查是否已登录.

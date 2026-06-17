@@ -6,10 +6,10 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/systems"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	"github.com/godyy/ggs/internal/protocol/pb/s2s"
-	"github.com/godyy/ggskit/infra/actor"
 	pkgerrors "github.com/pkg/errors"
 )
 
@@ -23,7 +23,7 @@ func handleLoginCharacter(ctx *gactor.Context, req *pbc2s.LoginCharacterReq) (*p
 
 	player.SetLogin()
 
-	getServerNameResp, err := player.Sugared().RPCWithTimeout(gactor.ActorUID{Category: actors.CategoryServer.ActorCategory(), ID: 1},
+	getServerNameResp, err := player.Sugared().RPCWithTimeout(gactor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: 1},
 		&s2s.GetServerNameReq{}, 5*time.Second)
 	if err != nil {
 		return nil, pkgerrors.WithMessage(err, "get server name")

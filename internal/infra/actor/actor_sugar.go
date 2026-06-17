@@ -1,4 +1,4 @@
-package actors
+package actor
 
 import (
 	"context"
@@ -13,10 +13,10 @@ var actorSugarUtil *actor.ActorHelper
 
 // ActorSugared Actor和语法糖基础封装.
 type ActorSugared struct {
-	actor.Actor
+	Actor
 }
 
-func (a *ActorSugared) GetActor() actor.Actor {
+func (a *ActorSugared) GetActor() Actor {
 	return a.Actor
 }
 
@@ -28,14 +28,14 @@ func (a *ActorSugared) Sugared() Sugared {
 
 // CActorSugared CActor和语法糖基础封装.
 type CActorSugared struct {
-	actor.CActor
+	CActor
 }
 
-func (a *CActorSugared) GetActor() actor.Actor {
+func (a *CActorSugared) GetActor() Actor {
 	return a.CActor
 }
 
-func (a *CActorSugared) GetCActor() actor.CActor {
+func (a *CActorSugared) GetCActor() CActor {
 	return a.CActor
 }
 
@@ -47,7 +47,7 @@ func (a *CActorSugared) Sugared() CSugared {
 
 // Sugared Actor 语法糖封装
 type Sugared struct {
-	actor.Actor
+	Actor
 }
 
 func (a Sugared) RPCWithDeadline(to actor.ActorUID, args proto.Message, deadline time.Time) (proto.Message, error) {
@@ -84,7 +84,7 @@ func (a Sugared) AsyncRPCWithContext(ctx context.Context, to actor.ActorUID, arg
 
 // CSugared CActor 语法糖封装
 type CSugared struct {
-	actor.CActor
+	CActor
 }
 
 func (a CSugared) PushRawMessage(msg proto.Message) error {

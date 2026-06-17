@@ -4,9 +4,9 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/base/errs"
 	"github.com/godyy/ggs/app/game/internal/systems"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
 	pbcs "github.com/godyy/ggs/internal/protocol/pb/c2s"
-	"github.com/godyy/ggskit/infra/actor"
 )
 
 func handleUseItem(c *gactor.Context, req *pbcs.UseItemReq) (*pbcs.UseItemResp, error) {

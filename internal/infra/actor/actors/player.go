@@ -6,14 +6,15 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actors/lifecycle"
-	"github.com/godyy/ggs/internal/infra/actors/model/player"
+	actors "github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
+	"github.com/godyy/ggs/internal/infra/actor/model/player"
 	"github.com/godyy/ggskit/infra/actor"
 )
 
 // Player 玩家Actor
 type Player struct {
-	CActorWithModule[*player.Model] // 集成携带数据模型的Actor封装
+	actors.CActorWithModule[*player.Model] // 集成携带数据模型的Actor封装
 
 	isLogin           bool           // 是否已登录.
 	heartbeatTimerId  gactor.TimerId // 心跳定时器ID.
@@ -23,7 +24,7 @@ type Player struct {
 // NewPlayer 构造玩家Actor.
 func NewPlayer(actor actor.CActor) *Player {
 	p := &Player{
-		CActorWithModule: NewCActorWithModule[*player.Model](actor),
+		CActorWithModule: actors.NewCActorWithModule[*player.Model](actor),
 	}
 	return p
 }
@@ -33,7 +34,7 @@ func (p *Player) OnStart() error {
 	// 构造model
 	p.Model = player.New(p.ActorUID().ID)
 
-	if err := p.onStart(); err != nil {
+	if err := p.CActorWithModule.OnStart(); err != nil {
 		return err
 	}
 
@@ -45,7 +46,7 @@ func (p *Player) OnStop() error {
 	// 调用生命周期回调
 	lifecycle.OnStop(p)
 
-	return p.onStop()
+	return p.CActorWithModule.OnStop()
 }
 
 // OnConnected 已连接行为.

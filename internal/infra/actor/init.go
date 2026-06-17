@@ -1,7 +1,7 @@
-package actors
+package actor
 
 import (
-	"github.com/godyy/ggs/internal/infra/actors/persist"
+	"github.com/godyy/ggs/internal/infra/actor/persist"
 	protoreg "github.com/godyy/ggs/internal/protocol/registry"
 	"github.com/godyy/ggskit/infra/actor"
 )

@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 
-	"github.com/godyy/ggs/internal/infra/actors/model"
+	"github.com/godyy/ggs/internal/infra/actor/model"
 	"github.com/godyy/ggskit/infra/actor"
 )
 
@@ -21,10 +21,10 @@ type Model struct {
 // New 创建server 数据模型.
 func New(a actor.ActorWithModel, serverId int64) *Model {
 	m := &Model{
-		serverId:   serverId,
-		ServerName: fmt.Sprintf("server%d", serverId),
+		ModelWithID: model.NewModuleWithID(fmt.Sprintf("server_%d", serverId)),
+		serverId:    serverId,
+		ServerName:  fmt.Sprintf("server%d", serverId),
 	}
-	m.ID = fmt.Sprintf("server_%d", serverId)
 	return m
 }
 

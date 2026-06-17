@@ -1,8 +1,7 @@
 package handlers
 
 import (
-	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -11,6 +10,6 @@ const (
 )
 
 // getReq 获取当前上下文的请求消息.
-func getReq[Req proto.Message](ctx *gactor.Context) Req {
-	return actors.SugarContext(ctx).GetMsg().(Req)
+func getReq[Req proto.Message](ctx *actor.Context) Req {
+	return actor.SugarContext(ctx).GetMsg().(Req)
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/godyy/ggs/app/platform/internal/models/httpproto"
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/nodeutil"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
 	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
 	"github.com/godyy/ggs/internal/utils/ginutils"
 	"github.com/godyy/ggskit/infra/cluster"
@@ -51,7 +51,7 @@ func (s *serverHandler) handleServerCreate(c *gin.Context, req *httpproto.Server
 	// 预注册服务器 Actor.
 	if _, err := app.ActorRegistry().RegisterActor(gactor.ActorRegisterParams{
 		UID: gactor.ActorUID{
-			Category: actors.CategoryServer.ActorCategory(),
+			Category: actor.CategoryServer.ActorCategory(),
 			ID:       server.ID,
 		},
 		NodeId:  server.NodeId,

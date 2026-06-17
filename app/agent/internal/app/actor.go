@@ -9,7 +9,7 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
-	"github.com/godyy/ggs/internal/infra/actors"
+	iactor "github.com/godyy/ggs/internal/infra/actor"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
@@ -28,7 +28,7 @@ func (a *app) startActor() error {
 	clientCfg := &actor.ClientConfig{
 		Core: &gactor.ClientConfig{
 			NodeId:            cluster.MakeNodeID(consts.NodeAgent, nodeutil.MakeServerNodeName(Env().ServerID())),
-			ActorCategory:     actors.CategoryPlayer.ActorCategory(),
+			ActorCategory:     iactor.CategoryPlayer.ActorCategory(),
 			DefRequestTimeout: time.Second * 10,
 			Handler:           a,
 		},

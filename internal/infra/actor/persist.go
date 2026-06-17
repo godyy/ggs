@@ -1,11 +1,11 @@
-package actors
+package actor
 
 import (
 	"time"
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actors/persist"
+	"github.com/godyy/ggs/internal/infra/actor/persist"
 	"go.uber.org/zap"
 )
 
@@ -15,14 +15,14 @@ type AsyncSaveCallback func(uid gactor.ActorUID, err error)
 
 // persistor 持久化辅助结构
 type persistor struct {
-	saveTimerId gactor.TimerId // save 定时器ID
+	saveTimerId TimerId // save 定时器ID
 }
 
-func (p *persistor) SaveTimerId() gactor.TimerId {
+func (p *persistor) SaveTimerId() TimerId {
 	return p.saveTimerId
 }
 
-func (p *persistor) SetSaveTimerId(timerId gactor.TimerId) {
+func (p *persistor) SetSaveTimerId(timerId TimerId) {
 	p.saveTimerId = timerId
 }
 

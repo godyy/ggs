@@ -1,9 +1,9 @@
 package systems
 
 import (
-	"github.com/godyy/ggs/internal/infra/actors"
-	"github.com/godyy/ggs/internal/infra/actors/model/player"
-	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
+	"github.com/godyy/ggs/internal/infra/actor/model/player"
 )
 
 type itemsModule struct{}

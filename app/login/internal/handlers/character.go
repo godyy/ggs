@@ -17,7 +17,7 @@ import (
 	"github.com/godyy/ggs/app/login/internal/infra/repo"
 	"github.com/godyy/ggs/app/login/internal/utils/ginutils"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
 	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
 	"github.com/godyy/ggs/internal/models"
 	cginutils "github.com/godyy/ggs/internal/utils/ginutils"
@@ -255,7 +255,7 @@ func (h *characterHandler) createCharacter(c *gin.Context, req *httpproto.Create
 
 	// 设置角色服务器.
 	if err := app.ActorServerStore().SetActorServer(gactor.ActorUID{
-		Category: actors.CategoryPlayer.ActorCategory(),
+		Category: actor.CategoryPlayer.ActorCategory(),
 		ID:       characterID,
 	}, req.ServerID); err != nil {
 		return errs.InernalErrorWithErr(pkgerrors.WithMessage(err, "set actor server"))

@@ -1,4 +1,4 @@
-package actors
+package actor
 
 import "github.com/godyy/ggskit/infra/actor"
 

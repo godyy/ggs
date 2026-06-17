@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/godyy/ggs/internal/base/consts"
-	"github.com/godyy/ggs/internal/infra/actors"
-	"github.com/godyy/ggs/internal/infra/actors/lifecycle"
-	"github.com/godyy/ggs/internal/infra/actors/model/player"
-	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
+	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
+	"github.com/godyy/ggs/internal/infra/actor/model/player"
 )
 
 type playerModule struct{}
@@ -15,7 +15,7 @@ type playerModule struct{}
 var Player = &playerModule{}
 
 func init() {
-	lifecycle.RegisterCHandler[*actors.Player](actors.CategoryPlayer.ActorCategory(), Player)
+	lifecycle.RegisterCHandler[*actors.Player](actor.CategoryPlayer.ActorCategory(), Player)
 }
 
 // OnStart Player OnStart回调.

@@ -3,10 +3,10 @@ package player
 import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/infra/actors"
-	"github.com/godyy/ggs/internal/infra/actors/model/player"
+	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
+	"github.com/godyy/ggs/internal/infra/actor/model/player"
 	"github.com/godyy/ggs/internal/protocol/pb/c2s"
-	"github.com/godyy/ggskit/infra/actor"
 )
 
 // handleModifyName 修改玩家名称

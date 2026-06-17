@@ -1,7 +1,7 @@
 package player
 
 import (
-	"github.com/godyy/ggs/internal/infra/actors/model"
+	"github.com/godyy/ggs/internal/infra/actor/model"
 )
 
 const DBColl = "players"

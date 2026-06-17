@@ -1,6 +1,6 @@
 package systems
 
-import "github.com/godyy/ggs/internal/infra/actors"
+import "github.com/godyy/ggs/internal/infra/actor/actors"
 
 type serverModule struct{}
 

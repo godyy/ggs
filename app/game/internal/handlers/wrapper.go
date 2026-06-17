@@ -4,7 +4,7 @@ import (
 	"github.com/godyy/gactor"
 
 	"github.com/godyy/ggs/app/game/internal/base/errs"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
@@ -20,7 +20,7 @@ func WrapC2SFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req) (
 			replyC2SError(ctx, err)
 			return
 		}
-		actors.SugarContext(ctx).Reply(resp)
+		actor.SugarContext(ctx).Reply(resp)
 	}
 }
 
@@ -33,7 +33,7 @@ func WrapS2SRPCFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req
 			replyS2SError(ctx, err)
 			return
 		}
-		actors.SugarContext(ctx).Reply(resp)
+		actor.SugarContext(ctx).Reply(resp)
 	}
 }
 
@@ -57,7 +57,7 @@ func replyC2SError(ctx *gactor.Context, err error) {
 		respErr = &pbcommon.Error{Code: int32(pbc2s.ErrCode_ECInternalError)}
 	}
 
-	actors.SugarContext(ctx).Reply(respErr)
+	actor.SugarContext(ctx).Reply(respErr)
 }
 
 // replyS2SError 回复S2S错误.
@@ -70,5 +70,5 @@ func replyS2SError(ctx *gactor.Context, err error) {
 		loggerInst.Errorf("replyS2SError: none PbError, %v", err)
 		respErr = &pbcommon.Error{Code: int32(pbs2s.ErrCode_ECInternalError)}
 	}
-	actors.SugarContext(ctx).Reply(respErr)
+	actor.SugarContext(ctx).Reply(respErr)
 }

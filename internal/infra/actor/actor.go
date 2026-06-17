@@ -1,11 +1,24 @@
-package actors
+package actor
 
 import (
 	"time"
 
-	model1 "github.com/godyy/ggs/internal/infra/actors/model"
+	"github.com/godyy/gactor"
+	model1 "github.com/godyy/ggs/internal/infra/actor/model"
 	"github.com/godyy/ggskit/infra/actor"
 )
+
+type ActorUID = actor.ActorUID
+
+type Actor = actor.Actor
+
+type CActor = actor.CActor
+
+type TimerId = gactor.TimerId
+
+func GetActorModule[M actor.Module](a actor.ActorWithModule, autoCreate bool) M {
+	return actor.GetActorModule[M](a, autoCreate)
+}
 
 const (
 	ActorSaveDelay = 5 * time.Second // Actor 存储延迟.
@@ -47,7 +60,7 @@ func (a *ActorWithModel[Model]) OnModelDirty() {
 	DelaySave(a, ActorSaveDelay)
 }
 
-func (a *ActorWithModel[Model]) onStart() error {
+func (a *ActorWithModel[Model]) OnStart() error {
 	// 加载model数据
 	exists, err := LoadModel(a)
 	if err != nil {
@@ -63,7 +76,7 @@ func (a *ActorWithModel[Model]) onStart() error {
 	return nil
 }
 
-func (a *ActorWithModel[Model]) onStop() error {
+func (a *ActorWithModel[Model]) OnStop() error {
 	// 持久化脏数据.
 	if ok, _ := a.Model.IsDirty(); ok {
 		if err := SaveModel(a); err != nil {
@@ -121,7 +134,7 @@ func (a *ActorWithModule[Model]) SetAllDirty() {
 	a.OnModelDirty()
 }
 
-func (a *ActorWithModule[Model]) onStart() error {
+func (a *ActorWithModule[Model]) OnStart() error {
 	// 加载model数据
 	exists, err := LoadModel(a)
 	if err != nil {
@@ -137,7 +150,7 @@ func (a *ActorWithModule[Model]) onStart() error {
 	return nil
 }
 
-func (a *ActorWithModule[Model]) onStop() error {
+func (a *ActorWithModule[Model]) OnStop() error {
 	// 持久化脏数据.
 	if ok, _ := a.Model.IsDirty(); ok {
 		if err := SaveModel(a); err != nil {
@@ -176,7 +189,7 @@ func (a *CActorWithModel[Model]) OnModelDirty() {
 	DelaySave(a, ActorSaveDelay)
 }
 
-func (a *CActorWithModel[Model]) onStart() error {
+func (a *CActorWithModel[Model]) OnStart() error {
 	// 加载model数据
 	exists, err := LoadModel(a)
 	if err != nil {
@@ -192,7 +205,7 @@ func (a *CActorWithModel[Model]) onStart() error {
 	return nil
 }
 
-func (a *CActorWithModel[Model]) onStop() error {
+func (a *CActorWithModel[Model]) OnStop() error {
 	// 持久化脏数据.
 	if ok, _ := a.Model.IsDirty(); ok {
 		if err := SaveModel(a); err != nil {
@@ -250,7 +263,7 @@ func (a *CActorWithModule[Model]) SetAllDirty() {
 	a.OnModelDirty()
 }
 
-func (a *CActorWithModule[Model]) onStart() error {
+func (a *CActorWithModule[Model]) OnStart() error {
 	// 加载model数据
 	exists, err := LoadModel(a)
 	if err != nil {
@@ -266,7 +279,7 @@ func (a *CActorWithModule[Model]) onStart() error {
 	return nil
 }
 
-func (a *CActorWithModule[Model]) onStop() error {
+func (a *CActorWithModule[Model]) OnStop() error {
 	// 持久化脏数据.
 	if ok, _ := a.Model.IsDirty(); ok {
 		if err := SaveModel(a); err != nil {

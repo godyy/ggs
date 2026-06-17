@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/godyy/gactor"
 	_ "github.com/godyy/ggs/app/game/internal/systems"
-	"github.com/godyy/ggs/internal/infra/actors"
+	iactor "github.com/godyy/ggs/internal/infra/actor"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
 	"github.com/godyy/ggskit/infra/actor"
@@ -42,7 +42,7 @@ func (h *Handler) Handle(ctx *gactor.Context) {
 
 // handleC2S 处理C2S请求.
 func (h *Handler) handleC2S(ctx *gactor.Context) {
-	ctxSugared := actors.SugarContext(ctx)
+	ctxSugared := iactor.SugarContext(ctx)
 
 	// 解码负载数据
 	pid, msg, err := ctxSugared.Decode()
@@ -69,7 +69,7 @@ func (h *Handler) handleC2S(ctx *gactor.Context) {
 
 // handleS2S 处理S2S请求.
 func (h *Handler) handleS2S(ctx *gactor.Context) {
-	ctxSugared := actors.SugarContext(ctx)
+	ctxSugared := iactor.SugarContext(ctx)
 
 	// 解码负载数据
 	pid, msg, err := ctxSugared.Decode()

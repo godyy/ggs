@@ -5,7 +5,7 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal/app"
-	"github.com/godyy/ggs/internal/infra/actors"
+	"github.com/godyy/ggs/internal/infra/actor"
 )
 
 const (
@@ -21,7 +21,7 @@ func checkLocation(location gactor.ActorLocation) bool {
 func updatePlayerLocation(playerId int64, nodeId string) error {
 	_, err := app.ActorRegistry().RegisterActor(gactor.ActorRegisterParams{
 		UID: gactor.ActorUID{
-			Category: actors.CategoryPlayer.ActorCategory(),
+			Category: actor.CategoryPlayer.ActorCategory(),
 			ID:       playerId,
 		},
 		NodeId:  nodeId,
@@ -34,7 +34,7 @@ func updatePlayerLocation(playerId int64, nodeId string) error {
 // getPlayerLocation 获取玩家 Actor 位置信息.
 func getPlayerLocation(playerId int64) (gactor.ActorLocation, error) {
 	return app.ActorRegistry().GetActorLocation(gactor.ActorUID{
-		Category: actors.CategoryPlayer.ActorCategory(),
+		Category: actor.CategoryPlayer.ActorCategory(),
 		ID:       playerId,
 	})
 }
