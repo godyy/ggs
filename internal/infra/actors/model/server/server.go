@@ -9,8 +9,8 @@ import (
 
 // Model server 数据模型.
 type Model struct {
-	model.Dirty           `bson:"-"`       // 集成脏标记位
-	model.FieldID[string] `bson:",inline"` // 集成通用ID字段
+	model.Dirty               `bson:"-"`       // 集成脏标记位
+	model.ModelWithID[string] `bson:",inline"` // 集成具备ID字段的模型
 
 	serverId int64
 

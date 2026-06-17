@@ -43,9 +43,6 @@ func (d *Dirty) ClearDirty() {
 	*d = false
 }
 
-// Release 释放资源.
-func (d *Dirty) Release() {}
-
 // MarshalBSONDirty 序列化脏数据.
 func (d *Dirty) MarshalBSONDirty() ([]byte, error) {
 	return nil, errors.New("should not be invoked")
