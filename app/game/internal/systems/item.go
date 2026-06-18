@@ -5,6 +5,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/convert"
+	"github.com/godyy/ggs/internal/infra/actor/handler"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 )
@@ -20,17 +21,18 @@ func (m *itemsModule) init(p *actors.Player) {
 	}
 }
 
-func (m *itemsModule) UseItem(p *actors.Player, itemId int32, num int64) (left int64, ok bool) {
+func (m *itemsModule) UseItem(ctx *actor.Context, itemId int32, num int64) (left int64, ok bool) {
 	if itemId == 0 || num <= 0 {
 		return 0, false
 	}
 
+	p := actor.CtxActor[*actors.Player](ctx)
 	items := actor.GetActorModule[*player.Items](p, true)
 	left, ok = items.Sub(itemId, num)
 	if ok {
 		p.SetDirtyModules(items)
 		item, _ := items.GetItem(itemId)
-		p.Sugared().PushRawMessage(&pbc2s.ItemNotify{
+		handler.AppendPushMsg(ctx, &pbc2s.ItemNotify{
 			Items: convert.Items2PB([]player.Item{item}),
 		})
 	}

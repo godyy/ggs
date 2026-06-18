@@ -11,6 +11,7 @@ import (
 // WrapReqFunc 包装Req处理函数.
 func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) HandlerFunc {
 	return func(ctx *actor.Context) {
+		defer handlePushMsgQueue(ctx)
 		req := GetArgs[Req](ctx)
 		resp, err := f(ctx, req)
 		if err != nil {
@@ -72,4 +73,13 @@ func replyS2SError(ctx *actor.Context, err error) {
 		respErr = &pbcommon.Error{Code: int32(pbs2s.ErrCode_ECInternalError)}
 	}
 	actor.SugarContext(ctx).Reply(respErr)
+}
+
+// handlePushMsgQueue 处理推送消息队列.
+func handlePushMsgQueue(ctx *actor.Context) {
+	sugared := actor.CSugared{CActor: ctx.Actor().(actor.CActor)}
+	msgQueue, _ := actor.CtxKGet(ctx, ctxKeyPushMsgQueue)
+	for _, msg := range msgQueue {
+		sugared.PushRawMessage(msg)
+	}
 }
