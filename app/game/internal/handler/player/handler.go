@@ -20,7 +20,6 @@ func initC2SHandler() {
 }
 
 func initS2SHandler() {
-	registerS2SFunc(pbs2s.PID_PActorSaveResult, actorhandler.WrapCastFunc(handler.OnActorSaveResult))
 }
 
 func registerC2SFunc(pid pbc2s.PID, checkLogin bool, f ...actorhandler.HandlerFunc) {

@@ -1,8 +1,6 @@
 package actor
 
 import (
-	"time"
-
 	"github.com/godyy/gactor"
 	model1 "github.com/godyy/ggs/internal/infra/actor/model"
 	"github.com/godyy/ggskit/infra/actor"
@@ -19,10 +17,6 @@ type TimerId = gactor.TimerId
 func GetActorModule[M actor.Module](a actor.ActorWithModule, autoCreate bool) M {
 	return actor.GetActorModule[M](a, autoCreate)
 }
-
-const (
-	ActorSaveDelay = 5 * time.Second // Actor 存储延迟.
-)
 
 // model 模型接口.
 // 用于限制ActorWithModel的模型类型.
@@ -57,7 +51,7 @@ func (a *ActorWithModel[Model]) OnModelDirty() {
 	if ok, _ := a.Model.IsDirty(); !ok {
 		return
 	}
-	DelaySave(a, ActorSaveDelay)
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *ActorWithModel[Model]) OnStart() error {
@@ -116,7 +110,7 @@ func (a *ActorWithModule[Model]) OnModelDirty() {
 	if ok, _ := a.Model.IsDirty(); !ok {
 		return
 	}
-	DelaySave(a, ActorSaveDelay)
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *ActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
@@ -186,7 +180,7 @@ func (a *CActorWithModel[Model]) OnModelDirty() {
 	if ok, _ := a.Model.IsDirty(); !ok {
 		return
 	}
-	DelaySave(a, ActorSaveDelay)
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *CActorWithModel[Model]) OnStart() error {
@@ -245,7 +239,7 @@ func (a *CActorWithModule[Model]) OnModelDirty() {
 	if ok, _ := a.Model.IsDirty(); !ok {
 		return
 	}
-	DelaySave(a, ActorSaveDelay)
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *CActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {

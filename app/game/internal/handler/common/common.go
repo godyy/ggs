@@ -1,13 +1,15 @@
-package handler
+package common
 
 import (
-	"github.com/godyy/ggs/internal/base/consts"
+	"github.com/godyy/ggs/app/game/internal/app"
+	"github.com/godyy/ggs/app/game/internal/handler"
 	iactor "github.com/godyy/ggs/internal/infra/actor"
+	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
 	"github.com/godyy/ggskit/infra/actor"
 )
 
-func OnActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) {
+func handleActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) {
 	if result.Success {
 		a, ok := ctx.Actor().Behavior().(actor.ActorWithModel)
 		if !ok {
@@ -22,6 +24,10 @@ func OnActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) {
 	}
 
 	if a, ok := ctx.Actor().Behavior().(iactor.ActorSaveWithTimer); ok {
-		iactor.DelaySave(a, consts.ActorSaveRetryDelay)
+		iactor.DelaySave(a, app.Config().Actor.SaveRetryDelay)
 	}
+}
+
+func init() {
+	handler.RegisterS2S(pbs2s.PID_PActorSaveResult, actorhandler.WrapCastFunc(handleActorSaveResult))
 }

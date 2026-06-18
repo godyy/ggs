@@ -31,7 +31,3 @@ func RegisterC2S(pid pbc2s.PID, funcs ...handler.HandlerFunc) {
 func RegisterS2S(pid pbs2s.PID, funcs ...handler.HandlerFunc) {
 	s2sHandler.RegisterFunc(pid, funcs...)
 }
-
-func init() {
-	RegisterS2S(pbs2s.PID_PActorSaveResult, handler.WrapCastFunc(OnActorSaveResult))
-}

@@ -190,7 +190,9 @@ func onSaveTimer(args *gactor.ActorTimerArgs) {
 			zap.Int64("id", uid.ID),
 			zap.NamedError("error", err),
 		)
+
 		// 尝试重新持久化
+		retryDelay := retryDelay + time.Duration(rand.Int64N(int64(delayRandom)))
 		startSaveTimer(a, saveArgs.db, retryDelay, saveArgs.callback)
 	}
 }

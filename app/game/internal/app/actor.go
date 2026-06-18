@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/game/internal"
+	"github.com/godyy/ggs/app/game/internal/handler"
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
@@ -66,7 +66,7 @@ func (a *app) startActor() error {
 			ActorConfig: gactor.ActorConfig{
 				ActorDefines:        actordefine.GetDefineList(),
 				ClientActorCategory: iactor.CategoryPlayer.ActorCategory(),
-				Handler:             internal.GetActorHandler(),
+				Handler:             handler.Handle,
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: []gtimewheel.LevelConfig{

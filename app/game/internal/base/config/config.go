@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/godyy/ggskit/base/config"
 	"github.com/godyy/ggskit/base/db/mongo"
 	"github.com/godyy/ggskit/base/db/redis"
@@ -37,6 +39,15 @@ type Config struct {
 
 	// Log 日志配置
 	Log *logger.Config
+
+	// Actor Actor相关配置.
+	Actor struct {
+		// SaveDelay 保存延迟.
+		SaveDelay time.Duration
+
+		// SaveRetryDelay 保存重试延迟.
+		SaveRetryDelay time.Duration
+	}
 }
 
 // Load 从指定路径加载配置文件.
