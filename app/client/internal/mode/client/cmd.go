@@ -1,13 +1,13 @@
 package client
 
 import (
-	"encoding/json"
 	"log"
 	"reflect"
 	"regexp"
 	"strings"
 
 	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
+	"github.com/ohler55/ojg/sen"
 )
 
 type cmdExecFunc func(c *cmd, cli *Client, args string) bool
@@ -89,7 +89,7 @@ func init() {
 			name: "sendreq",
 			desc: "send request message to server",
 			// usage:         "sendreq msgname[Req]" + cmdSendReqArgsSp + "msgjsonbody",
-			usage: `sendreq msgname {"key1":value1[,"key2":value2,...]}`,
+			usage: `sendreq msgname {key1:value1[,key2:value2,...]}`,
 			exec: func(c *cmd, cli *Client, args string) bool {
 				// parts := strings.Split(args, cmdSendReqArgsSp)
 				// if len(parts) < 2 {
@@ -115,7 +115,8 @@ func init() {
 					log.Println(err)
 					return false
 				}
-				err = json.Unmarshal([]byte(body), req)
+
+				err = sen.Unmarshal([]byte(body), req)
 				if err != nil {
 					log.Println(err)
 					return false
