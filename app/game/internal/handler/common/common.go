@@ -9,23 +9,25 @@ import (
 	"github.com/godyy/ggskit/infra/actor"
 )
 
-func handleActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) {
+func handleActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) bool {
 	if result.Success {
 		a, ok := ctx.Actor().Behavior().(actor.ActorWithModel)
 		if !ok {
-			return
+			return true
 		}
 		model, ok := a.GetModel().(actor.ModelDirty)
 		if !ok {
-			return
+			return true
 		}
 		model.ClearDirty()
-		return
+		return true
 	}
 
 	if a, ok := ctx.Actor().Behavior().(iactor.ActorSaveWithTimer); ok {
 		iactor.DelaySave(a, app.Config().Actor.SaveRetryDelay)
 	}
+
+	return true
 }
 
 func init() {

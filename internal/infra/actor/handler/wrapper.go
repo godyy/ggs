@@ -15,6 +15,7 @@ func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 		resp, err := f(ctx, req)
 		if err != nil {
 			replyC2SError(ctx, err)
+			ctx.Abort()
 			return
 		}
 		actor.SugarContext(ctx).Reply(resp)
@@ -28,6 +29,7 @@ func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 		resp, err := f(ctx, req)
 		if err != nil {
 			replyS2SError(ctx, err)
+			ctx.Abort()
 			return
 		}
 		actor.SugarContext(ctx).Reply(resp)
@@ -35,10 +37,12 @@ func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 }
 
 // WrapCastFunc 包装Cast处理函数.
-func WrapCastFunc[Params proto.Message](f func(ctx *actor.Context, params Params)) HandlerFunc {
+func WrapCastFunc[Params proto.Message](f func(ctx *actor.Context, params Params) bool) HandlerFunc {
 	return func(ctx *actor.Context) {
 		params := GetArgs[Params](ctx)
-		f(ctx, params)
+		if !f(ctx, params) {
+			ctx.Abort()
+		}
 	}
 }
 
