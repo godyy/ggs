@@ -1,4 +1,4 @@
-.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gen_gdconf
+.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gdconf
 
 protos:
 	cd internal/protocol && make protos
@@ -21,10 +21,10 @@ gen_user_token:
 			\"uid\": \"yy01\" \
 		}"
 
-gen_gdconf: excel_path := ../ggs_excels
-gen_gdconf: mongo_uri := mongodb://localhost:27017
-gen_gdconf: mongo_db := gdconf
-gen_gdconf:
+gdconf: excel_path := ../ggs_excels
+gdconf: mongo_uri := mongodb://localhost:27017
+gdconf: mongo_db := gdconf
+gdconf:
 	# 删除internal/gdconf下除了*_ext.go和gdconf.go之外的golang代码文件
 	find ./internal/gdconf -name "*.go" ! -name "*_ext.go" ! -name "gdconf.go" -delete
 
