@@ -4,6 +4,9 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
+	"github.com/godyy/ggs/app/game/internal/handler"
+	_ "github.com/godyy/ggs/app/game/internal/handler/player"
+	_ "github.com/godyy/ggs/app/game/internal/handler/server"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	actorsdefine "github.com/godyy/ggs/internal/infra/actor/define"
@@ -41,4 +44,9 @@ func initActorDefineList() {
 			gactor.WithMaxAsyncRPCAmount(10),
 		),
 	)
+}
+
+// GetActorHandler 获取Actor消息处理器
+func GetActorHandler() gactor.HandlerFunc {
+	return handler.Handle
 }

@@ -66,7 +66,7 @@ func (a *app) startActor() error {
 			ActorConfig: gactor.ActorConfig{
 				ActorDefines:        actordefine.GetDefineList(),
 				ClientActorCategory: iactor.CategoryPlayer.ActorCategory(),
-				Handler:             internal.ActorHandler,
+				Handler:             internal.GetActorHandler(),
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: []gtimewheel.LevelConfig{

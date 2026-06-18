@@ -1,0 +1,11 @@
+package server
+
+import (
+	"github.com/godyy/ggs/app/game/internal/handler"
+	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
+	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+)
+
+func init() {
+	handler.RegisterS2S(pbs2s.PID_PGetServerNameReq, actorhandler.WrapRPCFunc(handleGetServerName))
+}
