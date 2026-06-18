@@ -4,6 +4,8 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
+	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	"github.com/godyy/ggs/internal/protocol/pb/common"
 )
 
 type itemsModule struct{}
@@ -19,6 +21,15 @@ func (m *itemsModule) UseItem(p *actors.Player, itemId int32, num int64) (left i
 	left, ok = items.Sub(itemId, num)
 	if ok {
 		p.SetDirtyModules(items)
+		item, _ := items.GetItem(itemId)
+		p.Sugared().PushRawMessage(&pbc2s.ItemNotify{
+			Items: []*common.Item{
+				{
+					Id:    itemId,
+					Count: item.Num,
+				},
+			},
+		})
 	}
 
 	return

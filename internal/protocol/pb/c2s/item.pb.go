@@ -7,6 +7,7 @@
 package c2s
 
 import (
+	common "github.com/godyy/ggs/internal/protocol/pb/common"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -135,11 +136,56 @@ func (x *UseItemResp) GetLeftNum() int64 {
 	return 0
 }
 
+// 道具变更通知.
+type ItemNotify struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*common.Item         `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"` // 道具变更列表.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ItemNotify) Reset() {
+	*x = ItemNotify{}
+	mi := &file_c2s_item_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ItemNotify) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ItemNotify) ProtoMessage() {}
+
+func (x *ItemNotify) ProtoReflect() protoreflect.Message {
+	mi := &file_c2s_item_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ItemNotify.ProtoReflect.Descriptor instead.
+func (*ItemNotify) Descriptor() ([]byte, []int) {
+	return file_c2s_item_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ItemNotify) GetItems() []*common.Item {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 var File_c2s_item_proto protoreflect.FileDescriptor
 
 const file_c2s_item_proto_rawDesc = "" +
 	"\n" +
-	"\x0ec2s/item.proto\x12\x03c2s\"6\n" +
+	"\x0ec2s/item.proto\x12\x03c2s\x1a\x11common/item.proto\"6\n" +
 	"\n" +
 	"UseItemReq\x12\x16\n" +
 	"\x06itemId\x18\x01 \x01(\x05R\x06itemId\x12\x10\n" +
@@ -147,7 +193,10 @@ const file_c2s_item_proto_rawDesc = "" +
 	"\vUseItemResp\x12\x16\n" +
 	"\x06itemId\x18\x01 \x01(\x05R\x06itemId\x12\x10\n" +
 	"\x03num\x18\x02 \x01(\x03R\x03num\x12\x18\n" +
-	"\aleftNum\x18\x03 \x01(\x03R\aleftNumB/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
+	"\aleftNum\x18\x03 \x01(\x03R\aleftNum\"0\n" +
+	"\n" +
+	"ItemNotify\x12\"\n" +
+	"\x05items\x18\x01 \x03(\v2\f.common.ItemR\x05itemsB/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
 
 var (
 	file_c2s_item_proto_rawDescOnce sync.Once
@@ -161,17 +210,20 @@ func file_c2s_item_proto_rawDescGZIP() []byte {
 	return file_c2s_item_proto_rawDescData
 }
 
-var file_c2s_item_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_c2s_item_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_c2s_item_proto_goTypes = []any{
 	(*UseItemReq)(nil),  // 0: c2s.UseItemReq
 	(*UseItemResp)(nil), // 1: c2s.UseItemResp
+	(*ItemNotify)(nil),  // 2: c2s.ItemNotify
+	(*common.Item)(nil), // 3: common.Item
 }
 var file_c2s_item_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	3, // 0: c2s.ItemNotify.items:type_name -> common.Item
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_c2s_item_proto_init() }
@@ -185,7 +237,7 @@ func file_c2s_item_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_c2s_item_proto_rawDesc), len(file_c2s_item_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

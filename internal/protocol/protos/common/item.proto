@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/godyy/ggs/internal/protocol/pb/common";
+
+// Item 道具信息.
+message Item {
+    int32 id = 1; // 道具ID.
+    int64 count = 2; // 数量.
+}
