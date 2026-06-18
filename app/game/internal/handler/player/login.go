@@ -3,6 +3,7 @@ package player
 import (
 	"time"
 
+	"github.com/godyy/ggs/app/game/internal/app"
 	"github.com/godyy/ggs/app/game/internal/systems"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor"
@@ -22,7 +23,7 @@ func handleLoginCharacter(ctx *actor.Context, req *pbc2s.LoginCharacterReq) (*pb
 
 	player.SetLogin()
 
-	getServerNameResp, err := player.Sugared().RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: 1},
+	getServerNameResp, err := player.Sugared().RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: app.Env().ServerID()},
 		&s2s.GetServerNameReq{}, 5*time.Second)
 	if err != nil {
 		return nil, pkgerrors.WithMessage(err, "get server name")
