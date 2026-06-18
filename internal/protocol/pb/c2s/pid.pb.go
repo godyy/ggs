@@ -44,6 +44,7 @@ const (
 	// 道具系统 [100, 199]
 	PID_PUseItemReq  PID = 100 // 使用道具请求.
 	PID_PUseItemResp PID = 101 // 使用道具响应.
+	PID_PItemNotify  PID = 102 // 道具变更通知.
 )
 
 // Enum value maps for PID.
@@ -62,6 +63,7 @@ var (
 		10:  "PModifyNameResp",
 		100: "PUseItemReq",
 		101: "PUseItemResp",
+		102: "PItemNotify",
 	}
 	PID_value = map[string]int32{
 		"PUnknown":            0,
@@ -77,6 +79,7 @@ var (
 		"PModifyNameResp":     10,
 		"PUseItemReq":         100,
 		"PUseItemResp":        101,
+		"PItemNotify":         102,
 	}
 )
 
@@ -111,7 +114,7 @@ var File_c2s_pid_proto protoreflect.FileDescriptor
 
 const file_c2s_pid_proto_rawDesc = "" +
 	"\n" +
-	"\rc2s/pid.proto\x12\x03c2s*\xf7\x01\n" +
+	"\rc2s/pid.proto\x12\x03c2s*\x88\x02\n" +
 	"\x03PID\x12\f\n" +
 	"\bPUnknown\x10\x00\x12\n" +
 	"\n" +
@@ -128,7 +131,8 @@ const file_c2s_pid_proto_rawDesc = "" +
 	"\x0fPModifyNameResp\x10\n" +
 	"\x12\x0f\n" +
 	"\vPUseItemReq\x10d\x12\x10\n" +
-	"\fPUseItemResp\x10eB/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
+	"\fPUseItemResp\x10e\x12\x0f\n" +
+	"\vPItemNotify\x10fB/Z-github.com/godyy/ggs/internal/protocol/pb/c2sb\x06proto3"
 
 var (
 	file_c2s_pid_proto_rawDescOnce sync.Once

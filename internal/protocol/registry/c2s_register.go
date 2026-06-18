@@ -21,4 +21,5 @@ func init() {
 	registerC2S(c2s.PID_PModifyNameResp, &c2s.ModifyNameResp{})
 	registerC2S(c2s.PID_PUseItemReq, &c2s.UseItemReq{})
 	registerC2S(c2s.PID_PUseItemResp, &c2s.UseItemResp{})
+	registerC2S(c2s.PID_PItemNotify, &c2s.ItemNotify{})
 }

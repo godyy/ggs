@@ -1,6 +1,8 @@
 package systems
 
 import (
+	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/gdconf"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
@@ -12,6 +14,13 @@ type itemsModule struct{}
 
 var Items = &itemsModule{}
 
+func (m *itemsModule) init(p *actors.Player) {
+	items := actor.GetActorModule[*player.Items](p, true)
+	for _, item := range gdconf.Global().InitItems {
+		items.Add(item.Id, int64(item.Count))
+	}
+}
+
 func (m *itemsModule) UseItem(p *actors.Player, itemId int32, num int64) (left int64, ok bool) {
 	if itemId == 0 || num <= 0 {
 		return 0, false
@@ -22,14 +31,16 @@ func (m *itemsModule) UseItem(p *actors.Player, itemId int32, num int64) (left i
 	if ok {
 		p.SetDirtyModules(items)
 		item, _ := items.GetItem(itemId)
-		p.Sugared().PushRawMessage(&pbc2s.ItemNotify{
+		if err := p.Sugared().PushRawMessage(&pbc2s.ItemNotify{
 			Items: []*common.Item{
 				{
 					Id:    itemId,
 					Count: item.Num,
 				},
 			},
-		})
+		}); err != nil {
+			logger.Get().Error(err)
+		}
 	}
 
 	return

@@ -46,10 +46,9 @@ func (m *playerModule) InitPlayer(p *actors.Player) error {
 
 	base := actor.GetActorModule[*player.BaseInfo](p, true)
 	base.Name = fmt.Sprintf("player%d", p.ID())
+	Items.init(p)
 	p.Model.Version = consts.VersionInit
 	p.SetAllDirty()
-	fmt.Println(p.Model.Version)
-	fmt.Println(p.Model.IsDirty())
 
 	return nil
 }

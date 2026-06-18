@@ -7,8 +7,9 @@ const TblNameGlobal = "Global"
 
 // global 全局配置表
 type global struct {
-	First  int32 `bson:"first,omitempty"`  // 测试1
-	Second int64 `bson:"second,omitempty"` // 测试2
+	First     int32        `bson:"first,omitempty"`     // 测试1
+	Second    int64        `bson:"second,omitempty"`    // 测试2
+	InitItems []*ItemCount `bson:"initItems,omitempty"` // 初始道具
 }
 
 // load 加载数据

@@ -27,4 +27,5 @@ enum PID {
     // 道具系统 [100, 199]
     PUseItemReq = 100; // 使用道具请求.
     PUseItemResp = 101; // 使用道具响应.
+    PItemNotify = 102; // 道具变更通知.
 }
