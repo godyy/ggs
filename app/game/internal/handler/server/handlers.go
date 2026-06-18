@@ -2,12 +2,12 @@ package server
 
 import (
 	"github.com/godyy/gactor"
-	"github.com/godyy/ggs/app/game/internal/handlers"
+	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
 )
 
 var (
-	handler = handlers.NewHandler()
+	handler = actorhandler.NewS2SHandler()
 )
 
 func init() {
@@ -15,11 +15,11 @@ func init() {
 }
 
 func initS2SHandler() {
-	registerS2SFunc(pbs2s.PID_PGetServerNameReq, handlers.WrapS2SRPCFunc(handleGetServerName))
+	registerS2SFunc(pbs2s.PID_PGetServerNameReq, actorhandler.WrapRPCFunc(handleGetServerName))
 }
 
 func registerS2SFunc(pid pbs2s.PID, f ...gactor.HandlerFunc) {
-	handlers.RegisterS2SFunc(handler, pid, f...)
+	handler.RegisterFunc(pid, f...)
 }
 
 func Handle(ctx *gactor.Context) {

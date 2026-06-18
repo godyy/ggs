@@ -1,8 +1,8 @@
 package internal
 
 import (
-	"github.com/godyy/ggs/app/game/internal/handlers/player"
-	"github.com/godyy/ggs/app/game/internal/handlers/server"
+	"github.com/godyy/ggs/app/game/internal/handler/player"
+	"github.com/godyy/ggs/app/game/internal/handler/server"
 	"github.com/godyy/ggs/internal/infra/actor"
 )
 

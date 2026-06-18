@@ -1,9 +1,6 @@
-package handlers
+package handler
 
 import (
-	"github.com/godyy/gactor"
-
-	"github.com/godyy/ggs/app/game/internal/base/errs"
 	"github.com/godyy/ggs/internal/infra/actor"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
@@ -11,10 +8,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// WrapC2SFunc 包装C2S函数.
-func WrapC2SFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req) (Resp, error)) gactor.HandlerFunc {
-	return func(ctx *gactor.Context) {
-		req := getReq[Req](ctx)
+// WrapReqFunc 包装Req处理函数.
+func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) HandlerFunc {
+	return func(ctx *actor.Context) {
+		req := GetArgs[Req](ctx)
 		resp, err := f(ctx, req)
 		if err != nil {
 			replyC2SError(ctx, err)
@@ -24,10 +21,10 @@ func WrapC2SFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req) (
 	}
 }
 
-// WrapS2SRPCFunc 包装S2S RPC函数.
-func WrapS2SRPCFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req) (Resp, error)) gactor.HandlerFunc {
-	return func(ctx *gactor.Context) {
-		req := getReq[Req](ctx)
+// WrapRPCFunc 包装RPC处理函数.
+func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) HandlerFunc {
+	return func(ctx *actor.Context) {
+		req := GetArgs[Req](ctx)
 		resp, err := f(ctx, req)
 		if err != nil {
 			replyS2SError(ctx, err)
@@ -37,20 +34,20 @@ func WrapS2SRPCFunc[Req, Resp proto.Message](f func(ctx *gactor.Context, req Req
 	}
 }
 
-// WrapS2SCastFunc 包装S2S Cast函数.
-func WrapS2SCastFunc[Params proto.Message](f func(ctx *gactor.Context, params Params)) gactor.HandlerFunc {
-	return func(ctx *gactor.Context) {
-		params := getReq[Params](ctx)
+// WrapCastFunc 包装Cast处理函数.
+func WrapCastFunc[Params proto.Message](f func(ctx *actor.Context, params Params)) HandlerFunc {
+	return func(ctx *actor.Context) {
+		params := GetArgs[Params](ctx)
 		f(ctx, params)
 	}
 }
 
 // replyC2SError 回复C2S错误.
-func replyC2SError(ctx *gactor.Context, err error) {
+func replyC2SError(ctx *actor.Context, err error) {
 	var respErr *pbcommon.Error
 
 	switch e := err.(type) {
-	case *errs.PbError:
+	case *PbError:
 		respErr = e.Err
 	default:
 		loggerInst.Errorf("replyC2SError: none PbError, %v", err)
@@ -61,10 +58,10 @@ func replyC2SError(ctx *gactor.Context, err error) {
 }
 
 // replyS2SError 回复S2S错误.
-func replyS2SError(ctx *gactor.Context, err error) {
+func replyS2SError(ctx *actor.Context, err error) {
 	var respErr *pbcommon.Error
 	switch e := err.(type) {
-	case *errs.PbError:
+	case *PbError:
 		respErr = e.Err
 	default:
 		loggerInst.Errorf("replyS2SError: none PbError, %v", err)

@@ -1,4 +1,4 @@
-package handlers
+package handler
 
 import (
 	"github.com/godyy/ggs/internal/base/consts"
