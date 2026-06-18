@@ -1,7 +1,6 @@
 package player
 
 import (
-	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/systems"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
@@ -9,7 +8,7 @@ import (
 	pbcs "github.com/godyy/ggs/internal/protocol/pb/c2s"
 )
 
-func handleUseItem(c *gactor.Context, req *pbcs.UseItemReq) (*pbcs.UseItemResp, error) {
+func handleUseItem(c *actor.Context, req *pbcs.UseItemReq) (*pbcs.UseItemResp, error) {
 	if req.ItemId == 0 || req.Num <= 0 {
 		return nil, handler.WithC2SPbError(pbcs.ErrCode_ECInvalidPacket)
 	}

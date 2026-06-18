@@ -3,6 +3,7 @@ package player
 import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/handler"
+	"github.com/godyy/ggs/internal/infra/actor"
 	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
 	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
 	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
@@ -29,19 +30,19 @@ func initS2SHandler() {
 	registerS2SFunc(pbs2s.PID_PActorSaveResult, actorhandler.WrapCastFunc(handler.OnActorSaveResult))
 }
 
-func registerC2SFunc(pid pbc2s.PID, checkLogin bool, f ...gactor.HandlerFunc) {
+func registerC2SFunc(pid pbc2s.PID, checkLogin bool, f ...actorhandler.HandlerFunc) {
 	if checkLogin {
-		c2sHandler.RegisterFunc(pid, append([]gactor.HandlerFunc{mdCheckLogin}, f...)...)
+		c2sHandler.RegisterFunc(pid, append([]actorhandler.HandlerFunc{mdCheckLogin}, f...)...)
 	} else {
 		c2sHandler.RegisterFunc(pid, f...)
 	}
 }
 
-func registerS2SFunc(pid pbs2s.PID, f ...gactor.HandlerFunc) {
+func registerS2SFunc(pid pbs2s.PID, f ...actorhandler.HandlerFunc) {
 	s2sHandler.RegisterFunc(pid, f...)
 }
 
-func Handle(ctx *gactor.Context) {
+func Handle(ctx *actor.Context) {
 	if ctx.RequestType() == gactor.RequestTypeReq {
 		c2sHandler.Handle(ctx)
 	} else {

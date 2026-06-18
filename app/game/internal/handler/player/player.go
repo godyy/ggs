@@ -1,7 +1,6 @@
 package player
 
 import (
-	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
@@ -10,7 +9,7 @@ import (
 )
 
 // handleModifyName 修改玩家名称
-func handleModifyName(c *gactor.Context, req *c2s.ModifyNameReq) (*c2s.ModifyNameResp, error) {
+func handleModifyName(c *actor.Context, req *c2s.ModifyNameReq) (*c2s.ModifyNameResp, error) {
 	p := actor.CtxActor[*actors.Player](c)
 	m := actor.GetActorModule[*player.BaseInfo](p, true)
 	oldName := m.Name
