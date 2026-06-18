@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	protoreg "github.com/godyy/ggs/internal/protocol/registry"
+	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
 )
 
 type cmdExecFunc func(c *cmd, cli *Client, args string) bool

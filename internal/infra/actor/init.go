@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/godyy/ggs/internal/infra/actor/persist"
-	protoreg "github.com/godyy/ggs/internal/protocol/registry"
+	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
 	"github.com/godyy/ggskit/infra/actor"
 )
 

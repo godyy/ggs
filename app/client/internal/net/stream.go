@@ -7,7 +7,7 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	icrypto "github.com/godyy/ggs/internal/base/crypto"
 	inet "github.com/godyy/ggs/internal/base/net"
-	protoreg "github.com/godyy/ggs/internal/protocol/registry"
+	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
 	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
 	"github.com/godyy/ggskit/base/crypto/aes"
 	pkgerrors "github.com/pkg/errors"

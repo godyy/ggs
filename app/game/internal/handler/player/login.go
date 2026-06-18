@@ -8,8 +8,8 @@ import (
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
-	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
-	"github.com/godyy/ggs/internal/protocol/pb/s2s"
+	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	pkgerrors "github.com/pkg/errors"
 )
 

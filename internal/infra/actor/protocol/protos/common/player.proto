@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common";
+
+// 角色基础信息.
+message PlayerBase {
+    string name = 1; // 昵称.
+}

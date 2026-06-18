@@ -2,7 +2,7 @@ package convert
 
 import (
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
-	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
+	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
 )
 
 func Item2PB(item player.Item) *pbcommon.Item {

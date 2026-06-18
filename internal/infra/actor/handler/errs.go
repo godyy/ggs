@@ -3,8 +3,8 @@ package handler
 import (
 	"fmt"
 
-	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
-	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
+	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
 )
 
 // PbError 将Error协议结构封装实现error.

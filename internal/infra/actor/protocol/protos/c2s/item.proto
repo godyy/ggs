@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package c2s;
+
+option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s";
+
+import "common/item.proto";
+
+// 使用道具请求.
+message UseItemReq {
+    int32 itemId = 1; // 道具ID.
+    int64 num = 2; // 使用数量.
+}
+
+// 使用道具响应.
+message UseItemResp {
+    int32 itemId = 1; // 道具ID.
+    int64 num = 2; // 使用数量.
+    int64 leftNum = 3; // 剩余数量.
+}
+
+// 道具变更通知.
+message ItemNotify {
+    repeated common.Item items = 1; // 道具变更列表.
+}

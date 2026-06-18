@@ -3,8 +3,8 @@ package handler
 import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/infra/actor/handler"
-	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
-	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"github.com/godyy/ggskit/infra/actor"
 )
 

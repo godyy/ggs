@@ -5,7 +5,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
-	"github.com/godyy/ggs/internal/protocol/pb/c2s"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 )
 
 // handleModifyName 修改玩家名称

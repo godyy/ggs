@@ -5,7 +5,7 @@ import (
 	"github.com/godyy/ggs/app/game/internal/handler"
 	iactor "github.com/godyy/ggs/internal/infra/actor"
 	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
-	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"github.com/godyy/ggskit/infra/actor"
 )
 

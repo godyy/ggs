@@ -6,7 +6,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/convert"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
-	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 )
 
 type itemsModule struct{}

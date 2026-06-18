@@ -2,9 +2,9 @@ package handler
 
 import (
 	"github.com/godyy/ggs/internal/infra/actor"
-	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
-	pbcommon "github.com/godyy/ggs/internal/protocol/pb/common"
-	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
+	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"google.golang.org/protobuf/proto"
 )
 

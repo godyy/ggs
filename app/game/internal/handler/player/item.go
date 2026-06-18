@@ -5,7 +5,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/handler"
-	pbcs "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbcs "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 )
 
 func handleUseItem(c *actor.Context, req *pbcs.UseItemReq) (*pbcs.UseItemResp, error) {

@@ -10,7 +10,7 @@ import (
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
 	iactor "github.com/godyy/ggs/internal/infra/actor"
-	pbc2s "github.com/godyy/ggs/internal/protocol/pb/c2s"
+	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
 	pkgerrors "github.com/pkg/errors"

@@ -1,7 +1,7 @@
 .PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gdconf
 
 protos:
-	cd internal/protocol && make protos
+	cd internal/infra/actor/protocol && make protos
 
 secret_key: secret_key_alg := Ed25519
 secret_key:

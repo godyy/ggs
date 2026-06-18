@@ -4,7 +4,7 @@ import (
 	"github.com/godyy/ggs/app/game/internal/systems"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
-	pbs2s "github.com/godyy/ggs/internal/protocol/pb/s2s"
+	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 )
 
 func handleGetServerName(ctx *actor.Context, req *pbs2s.GetServerNameReq) (*pbs2s.GetServerNameResp, error) {
