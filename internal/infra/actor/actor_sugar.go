@@ -9,7 +9,7 @@ import (
 )
 
 // actorSugarUtil Actor 语法糖工具.
-var actorSugarUtil *actor.ActorHelper
+var actorSugarUtil *actor.ActorSugarUtil
 
 // ActorSugared Actor和语法糖基础封装.
 type ActorSugared struct {

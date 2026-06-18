@@ -10,16 +10,29 @@ import (
 
 type Context = actor.Context
 
+type CtxK[V any] = actor.CtxK[V]
+
+func NewCtxK[V any]() CtxK[V] {
+	return actor.NewCtxK[V]()
+}
+
+func CtxKSet[V any](ctx *Context, k CtxK[V], v V) {
+	actor.CtxKSet(ctx, k, v)
+}
+
+func CtxKGet[V any](ctx *Context, k CtxK[V]) (V, bool) {
+	return actor.CtxKGet(ctx, k)
+}
+
 func CtxActor[Actor actor.ActorBehavior](ctx *Context) Actor {
 	return actor.CtxActor[Actor](ctx)
 }
 
 // contextSugarUtil 全局上下文语法糖工具.
-var contextSugarUtil *actor.ContextHelper
+var contextSugarUtil *actor.ContextSugarUtil
 
-const (
-	ctxKeyMsg = "ctx:msg"
-)
+// ctxKeyMsg 用于上下文中消息的key.
+var ctxKeyMsg = NewCtxK[proto.Message]()
 
 // ContextSugared 上下文语法糖封装.
 type ContextSugared struct {
@@ -33,15 +46,13 @@ func SugarContext(ctx *Context) ContextSugared {
 
 // SetMsg 设置上下文中的消息.
 func (ctx ContextSugared) SetMsg(msg proto.Message) {
-	ctx.Set(ctxKeyMsg, msg)
+	CtxKSet(ctx.Context, ctxKeyMsg, msg)
 }
 
 // GetMsg 获取上下文中的消息.
 func (ctx ContextSugared) GetMsg() proto.Message {
-	if v, ok := ctx.Get(ctxKeyMsg); ok {
-		return v.(proto.Message)
-	}
-	return nil
+	msg, _ := CtxKGet(ctx.Context, ctxKeyMsg)
+	return msg
 }
 
 // Decode

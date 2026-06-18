@@ -27,8 +27,8 @@ func Init(cfg *InitConfig) {
 	persist.Init(cfg.Persist)
 	db = cfg.DB
 	asyncSaveCallback = cfg.AsyncSaveCallback
-	actorSugarUtil = actor.NewActorHelper(protoreg.Registry)
-	contextSugarUtil = actor.NewContextHelper(protoreg.Registry)
+	actorSugarUtil = actor.NewActorSugarUtil(protoreg.Registry)
+	contextSugarUtil = actor.NewContextSugarUtil(protoreg.Registry)
 	initialized = true
 }
 
