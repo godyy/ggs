@@ -10,12 +10,12 @@ type Item struct {
 // Items 道具模块.
 // 用于集中维护玩家道具数据，并提供获取/增减等操作方法.
 type Items struct {
-	Items map[int32]int64 `bson:"items"`
+	Items map[int32]*Item `bson:"items"`
 }
 
 // OnInit 初始化道具模块.
 func (m *Items) OnInit() {
-	m.Items = make(map[int32]int64, 8)
+	m.Items = make(map[int32]*Item)
 }
 
 // ModuleKey 模块关键字.
@@ -31,7 +31,11 @@ func (m *Items) GetNum(id int32) int64 {
 	if m.Items == nil {
 		return 0
 	}
-	return m.Items[id]
+	item, ok := m.Items[id]
+	if ok {
+		return item.Num
+	}
+	return 0
 }
 
 // GetItem 获取指定道具信息.
@@ -43,11 +47,11 @@ func (m *Items) GetItem(id int32) (Item, bool) {
 	if m.Items == nil {
 		return Item{}, false
 	}
-	num, ok := m.Items[id]
+	item, ok := m.Items[id]
 	if !ok {
 		return Item{}, false
 	}
-	return Item{ID: id, Num: num}, true
+	return *item, true
 }
 
 // Add 增加指定道具数量.
@@ -57,18 +61,19 @@ func (m *Items) Add(id int32, num int64) int64 {
 		return m.GetNum(id)
 	}
 
-	if m.Items == nil {
-		m.Items = make(map[int32]int64, 8)
+	item, ok := m.Items[id]
+	if !ok {
+		item = &Item{ID: id}
+		m.Items[id] = item
 	}
 
-	after := m.Items[id] + num
-	if after <= 0 {
+	item.Num += num
+	if item.Num <= 0 {
 		delete(m.Items, id)
 		return 0
 	}
 
-	m.Items[id] = after
-	return after
+	return item.Num
 }
 
 // Sub 扣除指定道具数量.
@@ -81,23 +86,18 @@ func (m *Items) Sub(id int32, num int64) (after int64, ok bool) {
 		return m.GetNum(id), true
 	}
 
-	if m.Items == nil {
-		return 0, false
-	}
-
-	cur, exists := m.Items[id]
-	if !exists || cur < num {
+	item, exists := m.Items[id]
+	if !exists || item.Num < num {
 		if !exists {
 			return 0, false
 		}
-		return cur, false
+		return item.Num, false
 	}
 
-	after = cur - num
-	if after == 0 {
+	item.Num -= num
+	if item.Num == 0 {
 		delete(m.Items, id)
 		return 0, true
 	}
-	m.Items[id] = after
-	return after, true
+	return item.Num, true
 }
