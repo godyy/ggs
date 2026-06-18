@@ -135,7 +135,7 @@ func AsyncSaveModel(uid gactor.ActorUID, m actor.Model, db string, callback Asyn
 			return
 		}
 
-		logger.Get().ErrorFields("actors: persist op async exec failed",
+		logger.Get().ErrorFields("persist op async exec failed",
 			zap.Uint16("category", uid.Category),
 			zap.Int64("id", uid.ID),
 			zap.NamedError("error", o.Err()),
@@ -185,7 +185,7 @@ func onSaveTimer(args *gactor.ActorTimerArgs) {
 
 	if err := AsyncSaveModel(a.ActorUID(), a.GetModel(), saveArgs.db, saveArgs.callback); err != nil {
 		uid := a.ActorUID()
-		logger.Get().ErrorFields("actors: persist async failed",
+		logger.Get().ErrorFields("persist async failed",
 			zap.Uint16("category", uid.Category),
 			zap.Int64("id", uid.ID),
 			zap.NamedError("error", err),
