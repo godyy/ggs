@@ -22,6 +22,8 @@ gen_user_token:
 		}"
 
 gdconf: excel_path := ../ggs_excels
+gdconf: enum_file := ../ggs_excels/枚举定义.xlsx
+gdconf: struct_file := ../ggs_excels/结构体定义.xlsx
 gdconf: mongo_uri := mongodb://localhost:27017
 gdconf: mongo_db := gdconf
 gdconf:
@@ -30,6 +32,8 @@ gdconf:
 
 	go run internal/tools/gen_gdconf/main.go \
 		-excel-path "$(excel_path)" \
+		-enum-file "$(enum_file)" \
+		-struct-file "$(struct_file)" \
 		-code-path "./internal/gdconf" \
 		-mongo-db "$(mongo_db)" \
 		-mongo-uri "$(mongo_uri)"

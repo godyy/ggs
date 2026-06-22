@@ -22,6 +22,8 @@ const (
 
 func main() {
 	excelPath := flag.String("excel-path", "", "excel path")
+	enumFile := flag.String("enum-file", "", "enum file")
+	structFile := flag.String("struct-file", "", "struct file")
 	codePath := flag.String("code-path", "", "code path")
 	mongoURI := flag.String("mongo-uri", "", "mongo uri")
 	mongoDB := flag.String("mongo-db", "", "mongo db")
@@ -52,7 +54,16 @@ func main() {
 		log.Fatalf("drop mongo db %s failed: %v", *mongoDB, err)
 	}
 
-	parser, err := parse.Parse(*excelPath, &parse.Options{Tags: []gexcels.Tag{tag}})
+	parseOptions := &parse.Options{
+		Tags: []gexcels.Tag{tag},
+	}
+	if *enumFile != "" {
+		parseOptions.EnumFiles = []string{*enumFile}
+	}
+	if *structFile != "" {
+		parseOptions.StructFiles = []string{*structFile}
+	}
+	parser, err := parse.Parse(*excelPath, parseOptions)
 	if err != nil {
 		log.Fatalf("parse excel at %s failed: %v", *excelPath, err)
 	}

@@ -6,7 +6,7 @@ require (
 	github.com/chzyer/readline v1.5.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/godyy/gactor v0.1.2
-	github.com/godyy/gexcels v0.4.3
+	github.com/godyy/gexcels v0.4.4
 	github.com/godyy/ggskit v0.0.12
 	github.com/godyy/glog v0.1.2
 	github.com/godyy/gtimewheel v0.1.1
@@ -55,7 +55,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/ohler55/ojg v1.26.5 // indirect
+	github.com/ohler55/ojg v1.28.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/peterbourgon/diskv/v3 v3.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

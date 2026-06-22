@@ -6,10 +6,12 @@ package gdconf
 const TblNameItem = "Item"
 
 type Item struct {
-	ID    int32  `bson:"_id,omitempty"`   // ID
-	Name  string `bson:"name,omitempty"`  // 名称
-	Icon  string `bson:"icon,omitempty"`  // 图标
-	Level int32  `bson:"level,omitempty"` // level
+	ID      int32       `bson:"_id,omitempty"`     // ID
+	Name    string      `bson:"name,omitempty"`    // 名称
+	Type    ItemType    `bson:"type,omitempty"`    // 类型
+	SubType ItemSubType `bson:"subType,omitempty"` // 子类型
+	Icon    string      `bson:"icon,omitempty"`    // 图标
+	Level   int32       `bson:"level,omitempty"`   // level
 }
 
 // tblItem 道具
