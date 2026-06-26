@@ -21,9 +21,9 @@ gen_user_token:
 			\"uid\": \"yy01\" \
 		}"
 
-gdconf: excel_path := ../ggs_excels
-gdconf: enum_file := ../ggs_excels/枚举定义.xlsx
-gdconf: struct_file := ../ggs_excels/结构体定义.xlsx
+gdconf: excel_path := ./excels
+gdconf: enum_file := ./excels/枚举定义.xlsx
+gdconf: struct_file := ./excels/结构体定义.xlsx
 gdconf: mongo_uri := mongodb://localhost:27017
 gdconf: mongo_db := gdconf
 gdconf:

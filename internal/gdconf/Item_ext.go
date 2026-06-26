@@ -7,7 +7,7 @@ import (
 var levelOfItems atomic.Value
 
 func init() {
-	registerAfterLoadFunc(TblNameItem, func() error {
+	RegisterAfterLoadFunc(TblNameItem, func() error {
 		v := make(map[int32][]*Item)
 		for _, item := range TblItem().All() {
 			v[item.Level] = append(v[item.Level], item)

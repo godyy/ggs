@@ -155,13 +155,13 @@ func init() {
 	registerAllLoadFuncs()
 }
 
-// afterLoadFunc 加载后处理函数
-type afterLoadFunc func() error
+// AfterLoadFunc 加载后处理函数
+type AfterLoadFunc func() error
 
 // afterLoadFuncInfo 加载后处理函数信息
 type afterLoadFuncInfo struct {
 	tableName string        // 配置表名称
-	f         afterLoadFunc // 加载后处理函数
+	f         AfterLoadFunc // 加载后处理函数
 	priority  int           // 优先级，数值越小越先执行
 }
 
@@ -171,8 +171,8 @@ var afterLoadFuncs []*afterLoadFuncInfo
 // afterLoadFuncMap 加载后处理函数映射
 var afterLoadFuncMap map[string]*afterLoadFuncInfo
 
-// registerAfterLoadFunc 注册加载后处理函数
-func registerAfterLoadFunc(tableName string, f afterLoadFunc, priority int) {
+// RegisterAfterLoadFunc 注册加载后处理函数
+func RegisterAfterLoadFunc(tableName string, f AfterLoadFunc, priority int) {
 	if afterLoadFuncMap == nil {
 		afterLoadFuncMap = make(map[string]*afterLoadFuncInfo)
 	}
