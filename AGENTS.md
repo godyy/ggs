@@ -315,7 +315,7 @@ internal/protocol
 约定：
 
 - 只能写在 `internal/gdconf/*_ext.go` 中。
-- 通过 `registerAfterLoadFunc(tableName, func() error { ... }, priority)` 注册。
+- 通过 `RegisterAfterLoadFunc(tableName, func() error { ... }, priority)` 注册。
 - 会在 `gdconf.Load(...)` 完成所有表加载后执行；如果走 `gdconf.LoadTable(...)`，只会执行被加载表的 after-load（按 `priority` 从小到大执行）。
 
 推荐写法：
@@ -328,7 +328,7 @@ import "sync/atomic"
 var levelOfItems atomic.Value
 
 func init() {
-	registerAfterLoadFunc(TblNameItem, func() error {
+	RegisterAfterLoadFunc(TblNameItem, func() error {
 		v := make(map[int32][]*Item)
 		for _, item := range TblItem().All() {
 			v[item.Level] = append(v[item.Level], item)
