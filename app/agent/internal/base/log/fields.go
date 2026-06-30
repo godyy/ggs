@@ -3,6 +3,7 @@ package log
 import (
 	"net"
 
+	"github.com/godyy/ggskit/base/protocol"
 	"go.uber.org/zap"
 )
 
@@ -26,8 +27,8 @@ func FldError(err error) zap.Field {
 	return zap.NamedError("err", err)
 }
 
-func FldPid(pid uint16) zap.Field {
-	return zap.Uint16("pid", pid)
+func FldPid(pid protocol.PID) zap.Field {
+	return zap.Uint32("pid", uint32(pid))
 }
 
 func FldSessionId(sessionId uint32) zap.Field {

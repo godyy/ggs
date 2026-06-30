@@ -5,6 +5,6 @@ package s2s;
 option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s";
 
 // Actor 保存结果
-message ActorSaveResult {
+message ActorSaveResultNtf {
     bool success = 1; // 是否成功
 }

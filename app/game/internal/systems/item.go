@@ -32,7 +32,7 @@ func (m *itemsModule) UseItem(ctx *actor.Context, itemId int32, num int64) (left
 	if ok {
 		p.SetDirtyModules(items)
 		item, _ := items.GetItem(itemId)
-		handler.AppendPushMsg(ctx, &pbc2s.ItemNotify{
+		handler.AppendPushMsg(ctx, &pbc2s.ItemPush{
 			Items: convert.Items2PB([]player.Item{item}),
 		})
 	}

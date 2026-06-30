@@ -137,27 +137,27 @@ func (x *UseItemResp) GetLeftNum() int64 {
 }
 
 // 道具变更通知.
-type ItemNotify struct {
+type ItemPush struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Items         []*common.Item         `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"` // 道具变更列表.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ItemNotify) Reset() {
-	*x = ItemNotify{}
+func (x *ItemPush) Reset() {
+	*x = ItemPush{}
 	mi := &file_c2s_item_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ItemNotify) String() string {
+func (x *ItemPush) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ItemNotify) ProtoMessage() {}
+func (*ItemPush) ProtoMessage() {}
 
-func (x *ItemNotify) ProtoReflect() protoreflect.Message {
+func (x *ItemPush) ProtoReflect() protoreflect.Message {
 	mi := &file_c2s_item_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -169,12 +169,12 @@ func (x *ItemNotify) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ItemNotify.ProtoReflect.Descriptor instead.
-func (*ItemNotify) Descriptor() ([]byte, []int) {
+// Deprecated: Use ItemPush.ProtoReflect.Descriptor instead.
+func (*ItemPush) Descriptor() ([]byte, []int) {
 	return file_c2s_item_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ItemNotify) GetItems() []*common.Item {
+func (x *ItemPush) GetItems() []*common.Item {
 	if x != nil {
 		return x.Items
 	}
@@ -193,9 +193,8 @@ const file_c2s_item_proto_rawDesc = "" +
 	"\vUseItemResp\x12\x16\n" +
 	"\x06itemId\x18\x01 \x01(\x05R\x06itemId\x12\x10\n" +
 	"\x03num\x18\x02 \x01(\x03R\x03num\x12\x18\n" +
-	"\aleftNum\x18\x03 \x01(\x03R\aleftNum\"0\n" +
-	"\n" +
-	"ItemNotify\x12\"\n" +
+	"\aleftNum\x18\x03 \x01(\x03R\aleftNum\".\n" +
+	"\bItemPush\x12\"\n" +
 	"\x05items\x18\x01 \x03(\v2\f.common.ItemR\x05itemsB;Z9github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2sb\x06proto3"
 
 var (
@@ -214,11 +213,11 @@ var file_c2s_item_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_c2s_item_proto_goTypes = []any{
 	(*UseItemReq)(nil),  // 0: c2s.UseItemReq
 	(*UseItemResp)(nil), // 1: c2s.UseItemResp
-	(*ItemNotify)(nil),  // 2: c2s.ItemNotify
+	(*ItemPush)(nil),    // 2: c2s.ItemPush
 	(*common.Item)(nil), // 3: common.Item
 }
 var file_c2s_item_proto_depIdxs = []int32{
-	3, // 0: c2s.ItemNotify.items:type_name -> common.Item
+	3, // 0: c2s.ItemPush.items:type_name -> common.Item
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name

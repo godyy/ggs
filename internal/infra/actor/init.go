@@ -4,16 +4,16 @@ import (
 	"time"
 
 	"github.com/godyy/ggs/internal/infra/actor/persist"
-	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
 	"github.com/godyy/ggskit/infra/actor"
 )
 
 // InitConfig 初始化配置.
 type InitConfig struct {
-	Persist           *persist.InitConfig // 持久化配置
-	DB                string              // 数据库名
-	AsyncSaveCallback AsyncSaveCallback   // 异步存储回调
-	ActorSaveDelay    time.Duration       // actor 保存延迟
+	Persist           *persist.InitConfig  // 持久化配置
+	DB                string               // 数据库名
+	AsyncSaveCallback AsyncSaveCallback    // 异步存储回调
+	ActorSaveDelay    time.Duration        // actor 保存延迟
+	ProtoRegistry     *actor.ProtoRegistry // 协议注册表
 }
 
 var (
@@ -32,8 +32,8 @@ func Init(cfg *InitConfig) {
 	db = cfg.DB
 	asyncSaveCallback = cfg.AsyncSaveCallback
 	actorSaveDelay = cfg.ActorSaveDelay
-	actorSugarUtil = actor.NewActorSugarUtil(protoreg.Registry)
-	contextSugarUtil = actor.NewContextSugarUtil(protoreg.Registry)
+	actorSugarUtil = actor.NewActorSugarUtil(cfg.ProtoRegistry)
+	contextSugarUtil = actor.NewContextSugarUtil(cfg.ProtoRegistry)
 	initialized = true
 }
 

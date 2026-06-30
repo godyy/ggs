@@ -7,7 +7,7 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	icrypto "github.com/godyy/ggs/internal/base/crypto"
 	inet "github.com/godyy/ggs/internal/base/net"
-	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
 	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
 	"github.com/godyy/ggskit/base/crypto/aes"
 	pkgerrors "github.com/pkg/errors"
@@ -59,7 +59,7 @@ func NewStream(conn net.Conn, sessionKey []byte, handler Handler) (*Stream, erro
 
 // SendReq 发送请求包
 func (s *Stream) SendReq(seq uint32, msg proto.Message) error {
-	p, err := codecc2s.EncodeReqPacket(protoreg.Registry.C2S, seq, msg)
+	p, err := codecc2s.EncodeReqPacket(c2s.Registry, seq, msg)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (s *Stream) readLoop() {
 			Pt:  codecc2s.HeadGetPt(p),
 			Seq: codecc2s.HeadGetSeq(p),
 		}
-		respMsg, err := codecc2s.DecodeMessage(protoreg.Registry.C2S, p)
+		respMsg, err := codecc2s.DecodeMessage(c2s.Registry, p)
 		if err != nil {
 			s.close(pkgerrors.WithMessagef(err, "decode pt:%v seq:%v", m.Pt, m.Seq))
 			return

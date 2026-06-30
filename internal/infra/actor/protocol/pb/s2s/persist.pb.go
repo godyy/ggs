@@ -22,27 +22,27 @@ const (
 )
 
 // Actor 保存结果
-type ActorSaveResult struct {
+type ActorSaveResultNtf struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *ActorSaveResult) Reset() {
-	*x = ActorSaveResult{}
+func (x *ActorSaveResultNtf) Reset() {
+	*x = ActorSaveResultNtf{}
 	mi := &file_s2s_persist_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ActorSaveResult) String() string {
+func (x *ActorSaveResultNtf) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ActorSaveResult) ProtoMessage() {}
+func (*ActorSaveResultNtf) ProtoMessage() {}
 
-func (x *ActorSaveResult) ProtoReflect() protoreflect.Message {
+func (x *ActorSaveResultNtf) ProtoReflect() protoreflect.Message {
 	mi := &file_s2s_persist_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -54,12 +54,12 @@ func (x *ActorSaveResult) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ActorSaveResult.ProtoReflect.Descriptor instead.
-func (*ActorSaveResult) Descriptor() ([]byte, []int) {
+// Deprecated: Use ActorSaveResultNtf.ProtoReflect.Descriptor instead.
+func (*ActorSaveResultNtf) Descriptor() ([]byte, []int) {
 	return file_s2s_persist_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *ActorSaveResult) GetSuccess() bool {
+func (x *ActorSaveResultNtf) GetSuccess() bool {
 	if x != nil {
 		return x.Success
 	}
@@ -70,8 +70,8 @@ var File_s2s_persist_proto protoreflect.FileDescriptor
 
 const file_s2s_persist_proto_rawDesc = "" +
 	"\n" +
-	"\x11s2s/persist.proto\x12\x03s2s\"+\n" +
-	"\x0fActorSaveResult\x12\x18\n" +
+	"\x11s2s/persist.proto\x12\x03s2s\".\n" +
+	"\x12ActorSaveResultNtf\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccessB;Z9github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2sb\x06proto3"
 
 var (
@@ -88,7 +88,7 @@ func file_s2s_persist_proto_rawDescGZIP() []byte {
 
 var file_s2s_persist_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_s2s_persist_proto_goTypes = []any{
-	(*ActorSaveResult)(nil), // 0: s2s.ActorSaveResult
+	(*ActorSaveResultNtf)(nil), // 0: s2s.ActorSaveResultNtf
 }
 var file_s2s_persist_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type

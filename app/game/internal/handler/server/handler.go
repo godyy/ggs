@@ -7,5 +7,5 @@ import (
 )
 
 func init() {
-	handler.RegisterS2S(pbs2s.PID_PGetServerNameReq, actorhandler.WrapRPCFunc(handleGetServerName))
+	handler.RegisterS2S((*pbs2s.GetServerNameReq)(nil), actorhandler.WrapRPCFunc(handleGetServerName))
 }

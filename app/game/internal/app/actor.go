@@ -14,7 +14,8 @@ import (
 	actordefine "github.com/godyy/ggs/internal/infra/actor/define"
 	"github.com/godyy/ggs/internal/infra/actor/persist"
 	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
-	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/s2s"
 	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
 	"github.com/godyy/gtimewheel"
@@ -30,11 +31,17 @@ func ActorService() *actor.Service {
 func (a *app) startActor() error {
 	selfNodeId := cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(Env().ServerID()))
 
+	a.actorProtoReg = &actor.ProtoRegistry{
+		C2S: c2s.Registry,
+		S2S: s2s.Registry,
+	}
+
 	// 初始化 actors.
 	iactor.Init(&iactor.InitConfig{
 		Persist:           &persist.InitConfig{BD: a.mongobd},
 		DB:                a.env.DB(),
 		AsyncSaveCallback: a.actorAsyncSaveCallback,
+		ProtoRegistry:     a.actorProtoReg,
 	})
 
 	// 创建注册表.
@@ -86,7 +93,7 @@ func (a *app) startActor() error {
 			Handler: a,
 		},
 		Logger:        logger.Get(),
-		ProtoRegistry: protoreg.Registry,
+		ProtoRegistry: a.actorProtoReg,
 	}
 	if a.env.Debug() {
 		actorConfig.Core.DefRPCTimeout = time.Hour * 1
@@ -96,7 +103,7 @@ func (a *app) startActor() error {
 		return pkgerrors.WithMessage(err, "new actor service")
 	}
 	a.actorCodec, err = actor.NewCodec(&actor.CodecConfig{
-		ProtoRegistry: protoreg.Registry,
+		ProtoRegistry: a.actorProtoReg,
 	})
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor codec")
@@ -136,7 +143,7 @@ func (a *app) stopActor() {
 }
 
 func (a *app) actorAsyncSaveCallback(uid gactor.ActorUID, err error) {
-	if castErr := a.actorService.Cast(uid, &pbs2s.ActorSaveResult{
+	if castErr := a.actorService.Cast(uid, &pbs2s.ActorSaveResultNtf{
 		Success: err == nil,
 	}); castErr != nil {
 		logger.Get().ErrorFields("cast persist result to actor",

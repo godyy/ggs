@@ -1,13 +1,17 @@
 package client
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"regexp"
 	"strings"
 
-	protoreg "github.com/godyy/ggs/internal/infra/actor/protocol/registry"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
 	"github.com/ohler55/ojg/sen"
+	pkgerrors "github.com/pkg/errors"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 type cmdExecFunc func(c *cmd, cli *Client, args string) bool
@@ -110,9 +114,16 @@ func init() {
 					msg = msg + "Req"
 				}
 
-				req, _, err := protoreg.Registry.C2S.CreateByName(msg)
+				fullName := protoreflect.FullName("c2s." + msg)
+				mt, err := protoregistry.GlobalTypes.FindMessageByName(fullName)
 				if err != nil {
-					log.Println(err)
+					log.Println(pkgerrors.WithMessagef(err, "find message type %s", fullName))
+					return false
+				}
+
+				req := mt.New().Interface()
+				if _, ok := c2s.Registry.GetPid(req); !ok {
+					log.Println(fmt.Errorf("message not registered: %s", fullName))
 					return false
 				}
 

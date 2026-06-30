@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/godyy/ggskit/base/protocol"
 	"github.com/godyy/ggskit/infra/actor"
 	"google.golang.org/protobuf/proto"
 )
@@ -56,7 +57,7 @@ func (ctx ContextSugared) GetMsg() proto.Message {
 }
 
 // Decode
-func (ctx ContextSugared) Decode() (uint16, proto.Message, error) {
+func (ctx ContextSugared) Decode() (protocol.PID, proto.Message, error) {
 	return contextSugarUtil.Decode(ctx.Context)
 }
 

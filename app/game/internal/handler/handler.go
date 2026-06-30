@@ -3,9 +3,8 @@ package handler
 import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/infra/actor/handler"
-	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
-	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"github.com/godyy/ggskit/infra/actor"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -23,11 +22,11 @@ func Handle(ctx *actor.Context) {
 }
 
 // RegisterC2S 注册C2S请求处理函数
-func RegisterC2S(pid pbc2s.PID, funcs ...handler.HandlerFunc) {
-	c2sHandler.RegisterFunc(pid, funcs...)
+func RegisterC2S(msg proto.Message, funcs ...handler.HandlerFunc) {
+	c2sHandler.RegisterFunc(msg, funcs...)
 }
 
 // RegisterS2S 注册S2S请求函数
-func RegisterS2S(pid pbs2s.PID, funcs ...handler.HandlerFunc) {
-	s2sHandler.RegisterFunc(pid, funcs...)
+func RegisterS2S(msg proto.Message, funcs ...handler.HandlerFunc) {
+	s2sHandler.RegisterFunc(msg, funcs...)
 }

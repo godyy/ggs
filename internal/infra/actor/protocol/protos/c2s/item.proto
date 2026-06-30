@@ -20,6 +20,6 @@ message UseItemResp {
 }
 
 // 道具变更通知.
-message ItemNotify {
+message ItemPush {
     repeated common.Item items = 1; // 道具变更列表.
 }

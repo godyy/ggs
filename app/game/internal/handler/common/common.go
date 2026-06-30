@@ -9,7 +9,7 @@ import (
 	"github.com/godyy/ggskit/infra/actor"
 )
 
-func handleActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) bool {
+func handleActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResultNtf) bool {
 	if result.Success {
 		a, ok := ctx.Actor().Behavior().(actor.ActorWithModel)
 		if !ok {
@@ -31,5 +31,5 @@ func handleActorSaveResult(ctx *actor.Context, result *pbs2s.ActorSaveResult) bo
 }
 
 func init() {
-	handler.RegisterS2S(pbs2s.PID_PActorSaveResult, actorhandler.WrapCastFunc(handleActorSaveResult))
+	handler.RegisterS2S((*pbs2s.ActorSaveResultNtf)(nil), actorhandler.WrapCastFunc(handleActorSaveResult))
 }

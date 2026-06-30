@@ -35,6 +35,7 @@ type app struct {
 
 	cluster *cluster.Service // cluster.
 
+	actorProtoReg    *actor.ProtoRegistry // actor 协议注册表
 	actorCodec       *actor.Codec         // actor编解码
 	actorRegistry    gactor.ActorRegistry // actor 注册表
 	actorServerStore *actor.ServerStore   // actor 所属服务器存储

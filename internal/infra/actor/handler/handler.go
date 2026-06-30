@@ -1,11 +1,17 @@
 package handler
 
 import (
+	"reflect"
+
 	iactor "github.com/godyy/ggs/internal/infra/actor"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
 	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
+	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/s2s"
 	"github.com/godyy/ggskit/infra/actor"
+	pkgerrors "github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 type HandlerFunc = actor.HandlerFunc
@@ -21,8 +27,12 @@ func NewC2SHandler() *C2SHandler {
 	}
 }
 
-func (h *C2SHandler) RegisterFunc(pid pbc2s.PID, funcs ...HandlerFunc) bool {
-	return h.m.Register(uint16(pid), funcs...)
+func (h *C2SHandler) RegisterFunc(msg proto.Message, funcs ...HandlerFunc) bool {
+	pid, ok := c2s.Registry.GetPid(msg)
+	if !ok {
+		panic(pkgerrors.Errorf("c2s message not registered: %s", reflect.TypeOf(msg)))
+	}
+	return h.m.Register(pid, funcs...)
 }
 
 func (h *C2SHandler) Handle(ctx *actor.Context) {
@@ -64,8 +74,12 @@ func NewS2SHandler() *S2SHandler {
 	}
 }
 
-func (h *S2SHandler) RegisterFunc(pid pbs2s.PID, funcs ...HandlerFunc) bool {
-	return h.m.Register(uint16(pid), funcs...)
+func (h *S2SHandler) RegisterFunc(msg proto.Message, funcs ...HandlerFunc) bool {
+	pid, ok := s2s.Registry.GetPid(msg)
+	if !ok {
+		panic(pkgerrors.Errorf("s2s message not registered: %s", reflect.TypeOf(msg)))
+	}
+	return h.m.Register(pid, funcs...)
 }
 
 func (h *S2SHandler) Handle(ctx *actor.Context) {
