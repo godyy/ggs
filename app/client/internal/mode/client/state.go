@@ -160,9 +160,9 @@ func (s *statePlayLogic) run(c *Client) {
 	go c.tick()
 
 	// 构造自动补全
-	cmdAutoCompleters := make([]readline.PrefixCompleterInterface, 0, len(getCmdNameAll()))
-	for _, name := range getCmdNameAll() {
-		cmdAutoCompleters = append(cmdAutoCompleters, readline.PcItem(name))
+	cmdAutoCompleters := make([]readline.PrefixCompleterInterface, 0, len(cmdList))
+	for _, cmd := range cmdList {
+		cmdAutoCompleters = append(cmdAutoCompleters, cmd.autoCompleter)
 	}
 	s.autoCompleter = readline.NewPrefixCompleter(cmdAutoCompleters...)
 

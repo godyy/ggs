@@ -7,9 +7,10 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/chzyer/readline"
 	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
-	"github.com/ohler55/ojg/sen"
 	pkgerrors "github.com/pkg/errors"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
@@ -19,10 +20,11 @@ type cmdExecFunc func(c *cmd, cli *Client, args string) bool
 type cmdExec func(cli *Client, args string) bool
 
 type cmd struct {
-	name  string      // 命令名称
-	desc  string      // 描述
-	usage string      // 用法
-	exec  cmdExecFunc // 执行逻辑
+	name          string                            // 命令名称
+	desc          string                            // 描述
+	usage         string                            // 用法
+	exec          cmdExecFunc                       // 执行逻辑
+	autoCompleter readline.PrefixCompleterInterface // 自动补全
 }
 
 func (c *cmd) execute(cli *Client, args string) bool {
@@ -32,7 +34,6 @@ func (c *cmd) execute(cli *Client, args string) bool {
 var (
 	cmdList    []*cmd
 	cmdExecMap map[string]cmdExec
-	cmdNameAll []string
 )
 
 const cmdNameSep = "|"
@@ -46,14 +47,8 @@ func registerCmd(c ...*cmd) {
 			}
 			cmdExecMap[name] = c.execute
 		}
-
 		cmdList = append(cmdList, c)
-		cmdNameAll = append(cmdNameAll, names...)
 	}
-}
-
-func getCmdNameAll() []string {
-	return cmdNameAll
 }
 
 func getCmdExec(name string) func(cli *Client, args string) bool {
@@ -81,6 +76,9 @@ func init() {
 				cmdAllUsage()
 				return false
 			},
+			autoCompleter: readline.PcItemDynamic(func(s string) []string {
+				return []string{"help", "h", "?"}
+			}),
 		},
 		&cmd{
 			name: "exit|quit|q",
@@ -88,6 +86,9 @@ func init() {
 			exec: func(_ *cmd, c *Client, args string) bool {
 				return true
 			},
+			autoCompleter: readline.PcItemDynamic(func(s string) []string {
+				return []string{"exit", "quit", "q"}
+			}),
 		},
 		&cmd{
 			name: "sendreq",
@@ -127,7 +128,7 @@ func init() {
 					return false
 				}
 
-				err = sen.Unmarshal([]byte(body), req)
+				err = protojson.Unmarshal([]byte(body), req)
 				if err != nil {
 					log.Println(err)
 					return false
@@ -142,6 +143,7 @@ func init() {
 				log.Printf("%s:{%+v}", reflect.TypeOf(resp).Elem().Name(), resp)
 				return false
 			},
+			autoCompleter: genSendreqAutoCompleter(),
 		},
 	)
 }
@@ -149,3 +151,18 @@ func init() {
 var (
 	cmdSendReqArgsRegex = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9_]*)\s+({.*})$`)
 )
+
+func genSendreqAutoCompleter() readline.PrefixCompleterInterface {
+	marshalOptions := protojson.MarshalOptions{
+		EmitUnpopulated: true,
+	}
+	var children []readline.PrefixCompleterInterface
+	protoregistry.GlobalTypes.RangeMessages(func(mt protoreflect.MessageType) bool {
+		if mt.Descriptor().FullName().Parent() == "c2s" && strings.HasSuffix(string(mt.Descriptor().Name()), "Req") {
+			jb, _ := marshalOptions.Marshal(mt.New().Interface())
+			children = append(children, readline.PcItem(string(mt.Descriptor().Name()), readline.PcItem(string(jb))))
+		}
+		return true
+	})
+	return readline.PcItem("sendreq", children...)
+}
