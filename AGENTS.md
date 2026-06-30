@@ -42,6 +42,8 @@
 
 - `app/client`
   - 本地客户端 / 机器人工具。
+  - 交互式 CLI 基于 `github.com/chzyer/readline`，支持多级自动补全（命令/参数）。
+  - protobuf JSON 输入/模板使用 `google.golang.org/protobuf/encoding/protojson`（例如 `sendreq`），可通过 `EmitUnpopulated` 输出 0 值字段。
 
 各服务自己的接线、handler、配置封装、服务私有 infra 放在：
 
@@ -289,6 +291,18 @@ internal/protocol
 ├── pb          # 生成代码，不手工编辑
 ├── registry    # 协议注册表，部分文件为生成物
 └── tools       # 生成工具
+```
+
+Actor 协议（C2S/S2S）目录：
+
+```text
+internal/infra/actor/protocol
+├── protos      # 可编辑 .proto 源文件
+├── pb          # 生成代码，不手工编辑
+├── registry
+│   ├── c2s     # C2S 注册表（包含生成的 register.go）
+│   └── s2s     # S2S 注册表（包含生成的 register.go）
+└── tools       # 生成工具（gen_register）
 ```
 
 规则：
