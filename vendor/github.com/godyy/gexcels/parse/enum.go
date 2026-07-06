@@ -1,0 +1,221 @@
+package parse
+
+import (
+	"fmt"
+	"regexp"
+
+	"github.com/godyy/gexcels"
+	pkg_errors "github.com/pkg/errors"
+	"github.com/tealeg/xlsx/v3"
+)
+
+// Enum 枚举.
+type Enum struct {
+	*gexcels.Enum       // 基础信息
+	ItemValues    []any // 枚举项值列表
+}
+
+// newEnum 创建枚举.
+func newEnum(name string, typ gexcels.FieldType, desc string) *Enum {
+	return &Enum{
+		Enum: gexcels.NewEnum(name, typ, desc),
+	}
+}
+
+// addItem 添加枚举项
+func (e *Enum) addItem(item *gexcels.EnumItem, value any) bool {
+	if !e.Enum.AddItem(item) {
+		return false
+	}
+	e.ItemValues = append(e.ItemValues, value)
+	return true
+}
+
+// GetItemValue 获取枚举项值
+func (e *Enum) GetItemValue(index int) any {
+	return e.ItemValues[index]
+}
+
+// GetItemValueByName 获取枚举项值
+func (e *Enum) GetItemValueByName(itemName string) (any, bool) {
+	if item := e.GetItemByName(itemName); item != nil {
+		return e.GetItemValue(item.Index), true
+	} else {
+		return nil, false
+	}
+}
+
+// enumBeginRegexp 匹配开始定义枚举的正则表达式.
+var enumBeginRegexp = regexp.MustCompile(`^([a-zA-Z][a-zA-Z0-9_]*)_BEGIN$`)
+
+// addEnum 添加枚举
+func (p *Parser) addEnum(enum *Enum) error {
+	if err := p.addCustomFieldType(gexcels.NewEnumFieldTypeInfo(enum.Name)); err != nil {
+		return err
+	}
+
+	p.Enums = append(p.Enums, enum)
+	p.enumByName[enum.Name] = enum
+	return nil
+}
+
+// GetEnum 获取枚举
+func (p *Parser) GetEnum(name string) *Enum {
+	return p.enumByName[name]
+}
+
+// parseEnums 解析枚举.
+func (p *Parser) parseEnums(enumFiles []string) error {
+	for _, file := range enumFiles {
+		if err := p.parseEnumFile(file); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// enumSheetNameRegexp 枚举sheet名匹配正则表达式
+var enumSheetNameRegexp = regexp.MustCompile(`^(.*)\|(Enum\w*)`)
+
+// parseEnumFile 解析枚举文件.
+func (p *Parser) parseEnumFile(path string) error {
+	file, err := xlsx.OpenFile(path)
+	if err != nil {
+		return err
+	}
+
+	for _, sheet := range file.Sheets {
+		matches := enumSheetNameRegexp.FindStringSubmatch(sheet.Name)
+		if len(matches) != 3 {
+			continue
+		}
+
+		if err := p.parseEnumSheet(sheet); err != nil {
+			return pkg_errors.WithMessagef(err, "enum file(%s).sheet(%s)", path, sheet.Name)
+		}
+	}
+	return nil
+}
+
+// parseEnumOfSheet 解析枚举表
+func (p *Parser) parseEnumSheet(sheet *xlsx.Sheet) error {
+	if sheet.MaxRow < gexcels.EnumRowFirstEntry || sheet.MaxCol < gexcels.EnumCols {
+		return errSheetRowsOrColsNotMatch
+	}
+
+	var (
+		enum *Enum
+		row  int
+		err  error
+	)
+
+	row = gexcels.EnumRowFirstEntry
+	for row < sheet.MaxRow {
+		var newRow int
+		enum, newRow, err = p.parseEnum(sheet, row)
+		if err != nil {
+			return pkg_errors.WithMessagef(err, "parse enum start at %d", row)
+		}
+		if enum != nil {
+			if err := p.addEnum(enum); err != nil {
+				return pkg_errors.WithMessagef(err, "add enum %s", enum.Name)
+			}
+		}
+		row = newRow
+	}
+	return nil
+}
+
+// parseEnum 解析枚举.
+func (p *Parser) parseEnum(sheet *xlsx.Sheet, row int) (*Enum, int, error) {
+	if isSheetRowComment(sheet, row) {
+		return nil, row + 1, nil
+	}
+
+	enumBegin, err := getSheetValue(sheet, row, gexcels.EnumColBegin, true)
+	if err != nil {
+		return nil, 0, pkg_errors.WithMessagef(err, "get begin cell")
+	}
+	if enumBegin == "" {
+		return nil, row + 1, nil
+	}
+	matches := enumBeginRegexp.FindStringSubmatch(enumBegin)
+	if len(matches) != 2 {
+		return nil, 0, fmt.Errorf("invalid begin \"%s\"", enumBegin)
+	}
+	enumName := matches[1]
+
+	enumTag, err := getSheetValue(sheet, row, gexcels.EnumColTag, true)
+	if err != nil {
+		return nil, 0, pkg_errors.WithMessage(err, "get tag cell")
+	}
+	if ok, valid := p.checkTag(enumTag); !valid {
+		return nil, 0, fmt.Errorf("invalid tag %s", enumTag)
+	} else if !ok {
+		row += 1
+		for row < sheet.MaxRow {
+			itemName, err := getSheetValue(sheet, row, gexcels.EnumColItemName, true)
+			if err != nil {
+				return nil, 0, pkg_errors.WithMessagef(err, "get item name cell at row %d", row)
+			}
+			row += 1
+			if itemName == "" {
+				break
+			}
+		}
+		return nil, row, nil
+	}
+
+	enumType, err := getSheetValue(sheet, row, gexcels.EnumColType, true)
+	if err != nil {
+		return nil, 0, pkg_errors.WithMessage(err, "get type cell")
+	}
+	enumTypeInfo, err := p.parseFieldTypeInfo(enumType)
+	if err != nil {
+		return nil, 0, pkg_errors.WithMessage(err, "parse type")
+	}
+	if !enumTypeInfo.Type.CanEnum() {
+		return nil, row, fmt.Errorf("invalid enum type %s", enumType)
+	}
+
+	enumDesc, err := getSheetValue(sheet, row, gexcels.EnumColDesc, true)
+	if err != nil {
+		return nil, 0, pkg_errors.WithMessage(err, "get desc cell")
+	}
+
+	enum := newEnum(enumName, enumTypeInfo.Type, enumDesc)
+	row += 1
+	for row < sheet.MaxRow {
+		if isSheetRowComment(sheet, row) {
+			row++
+			continue
+		}
+		itemName, err := getSheetValue(sheet, row, gexcels.EnumColItemName, true)
+		if err != nil {
+			return nil, 0, pkg_errors.WithMessagef(err, "get [%d] item name cell", enum.ItemAmount())
+		}
+		if itemName == "" {
+			row++
+			break
+		}
+		if !gexcels.MatchName(itemName) {
+			return nil, 0, fmt.Errorf("invalid item name %s", itemName)
+		}
+		itemDesc, err := getSheetValue(sheet, row, gexcels.EnumColDesc, true)
+		if err != nil {
+			return nil, 0, pkg_errors.WithMessagef(err, "get [%d] item desc cell", enum.ItemAmount())
+		}
+		itemValue, err := getSheetValue(sheet, row, gexcels.EnumColValue)
+		if err != nil {
+			return nil, 0, pkg_errors.WithMessagef(err, "get [%d] item value cell", enum.ItemAmount())
+		}
+		value, err := parsePrimitiveValue(enumTypeInfo.Type, itemValue)
+		if err != nil {
+			return nil, 0, pkg_errors.WithMessage(err, "parse [%d ]item value")
+		}
+		enum.addItem(gexcels.NewEnumItem(itemName, itemDesc, itemValue), value)
+		row++
+	}
+
+	return enum, row, nil
+}

@@ -1,11 +1,11 @@
 # HTTP端口
-HttpPort = 23088
+HttpPort = 8888
 
 # 是否启用PProf
 EnablePProf = false
 
 [Cluster]
-Port = 23002 # 集群端口
+Port = 20002 # 集群端口
 
 # 集群核心配置（严格匹配结构体字段名）
 [Cluster.Core]

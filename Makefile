@@ -1,4 +1,4 @@
-.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gdconf
+.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gdconf docker docker-agent docker-game docker-login docker-platform
 
 protos:
 	cd internal/infra/actor/protocol && make protos
@@ -40,7 +40,7 @@ gdconf:
 	goimports -w ./internal/gdconf
 		
 run_client: login_url_root := http://localhost:8080/api/v1
-run_client: agent_addr := localhost:22001
+run_client: agent_addr := localhost:21001
 run_client: uid := yy01
 run_client: server_id := 1
 run_client:
@@ -75,3 +75,19 @@ run_platform: config_path := ./app/platform/configs/dev.toml
 run_platform:
 	go run github.com/godyy/ggs/app/platform \
 		-config-path "$(config_path)"
+
+docker_services := agent game login platform
+docker_image_prefix ?= ggs
+docker_tag ?= latest
+docker_file ?= ./Dockerfile
+docker_env ?= dev
+
+docker: $(addprefix docker-,$(docker_services))
+
+docker-agent docker-game docker-login docker-platform:
+	DOCKER_BUILDKIT=1 docker build \
+		-f "$(docker_file)" \
+		--build-arg APP_ENV="$(docker_env)" \
+		--target "$(patsubst docker-%,%,$@)" \
+		-t "$(docker_image_prefix)/$(patsubst docker-%,%,$@):$(docker_tag)" \
+		.

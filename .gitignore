@@ -1,2 +1,4 @@
 bin/
 volumes/
+docker/dev/.env
+docker/dev/configs
