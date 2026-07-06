@@ -122,7 +122,7 @@ services:
         condition: service_healthy
       etcd:
         condition: service_healthy
-    command: ["-env-server-id", "${GGS_GAME_SERVER_ID:-1}"]
+    command: ["-env-server-id", "${GGS_GAME_SERVER_ID:-1}", "-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}"]
     ports:
       - "${GGS_GAME_PORT:-22002}:20002"
       - "${GGS_GAME_MONITOR_PORT:-22088}:8888"

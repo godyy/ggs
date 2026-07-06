@@ -10,6 +10,7 @@ type Env struct {
 
 	serverId int64  // 服务器ID
 	db       string // 服务器数据库名称
+	gdconfDB string // gdconf数据库名称
 }
 
 // NewEnv 创建环境变量管理器.
@@ -32,4 +33,9 @@ func (e *Env) ServerID() int64 {
 // DB 服务器数据库名称
 func (e *Env) DB() string {
 	return e.db
+}
+
+// GDconfDB gdconf数据库名称
+func (e *Env) GDconfDB() string {
+	return e.gdconfDB
 }

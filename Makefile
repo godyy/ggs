@@ -25,7 +25,7 @@ gdconf: excel_path := ./excels
 gdconf: enum_file := ./excels/枚举定义.xlsx
 gdconf: struct_file := ./excels/结构体定义.xlsx
 gdconf: mongo_uri := mongodb://localhost:27017
-gdconf: mongo_db := gdconf
+gdconf: ver := dev
 gdconf:
 	# 删除internal/gdconf下除了*_ext.go和gdconf.go之外的golang代码文件
 	find ./internal/gdconf -name "*.go" ! -name "*_ext.go" ! -name "gdconf.go" -delete
@@ -35,7 +35,7 @@ gdconf:
 		-enum-file "$(enum_file)" \
 		-struct-file "$(struct_file)" \
 		-code-path "./internal/gdconf" \
-		-mongo-db "$(mongo_db)" \
+		-mongo-db "gdconf_$(ver)" \
 		-mongo-uri "$(mongo_uri)"
 	goimports -w ./internal/gdconf
 		

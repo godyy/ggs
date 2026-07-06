@@ -103,7 +103,7 @@ func Start() {
 	appInst.mongobd = mongobd
 
 	// 配置表加载.
-	gdconfDB := mongoClient.Database("gdconf", options.Database().SetReadConcern(readconcern.Majority()))
+	gdconfDB := mongoClient.Database(Env().GDconfDB(), options.Database().SetReadConcern(readconcern.Majority()))
 	if err := gdconf.Load(gdconfDB); err != nil {
 		logger.Get().Fatalf("load gdconf failed, %v", err)
 	}

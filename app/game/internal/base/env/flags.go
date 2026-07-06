@@ -14,8 +14,14 @@ func (e *Env) applyFlags() {
 	} else {
 		panic("env: env-server-id is required and must > 0")
 	}
+
+	gdconfDB, ok := env.GetFlagValue[string]("gdconf-db")
+	if ok && gdconfDB != "" {
+		e.gdconfDB = gdconfDB
+	}
 }
 
 func init() {
 	env.AddFlag("server-id", int64(0), "server id")
+	env.AddFlag("gdconf-db", "gdconf_dev", "gdconf db name")
 }
