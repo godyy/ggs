@@ -3,7 +3,9 @@ package actors
 import (
 	"fmt"
 
+	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/define"
 	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
 	"github.com/godyy/ggs/internal/infra/actor/model/server"
 )
@@ -39,4 +41,19 @@ func (s *Server) OnStop() error {
 	lifecycle.OnStop(s)
 
 	return s.ActorWithModel.OnStop()
+}
+
+func init() {
+	define.RegisterDefine(gactor.NewActorDefine(gactor.ActorDefineConfig{
+		Name:           actor.CategoryServer.String(),
+		Category:       actor.CategoryServer.ActorCategory(),
+		Priority:       0,
+		MessageBoxSize: 100,
+		BehaviorCreator: func(a gactor.Actor) gactor.ActorBehavior {
+			return NewServer(a)
+		},
+	},
+		gactor.WithMaxTimerAmount(10),
+		gactor.WithMaxAsyncRPCAmount(10),
+	))
 }

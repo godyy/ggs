@@ -1,11 +1,8 @@
 package internal
 
-import applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
+import (
+	"github.com/gin-gonic/gin"
+	_ "github.com/godyy/ggs/internal/infra/actor/actors"
+)
 
-func init() {
-	applifecycle.RegisterBeforeStart(beforeAppStart)
-}
-
-func beforeAppStart() {
-	initActorDefineList()
-}
+var SetupRoutes func(root *gin.RouterGroup)
