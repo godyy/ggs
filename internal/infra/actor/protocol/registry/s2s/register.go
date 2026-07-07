@@ -13,4 +13,6 @@ func init() {
 	register((*s2s.ActorSaveResultNtf)(nil))
 	register((*s2s.GetServerNameReq)(nil))
 	register((*s2s.GetServerNameResp)(nil))
+	register((*s2s.ReloadGDConfReq)(nil))
+	register((*s2s.ReloadGDConfResp)(nil))
 }

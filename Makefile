@@ -72,9 +72,11 @@ run_login:
 		-config-path "$(config_path)"
 
 run_platform: config_path := ./app/platform/configs/dev.toml
+run_platform: server_id := 1
 run_platform:
 	go run github.com/godyy/ggs/app/platform \
-		-config-path "$(config_path)"
+		-config-path "$(config_path)" \
+		-env-server-id "$(server_id)"
 
 docker_services := agent game login platform
 docker_image_prefix ?= ggs

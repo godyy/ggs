@@ -52,3 +52,12 @@ func (s *Server) GetAllServers(ctx context.Context) ([]*models.Server, error) {
 
 	return servers, nil
 }
+
+// GetAllServerIds 获取所有服务器ID列表
+func (s *Server) GetAllServerIds(ctx context.Context) ([]int64, error) {
+	var ids []int64
+	if err := s.col.Distinct(ctx, "id", bson.M{}).Decode(&ids); err != nil {
+		return nil, err
+	}
+	return ids, nil
+}

@@ -12,11 +12,7 @@ import (
 	"github.com/godyy/ggs/internal/base/logger"
 )
 
-var (
-	srv *http.Server
-)
-
-func startHttp() {
+func (a *app) startHttp() {
 	// 创建gin引擎
 	engine := gin.New()
 
@@ -27,15 +23,15 @@ func startHttp() {
 	internal.SetupRoutes(engine.Group("/api"))
 
 	// 创建http服务
-	srv = &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Port),
+	appInst.httpServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", a.cfg.Port),
 		Handler: engine,
 	}
 
 	// 启动http服务
 	go func() {
-		logger.Get().Infof("http server listening at :%d", cfg.Port)
-		if err := srv.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
+		logger.Get().Infof("http server listening at :%d", a.cfg.Port)
+		if err := appInst.httpServer.ListenAndServe(); errors.Is(err, http.ErrServerClosed) {
 			logger.Get().Info("http server closed.")
 		} else {
 			logger.Get().Errorf("http server closed with error: %v", err)
@@ -43,14 +39,14 @@ func startHttp() {
 	}()
 }
 
-func stopHttp() {
-	if srv != nil {
+func (a *app) stopHttp() {
+	if a.httpServer != nil {
 		// 创建上下文用于优雅关闭
 		ctx, cancel := context.WithTimeout(context.Background(), consts.ShutdownTimeout)
 		defer cancel()
 
 		// 优雅关闭服务器
-		if err := srv.Shutdown(ctx); err != nil {
+		if err := a.httpServer.Shutdown(ctx); err != nil {
 			logger.Get().Error("http server shutdown with error: %v", err)
 		}
 	}

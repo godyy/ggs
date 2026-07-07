@@ -103,6 +103,112 @@ func (x *GetServerNameResp) GetServerName() string {
 	return ""
 }
 
+// 重载gdconf配置.
+type ReloadGDConfReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	All           bool                   `protobuf:"varint,1,opt,name=all,proto3" json:"all,omitempty"`      // 是否全体重载
+	Tables        []string               `protobuf:"bytes,2,rep,name=tables,proto3" json:"tables,omitempty"` // 需重载的表名
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadGDConfReq) Reset() {
+	*x = ReloadGDConfReq{}
+	mi := &file_s2s_server_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadGDConfReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadGDConfReq) ProtoMessage() {}
+
+func (x *ReloadGDConfReq) ProtoReflect() protoreflect.Message {
+	mi := &file_s2s_server_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadGDConfReq.ProtoReflect.Descriptor instead.
+func (*ReloadGDConfReq) Descriptor() ([]byte, []int) {
+	return file_s2s_server_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ReloadGDConfReq) GetAll() bool {
+	if x != nil {
+		return x.All
+	}
+	return false
+}
+
+func (x *ReloadGDConfReq) GetTables() []string {
+	if x != nil {
+		return x.Tables
+	}
+	return nil
+}
+
+// 重载gdconf配置响应.
+type ReloadGDConfResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"` // 是否成功
+	Err           string                 `protobuf:"bytes,2,opt,name=err,proto3" json:"err,omitempty"`          // 错误信息
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReloadGDConfResp) Reset() {
+	*x = ReloadGDConfResp{}
+	mi := &file_s2s_server_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReloadGDConfResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReloadGDConfResp) ProtoMessage() {}
+
+func (x *ReloadGDConfResp) ProtoReflect() protoreflect.Message {
+	mi := &file_s2s_server_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReloadGDConfResp.ProtoReflect.Descriptor instead.
+func (*ReloadGDConfResp) Descriptor() ([]byte, []int) {
+	return file_s2s_server_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *ReloadGDConfResp) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *ReloadGDConfResp) GetErr() string {
+	if x != nil {
+		return x.Err
+	}
+	return ""
+}
+
 var File_s2s_server_proto protoreflect.FileDescriptor
 
 const file_s2s_server_proto_rawDesc = "" +
@@ -112,7 +218,13 @@ const file_s2s_server_proto_rawDesc = "" +
 	"\x11GetServerNameResp\x12\x1e\n" +
 	"\n" +
 	"serverName\x18\x01 \x01(\tR\n" +
-	"serverNameB;Z9github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2sb\x06proto3"
+	"serverName\";\n" +
+	"\x0fReloadGDConfReq\x12\x10\n" +
+	"\x03all\x18\x01 \x01(\bR\x03all\x12\x16\n" +
+	"\x06tables\x18\x02 \x03(\tR\x06tables\">\n" +
+	"\x10ReloadGDConfResp\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x10\n" +
+	"\x03err\x18\x02 \x01(\tR\x03errB;Z9github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2sb\x06proto3"
 
 var (
 	file_s2s_server_proto_rawDescOnce sync.Once
@@ -126,10 +238,12 @@ func file_s2s_server_proto_rawDescGZIP() []byte {
 	return file_s2s_server_proto_rawDescData
 }
 
-var file_s2s_server_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_s2s_server_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_s2s_server_proto_goTypes = []any{
 	(*GetServerNameReq)(nil),  // 0: s2s.GetServerNameReq
 	(*GetServerNameResp)(nil), // 1: s2s.GetServerNameResp
+	(*ReloadGDConfReq)(nil),   // 2: s2s.ReloadGDConfReq
+	(*ReloadGDConfResp)(nil),  // 3: s2s.ReloadGDConfResp
 }
 var file_s2s_server_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -150,7 +264,7 @@ func file_s2s_server_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_s2s_server_proto_rawDesc), len(file_s2s_server_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

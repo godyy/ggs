@@ -103,8 +103,10 @@ services:
         condition: service_healthy
       mongodb:
         condition: service_healthy
+    command: ["-env-server-id", "${GGS_GAME_SERVER_ID:-1}"]
     ports:
       - "${GGS_PLATFORM_PORT:-8081}:8080"
+      - "${GGS_PLATFORM_CLUSTER_PORT:-23002}:20002"
     volumes:
       - ./configs/platform.toml:/app/configs/config.toml:rw
     networks:
@@ -124,7 +126,7 @@ services:
         condition: service_healthy
     command: ["-env-server-id", "${GGS_GAME_SERVER_ID:-1}", "-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}"]
     ports:
-      - "${GGS_GAME_PORT:-22002}:20002"
+      - "${GGS_GAME_CLUSTER_PORT:-22002}:20002"
       - "${GGS_GAME_MONITOR_PORT:-22088}:8888"
     volumes:
       - ./configs/game.toml:/app/configs/config.toml:rw
@@ -143,8 +145,8 @@ services:
         condition: service_healthy
     command: ["-env-server-id", "${GGS_AGENT_SERVER_ID:-1}"]
     ports:
-      - "${GGS_AGENT_PORT_1:-21001}:20001"
-      - "${GGS_AGENT_PORT_2:-21002}:20002"
+      - "${GGS_AGENT_PORT:-21001}:20001"
+      - "${GGS_AGENT_CLUSTER_PORT:-21002}:20002"
       - "${GGS_AGENT_MONITOR_PORT:-21088}:8888"
     volumes:
       - ./configs/agent.toml:/app/configs/config.toml:rw

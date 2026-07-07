@@ -1,6 +1,33 @@
 # 服务端口
 Port = 8080
 
+[Cluster]
+Port = 20002 # 集群端口
+
+# 集群核心配置（严格匹配结构体字段名）
+[Cluster.Core]
+EtcdEndPoints = ["localhost:2379"]
+EtcdRoot = "/ggs/cluster"
+ExpectedConcurrentSessions = 1000 # 预期同时存在的会话数量
+
+# 握手配置（严格匹配结构体字段名）
+[Cluster.Core.Handshake]
+Token = "dev-token-123"  # 握手令牌
+Timeout = "5s"  # 握手超时时间
+
+# 会话配置（严格匹配结构体字段名）
+[Cluster.Core.Session]
+PendingPacketQueueSize = 100  # 待处理包队列大小
+MaxPacketLength = 1048576  # 最大包长度
+ReadBufSize = 8192  # 读取缓冲区大小
+WriteBufSize = 8192  # 写入缓冲区大小
+ReadWriteTimeout = "10s"  # 读写超时时间
+BatchWriteLimit = 10  # 批量写入限制
+BatchWriteTimeLmit = "1ms"  # 批量写入时间限制
+TickInterval = "2s"  # 心跳间隔
+HeartbeatTimeout = "5s"  # 心跳超时时间
+InactiveTimeout = "10m"  # 非活动超时时间
+
 # 数据库配置
 [DB]
 
@@ -41,3 +68,4 @@ Caller = true
 CallerSkip = 0
 # Development = true
 EnableStd = true
+

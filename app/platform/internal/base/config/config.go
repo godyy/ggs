@@ -5,11 +5,21 @@ import (
 	"github.com/godyy/ggskit/base/db/mongo"
 	"github.com/godyy/ggskit/base/db/redis"
 	"github.com/godyy/ggskit/base/logger"
+	"github.com/godyy/ggskit/infra/cluster"
 	pkgerrors "github.com/pkg/errors"
 )
 
 // Config 配置.
 type Config struct {
+	// Cluster 集群配置.
+	Cluster struct {
+		// Port 集群端口.
+		Port int
+
+		// Core 核心配置.
+		Core cluster.Config
+	}
+
 	// Port 服务端口.
 	Port int
 

@@ -158,6 +158,11 @@ func Env() *env.Env {
 	return appInst.env
 }
 
+// MongoClient 返回 mongo 客户端.
+func MongoClient() *mongo.Client {
+	return appInst.mongoClient
+}
+
 // MongoBD 返回 mongo 后台.
 func MongoBD() *imongobd.BD {
 	return appInst.mongobd
