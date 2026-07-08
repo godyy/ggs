@@ -5,7 +5,6 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/infra/actor/define"
 	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
 	"github.com/godyy/ggs/internal/infra/actor/model/server"
 )
@@ -44,7 +43,7 @@ func (s *Server) OnStop() error {
 }
 
 func init() {
-	define.RegisterDefine(gactor.NewActorDefine(gactor.ActorDefineConfig{
+	registerDefine(gactor.NewActorDefine(gactor.ActorDefineConfig{
 		Name:           actor.CategoryServer.String(),
 		Category:       actor.CategoryServer.ActorCategory(),
 		Priority:       0,

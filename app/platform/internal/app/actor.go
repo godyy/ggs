@@ -9,7 +9,7 @@ import (
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
 	iactor "github.com/godyy/ggs/internal/infra/actor"
-	actordefine "github.com/godyy/ggs/internal/infra/actor/define"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/s2s"
 	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
@@ -50,7 +50,7 @@ func (a *app) startActor() error {
 		Core: &gactor.ServiceConfig{
 			NodeId: selfNodeId,
 			ActorConfig: gactor.ActorConfig{
-				ActorDefines: actordefine.GetDefineList(),
+				ActorDefines: actors.GetDefineList(),
 				Handler:      func(ctx *gactor.Context) {},
 			},
 			TimerConfig: gactor.TimerConfig{

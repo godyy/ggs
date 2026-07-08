@@ -7,7 +7,6 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	iactor "github.com/godyy/ggs/internal/infra/actor"
-	"github.com/godyy/ggs/internal/infra/actor/define"
 	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
 	"github.com/godyy/ggskit/infra/actor"
@@ -116,7 +115,7 @@ func (p *Player) onHeartbeatTimer(args *gactor.ActorTimerArgs) {
 }
 
 func init() {
-	define.RegisterDefine(gactor.NewCActorDefine(gactor.CActorDefineConfig{
+	registerDefine(gactor.NewCActorDefine(gactor.CActorDefineConfig{
 		Name:           iactor.CategoryPlayer.String(),
 		Category:       iactor.CategoryPlayer.ActorCategory(),
 		Priority:       99,

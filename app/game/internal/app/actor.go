@@ -11,7 +11,7 @@ import (
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
 	iactor "github.com/godyy/ggs/internal/infra/actor"
-	actordefine "github.com/godyy/ggs/internal/infra/actor/define"
+	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/persist"
 	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
@@ -71,7 +71,7 @@ func (a *app) startActor() error {
 		Core: &gactor.ServiceConfig{
 			NodeId: selfNodeId,
 			ActorConfig: gactor.ActorConfig{
-				ActorDefines:        actordefine.GetDefineList(),
+				ActorDefines:        actors.GetDefineList(),
 				ClientActorCategory: iactor.CategoryPlayer.ActorCategory(),
 				Handler:             handler.Handle,
 			},
