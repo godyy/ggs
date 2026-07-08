@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/godyy/gactor"
+	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor/handler"
 	"github.com/godyy/ggskit/infra/actor"
 	"google.golang.org/protobuf/proto"
@@ -29,4 +30,9 @@ func RegisterC2S(msg proto.Message, funcs ...handler.HandlerFunc) {
 // RegisterS2S 注册S2S请求函数
 func RegisterS2S(msg proto.Message, funcs ...handler.HandlerFunc) {
 	s2sHandler.RegisterFunc(msg, funcs...)
+}
+
+// Logger 获取日志实例
+func Logger() logger.Logger {
+	return handler.Logger()
 }

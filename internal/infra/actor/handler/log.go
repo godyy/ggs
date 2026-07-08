@@ -8,6 +8,11 @@ var loggerInst logger.Logger
 
 func init() {
 	logger.RegisterAfterInitFunc(func(l logger.Logger) {
-		loggerInst = l.Named("handlers")
+		loggerInst = l.Named("handler")
 	})
+}
+
+// Logger 获取日志实例
+func Logger() logger.Logger {
+	return loggerInst
 }

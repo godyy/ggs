@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/godyy/ggs/app/game/internal/app"
+	"github.com/godyy/ggs/app/game/internal/handler"
 	"github.com/godyy/ggs/app/game/internal/systems"
-	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
@@ -28,7 +28,7 @@ func handleLoginCharacter(ctx *actor.Context, req *pbc2s.LoginCharacterReq) (*pb
 	if err != nil {
 		return nil, pkgerrors.WithMessage(err, "get server name")
 	}
-	logger.Get().Info("get server name success, server name: %s", getServerNameResp.(*s2s.GetServerNameResp).ServerName)
+	handler.Logger().Info("get server name success, server name: %s", getServerNameResp.(*s2s.GetServerNameResp).ServerName)
 
 	return &pbc2s.LoginCharacterResp{}, nil
 }

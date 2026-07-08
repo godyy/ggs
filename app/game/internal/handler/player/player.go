@@ -1,7 +1,7 @@
 package player
 
 import (
-	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/app/game/internal/handler"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
@@ -15,6 +15,6 @@ func handleModifyName(c *actor.Context, req *c2s.ModifyNameReq) (*c2s.ModifyName
 	oldName := m.Name
 	m.Name = req.Name
 	p.SetDirtyModules(m)
-	logger.Get().Debugf("player %d modify name %s to %s", p.ID(), oldName, m.Name)
+	handler.Logger().Debugf("player %d modify name %s to %s", p.ID(), oldName, m.Name)
 	return &c2s.ModifyNameResp{Name: req.Name}, nil
 }

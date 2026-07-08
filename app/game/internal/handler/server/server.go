@@ -2,8 +2,8 @@ package server
 
 import (
 	"github.com/godyy/ggs/app/game/internal/app"
+	"github.com/godyy/ggs/app/game/internal/handler"
 	"github.com/godyy/ggs/app/game/internal/systems"
-	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/gdconf"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
@@ -26,17 +26,17 @@ func handleReloadGDConf(ctx *actor.Context, req *pbs2s.ReloadGDConfReq) (*pbs2s.
 		if err := gdconf.Load(db); err != nil {
 			resp.Success = false
 			resp.Err = err.Error()
-			logger.Get().Errorf("reload gdconf, %v", err)
+			handler.Logger().Errorf("reload gdconf, %v", err)
 		} else {
-			logger.Get().Info("reload gdconf")
+			handler.Logger().Info("reload gdconf")
 		}
 	} else if len(req.Tables) > 0 {
 		if err := gdconf.LoadTable(db, req.Tables...); err != nil {
 			resp.Success = false
 			resp.Err = err.Error()
-			logger.Get().Errorf("reload gdconf tables %v, %v", req.Tables, err)
+			handler.Logger().Errorf("reload gdconf tables %v, %v", req.Tables, err)
 		} else {
-			logger.Get().Info("reload gdconf tables %v", req.Tables)
+			handler.Logger().Info("reload gdconf tables %v", req.Tables)
 		}
 	}
 	return resp, nil
