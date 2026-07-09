@@ -2,6 +2,7 @@ package player
 
 import (
 	"github.com/godyy/ggs/app/game/internal/handler"
+	"github.com/godyy/ggs/internal/infra/actor"
 	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 	"google.golang.org/protobuf/proto"
@@ -22,14 +23,14 @@ func initC2SHandler() {
 func initS2SHandler() {
 }
 
-func registerC2SFunc(msg proto.Message, checkLogin bool, f ...actorhandler.HandlerFunc) {
+func registerC2SFunc(msg proto.Message, checkLogin bool, f ...actor.HandlerFunc) {
 	if checkLogin {
-		handler.RegisterC2S(msg, append([]actorhandler.HandlerFunc{mdCheckLogin}, f...)...)
+		handler.RegisterC2S(msg, append([]actor.HandlerFunc{mdCheckLogin}, f...)...)
 	} else {
 		handler.RegisterC2S(msg, f...)
 	}
 }
 
-func registerS2SFunc(msg proto.Message, f ...actorhandler.HandlerFunc) {
+func registerS2SFunc(msg proto.Message, f ...actor.HandlerFunc) {
 	handler.RegisterS2S(msg, f...)
 }

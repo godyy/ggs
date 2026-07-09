@@ -30,7 +30,7 @@ type ActorWithModel[Model model] struct {
 	Model Model
 }
 
-func NewActorWithModel[Model model](actor actor.Actor) ActorWithModel[Model] {
+func NewActorWithModel[Model model](actor Actor) ActorWithModel[Model] {
 	return ActorWithModel[Model]{ActorSugared: ActorSugared{Actor: actor}}
 }
 
@@ -85,7 +85,7 @@ type ActorWithModule[Model modelWithModule] struct {
 	Model Model
 }
 
-func NewActorWithModule[Model modelWithModule](actor actor.Actor) ActorWithModule[Model] {
+func NewActorWithModule[Model modelWithModule](actor Actor) ActorWithModule[Model] {
 	return ActorWithModule[Model]{ActorSugared: ActorSugared{Actor: actor}}
 }
 
@@ -159,7 +159,7 @@ type CActorWithModel[Model model] struct {
 	Model Model
 }
 
-func NewCActorWithModel[Model model](actor actor.CActor) CActorWithModel[Model] {
+func NewCActorWithModel[Model model](actor CActor) CActorWithModel[Model] {
 	return CActorWithModel[Model]{CActorSugared: CActorSugared{CActor: actor}}
 }
 
@@ -214,7 +214,7 @@ type CActorWithModule[Model modelWithModule] struct {
 	Model Model
 }
 
-func NewCActorWithModule[Model modelWithModule](actor actor.CActor) CActorWithModule[Model] {
+func NewCActorWithModule[Model modelWithModule](actor CActor) CActorWithModule[Model] {
 	return CActorWithModule[Model]{CActorSugared: CActorSugared{CActor: actor}}
 }
 

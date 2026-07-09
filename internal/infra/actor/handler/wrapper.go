@@ -9,7 +9,7 @@ import (
 )
 
 // WrapReqFunc 包装Req处理函数.
-func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) HandlerFunc {
+func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) actor.HandlerFunc {
 	return func(ctx *actor.Context) {
 		defer handlePushMsgQueue(ctx)
 		req := GetArgs[Req](ctx)
@@ -24,7 +24,7 @@ func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 }
 
 // WrapRPCFunc 包装RPC处理函数.
-func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) HandlerFunc {
+func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (Resp, error)) actor.HandlerFunc {
 	return func(ctx *actor.Context) {
 		req := GetArgs[Req](ctx)
 		resp, err := f(ctx, req)
@@ -38,7 +38,7 @@ func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 }
 
 // WrapCastFunc 包装Cast处理函数.
-func WrapCastFunc[Params proto.Message](f func(ctx *actor.Context, params Params) bool) HandlerFunc {
+func WrapCastFunc[Params proto.Message](f func(ctx *actor.Context, params Params) bool) actor.HandlerFunc {
 	return func(ctx *actor.Context) {
 		params := GetArgs[Params](ctx)
 		if !f(ctx, params) {

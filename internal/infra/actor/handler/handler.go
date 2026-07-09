@@ -14,8 +14,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type HandlerFunc = actor.HandlerFunc
-
 // C2SHandler C2S消息处理器.
 type C2SHandler struct {
 	m actor.HandlerMap
@@ -27,7 +25,7 @@ func NewC2SHandler() *C2SHandler {
 	}
 }
 
-func (h *C2SHandler) RegisterFunc(msg proto.Message, funcs ...HandlerFunc) bool {
+func (h *C2SHandler) RegisterFunc(msg proto.Message, funcs ...iactor.HandlerFunc) bool {
 	pid, ok := c2s.Registry.GetPid(msg)
 	if !ok {
 		panic(pkgerrors.Errorf("c2s message not registered: %s", reflect.TypeOf(msg)))
@@ -35,7 +33,7 @@ func (h *C2SHandler) RegisterFunc(msg proto.Message, funcs ...HandlerFunc) bool 
 	return h.m.Register(pid, funcs...)
 }
 
-func (h *C2SHandler) Handle(ctx *actor.Context) {
+func (h *C2SHandler) Handle(ctx *iactor.Context) {
 	ctxSugared := iactor.SugarContext(ctx)
 
 	// 解码负载数据
@@ -74,7 +72,7 @@ func NewS2SHandler() *S2SHandler {
 	}
 }
 
-func (h *S2SHandler) RegisterFunc(msg proto.Message, funcs ...HandlerFunc) bool {
+func (h *S2SHandler) RegisterFunc(msg proto.Message, funcs ...iactor.HandlerFunc) bool {
 	pid, ok := s2s.Registry.GetPid(msg)
 	if !ok {
 		panic(pkgerrors.Errorf("s2s message not registered: %s", reflect.TypeOf(msg)))
@@ -82,7 +80,7 @@ func (h *S2SHandler) RegisterFunc(msg proto.Message, funcs ...HandlerFunc) bool 
 	return h.m.Register(pid, funcs...)
 }
 
-func (h *S2SHandler) Handle(ctx *actor.Context) {
+func (h *S2SHandler) Handle(ctx *iactor.Context) {
 	ctxSugared := iactor.SugarContext(ctx)
 
 	// 解码负载数据

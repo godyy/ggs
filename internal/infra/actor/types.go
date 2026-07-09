@@ -37,3 +37,12 @@ type Router = actor.Router
 
 // Context Actor上下文类型映射.
 type Context = actor.Context
+
+// HandlerFunc Actor处理函数类型映射.
+type HandlerFunc = actor.HandlerFunc
+
+// ActorAsyncRPCCallback Actor异步RPC回调类型映射.
+type ActorAsyncRPCCallback = actor.ActorAsyncRPCCallback
+
+// ContextAsyncRPCCallback 上下文异步RPC回调类型映射.
+type ContextAsyncRPCCallback = actor.ContextAsyncRPCCallback

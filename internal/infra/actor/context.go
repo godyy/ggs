@@ -85,22 +85,22 @@ func (ctx ContextSugared) RPCWithContext(cctx context.Context, to ActorUID, args
 }
 
 // AsyncRPCWithDeadline
-func (ctx ContextSugared) AsyncRPCWithDeadline(to ActorUID, args proto.Message, callback actor.ContextAsyncRPCCallback, deadline time.Time) error {
+func (ctx ContextSugared) AsyncRPCWithDeadline(to ActorUID, args proto.Message, callback ContextAsyncRPCCallback, deadline time.Time) error {
 	return contextSugarUtil.AsyncRPCWithDeadline(ctx.Context, to, args, callback, deadline)
 }
 
 // AsyncRPCWithTimeout
-func (ctx ContextSugared) AsyncRPCWithTimeout(to ActorUID, args proto.Message, callback actor.ContextAsyncRPCCallback, timeout time.Duration) error {
+func (ctx ContextSugared) AsyncRPCWithTimeout(to ActorUID, args proto.Message, callback ContextAsyncRPCCallback, timeout time.Duration) error {
 	return contextSugarUtil.AsyncRPCWithTimeout(ctx.Context, to, args, callback, timeout)
 }
 
 // AsyncRPC
-func (ctx ContextSugared) AsyncRPC(to ActorUID, args proto.Message, callback actor.ContextAsyncRPCCallback) error {
+func (ctx ContextSugared) AsyncRPC(to ActorUID, args proto.Message, callback ContextAsyncRPCCallback) error {
 	return contextSugarUtil.AsyncRPC(ctx.Context, to, args, callback)
 }
 
 // AsyncRPCWithContext
-func (ctx ContextSugared) AsyncRPCWithContext(cctx context.Context, to ActorUID, args proto.Message, callback actor.ContextAsyncRPCCallback) error {
+func (ctx ContextSugared) AsyncRPCWithContext(cctx context.Context, to ActorUID, args proto.Message, callback ContextAsyncRPCCallback) error {
 	return contextSugarUtil.AsyncRPCWithContext(ctx.Context, cctx, to, args, callback)
 }
 

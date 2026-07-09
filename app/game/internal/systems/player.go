@@ -15,7 +15,7 @@ type playerModule struct{}
 var Player = &playerModule{}
 
 func init() {
-	lifecycle.RegisterCHandler[*actors.Player](actor.CategoryPlayer.ActorCategory(), Player)
+	lifecycle.RegisterCHandler(actor.CategoryPlayer, Player)
 }
 
 // OnStart Player OnStart回调.

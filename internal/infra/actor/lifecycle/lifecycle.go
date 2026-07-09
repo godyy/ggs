@@ -3,7 +3,7 @@ package lifecycle
 import (
 	"fmt"
 
-	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
 )
 
 // handler 生命周期回调处理器.

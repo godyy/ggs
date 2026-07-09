@@ -6,15 +6,14 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	iactor "github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
-	"github.com/godyy/ggskit/infra/actor"
 )
 
 // Player 玩家Actor
 type Player struct {
-	iactor.CActorWithModule[*player.Model] // 集成携带数据模型的Actor封装
+	actor.CActorWithModule[*player.Model] // 集成携带数据模型的Actor封装
 
 	isLogin           bool           // 是否已登录.
 	heartbeatTimerId  gactor.TimerId // 心跳定时器ID.
@@ -22,9 +21,9 @@ type Player struct {
 }
 
 // NewPlayer 构造玩家Actor.
-func NewPlayer(actor actor.CActor) *Player {
+func NewPlayer(a actor.CActor) *Player {
 	p := &Player{
-		CActorWithModule: iactor.NewCActorWithModule[*player.Model](actor),
+		CActorWithModule: actor.NewCActorWithModule[*player.Model](a),
 	}
 	return p
 }
@@ -116,8 +115,8 @@ func (p *Player) onHeartbeatTimer(args *gactor.ActorTimerArgs) {
 
 func init() {
 	registerDefine(gactor.NewCActorDefine(gactor.CActorDefineConfig{
-		Name:           iactor.CategoryPlayer.String(),
-		Category:       iactor.CategoryPlayer.ActorCategory(),
+		Name:           actor.CategoryPlayer.String(),
+		Category:       actor.CategoryPlayer.ActorCategory(),
 		Priority:       99,
 		MessageBoxSize: 10,
 		RecycleTime:    time.Minute * 30,
