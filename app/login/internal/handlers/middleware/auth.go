@@ -86,6 +86,8 @@ func Auth(c *gin.Context) {
 		User:      userInfo,
 	})
 
+	logger.Get().Infof("auth success, accountID: %d, userID: %d", account.ID, userInfo.UID)
+
 	c.Next()
 }
 

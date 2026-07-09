@@ -115,6 +115,8 @@ func (h *characterHandler) handleCharacterCreate(c *gin.Context, req *httpproto.
 		return err
 	}
 
+	logger.Get().Infof("handler [CreateCharacter], create character success, accountID: %d, characterID: %d, serverID: %d", accountInfo.AccountID, resp.CharacterID, req.ServerID)
+
 	return nil
 }
 
@@ -150,6 +152,8 @@ func (h *characterHandler) handleCharacterLogin(c *gin.Context, req *httpproto.C
 		return errs.ErrCodeInternalError
 	}
 	resp.Token = token
+
+	logger.Get().Infof("handler [CharacterLogin], login character success, accountID: %d, characterID: %d, serverID: %d", account.AccountID, req.CharacterID, character.ServerID)
 
 	return nil
 }

@@ -11,7 +11,7 @@ import (
 type commonResp struct {
 	Code int         `json:"code"`
 	Msg  string      `json:"msg"`
-	Data interface{} `json:"db"`
+	Data interface{} `json:"data"`
 }
 
 func checkCommonResp(resp *commonResp) error {

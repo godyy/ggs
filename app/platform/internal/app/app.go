@@ -10,11 +10,11 @@ import (
 	"github.com/godyy/ggs/app/platform/internal/infra/repo"
 	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/actor"
 	mongomodels "github.com/godyy/ggs/internal/infra/mongo/models"
 	"github.com/godyy/ggskit/base/db/mongo"
 	"github.com/godyy/ggskit/base/db/redis"
 	"github.com/godyy/ggskit/base/flags"
-	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
 	pkgerrors "github.com/pkg/errors"
 )
@@ -27,7 +27,6 @@ type app struct {
 	mongoClient *mongo.Client // mongo 客户端
 
 	actorRegistry    gactor.ActorRegistry
-	actorProtoReg    *actor.ProtoRegistry
 	actorRouter      *actor.Router
 	actorService     *actor.Service
 	actorCodec       *actor.Codec

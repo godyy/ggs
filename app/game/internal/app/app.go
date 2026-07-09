@@ -12,11 +12,11 @@ import (
 	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/gdconf"
+	"github.com/godyy/ggs/internal/infra/actor"
 	imongobd "github.com/godyy/ggs/internal/infra/mongobd"
 	"github.com/godyy/ggskit/base/db/mongo"
 	"github.com/godyy/ggskit/base/db/redis"
 	"github.com/godyy/ggskit/base/flags"
-	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
 	"github.com/godyy/ggskit/infra/mongobd"
 	pkgerrors "github.com/pkg/errors"
@@ -35,7 +35,6 @@ type app struct {
 
 	cluster *cluster.Service // cluster.
 
-	actorProtoReg    *actor.ProtoRegistry // actor 协议注册表
 	actorCodec       *actor.Codec         // actor编解码
 	actorRegistry    gactor.ActorRegistry // actor 注册表
 	actorServerStore *actor.ServerStore   // actor 所属服务器存储

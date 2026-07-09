@@ -12,10 +12,10 @@ import (
 	icrypto "github.com/godyy/ggs/internal/base/crypto"
 	applifecycle "github.com/godyy/ggs/internal/base/lifecycle"
 	"github.com/godyy/ggs/internal/base/logger"
+	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggskit/base/crypto"
 	"github.com/godyy/ggskit/base/db/redis"
 	"github.com/godyy/ggskit/base/flags"
-	"github.com/godyy/ggskit/infra/actor"
 	"github.com/godyy/ggskit/infra/cluster"
 	"github.com/godyy/ggskit/infra/noderouter"
 	pkgerrors "github.com/pkg/errors"
@@ -38,7 +38,7 @@ type app struct {
 	nodeSelector *router.NodeSelector
 
 	// actor.
-	actorRegistry gactor.ActorRegistry
+	actorRegistry *actor.Registry
 	actorClient   *actor.Client
 
 	// crypto.

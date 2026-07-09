@@ -9,11 +9,10 @@ import (
 
 // InitConfig 初始化配置.
 type InitConfig struct {
-	Persist           *persist.InitConfig  // 持久化配置
-	DB                string               // 数据库名
-	AsyncSaveCallback AsyncSaveCallback    // 异步存储回调
-	ActorSaveDelay    time.Duration        // actor 保存延迟
-	ProtoRegistry     *actor.ProtoRegistry // 协议注册表
+	Persist           *persist.InitConfig // 持久化配置
+	DB                string              // 数据库名
+	AsyncSaveCallback AsyncSaveCallback   // 异步存储回调
+	ActorSaveDelay    time.Duration       // actor 保存延迟
 }
 
 var (
@@ -32,8 +31,8 @@ func Init(cfg *InitConfig) {
 	db = cfg.DB
 	asyncSaveCallback = cfg.AsyncSaveCallback
 	actorSaveDelay = cfg.ActorSaveDelay
-	actorSugarUtil = actor.NewActorSugarUtil(cfg.ProtoRegistry)
-	contextSugarUtil = actor.NewContextSugarUtil(cfg.ProtoRegistry)
+	actorSugarUtil = actor.NewActorSugarUtil(ProtoRegistry)
+	contextSugarUtil = actor.NewContextSugarUtil(ProtoRegistry)
 	initialized = true
 }
 

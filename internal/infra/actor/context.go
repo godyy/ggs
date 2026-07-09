@@ -9,8 +9,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type Context = actor.Context
-
 type CtxK[V any] = actor.CtxK[V]
 
 func NewCtxK[V any]() CtxK[V] {

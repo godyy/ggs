@@ -1,17 +1,15 @@
 package app
 
 import (
-	"time"
-
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal"
 	"github.com/godyy/ggs/app/agent/internal/base/log"
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/base/nodeutil"
-	iactor "github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
-	"github.com/godyy/ggskit/infra/actor"
+	"github.com/godyy/ggs/internal/infra/actor/service"
 	"github.com/godyy/ggskit/infra/cluster"
 	pkgerrors "github.com/pkg/errors"
 )
@@ -25,19 +23,10 @@ func (a *app) startActor() error {
 	}
 
 	// 创建 actor 客户端.
-	clientCfg := &actor.ClientConfig{
-		Core: &gactor.ClientConfig{
-			NodeId:            cluster.MakeNodeID(consts.NodeAgent, nodeutil.MakeServerNodeName(Env().ServerID())),
-			ActorCategory:     iactor.CategoryPlayer.ActorCategory(),
-			DefRequestTimeout: time.Second * 10,
-			Handler:           a,
-		},
-		Logger: logger.Get(),
-	}
-	if Env().Debug() {
-		clientCfg.Core.DefCtxTimeout = time.Hour * 1
-	}
-	a.actorClient = actor.NewClient(clientCfg)
+	a.actorClient = service.NewClient(&service.ClientConfig{
+		NodeId:  cluster.MakeNodeID(consts.NodeAgent, nodeutil.MakeServerNodeName(Env().ServerID())),
+		Handler: a,
+	})
 
 	return nil
 }

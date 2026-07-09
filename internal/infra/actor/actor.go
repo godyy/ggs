@@ -1,18 +1,9 @@
 package actor
 
 import (
-	"github.com/godyy/gactor"
 	model1 "github.com/godyy/ggs/internal/infra/actor/model"
 	"github.com/godyy/ggskit/infra/actor"
 )
-
-type ActorUID = actor.ActorUID
-
-type Actor = actor.Actor
-
-type CActor = actor.CActor
-
-type TimerId = gactor.TimerId
 
 func GetActorModule[M actor.Module](a actor.ActorWithModule, autoCreate bool) M {
 	return actor.GetActorModule[M](a, autoCreate)
