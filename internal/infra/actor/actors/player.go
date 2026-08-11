@@ -103,7 +103,7 @@ func (p *Player) stopHeartbeatTimer() {
 }
 
 // onHeartbeatTimer 心跳定时器回调.
-func (p *Player) onHeartbeatTimer(args *gactor.ActorTimerArgs) {
+func (p *Player) onHeartbeatTimer(args gactor.ActorTimerArgs) {
 	if args.TID != p.heartbeatTimerId {
 		return
 	}
@@ -115,16 +115,14 @@ func (p *Player) onHeartbeatTimer(args *gactor.ActorTimerArgs) {
 
 func init() {
 	registerDefine(gactor.NewCActorDefine(gactor.CActorDefineConfig{
-		Name:           actor.CategoryPlayer.String(),
-		Category:       actor.CategoryPlayer.ActorCategory(),
-		Priority:       99,
-		MessageBoxSize: 10,
-		RecycleTime:    time.Minute * 30,
+		Name:              actor.CategoryPlayer.String(),
+		Category:          actor.CategoryPlayer.ActorCategory(),
+		Priority:          99,
+		PriMessageBoxSize: 10,
+		MessageBoxSize:    10,
+		RecycleTime:       time.Minute * 30,
 		BehaviorCreator: func(c gactor.CActor) gactor.CActorBehavior {
 			return NewPlayer(c)
 		},
-	},
-		gactor.WithMaxTimerAmount(10),
-		gactor.WithMaxAsyncRPCAmount(10),
-	))
+	}))
 }

@@ -1,9 +1,8 @@
-package handler
+package actor
 
 import (
 	"fmt"
 
-	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
 )
 
@@ -17,16 +16,11 @@ func (e PbError) Error() string {
 }
 
 // WithPbError 创建一个PbError.
-func WithPbError(code int32, args ...*pbcommon.ErrArg) *PbError {
+func WithPbError(code pbcommon.ErrCode, args ...*pbcommon.ErrArg) *PbError {
 	return &PbError{
 		Err: &pbcommon.Error{
 			Code: code,
 			Args: args,
 		},
 	}
-}
-
-// WithC2SPbError 创建一个C2S PbError.
-func WithC2SPbError(code pbc2s.ErrCode, args ...*pbcommon.ErrArg) *PbError {
-	return WithPbError(int32(code), args...)
 }

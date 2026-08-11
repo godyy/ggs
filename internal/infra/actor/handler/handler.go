@@ -4,9 +4,7 @@ import (
 	"reflect"
 
 	iactor "github.com/godyy/ggs/internal/infra/actor"
-	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
-	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/c2s"
 	"github.com/godyy/ggs/internal/infra/actor/protocol/registry/s2s"
 	"github.com/godyy/ggskit/infra/actor"
@@ -51,7 +49,7 @@ func (h *C2SHandler) Handle(ctx *iactor.Context) {
 	f := h.m[pid]
 	if f == nil {
 		ctxSugared.Reply(&pbcommon.Error{
-			Code: int32(pbc2s.ErrCode_ECInternalError),
+			Code: pbcommon.ErrCode_ECInternalError,
 		})
 		ctx.Abort()
 		return
@@ -98,7 +96,7 @@ func (h *S2SHandler) Handle(ctx *iactor.Context) {
 	f := h.m[pid]
 	if f == nil {
 		ctxSugared.Reply(&pbcommon.Error{
-			Code: int32(pbs2s.ErrCode_ECInternalError),
+			Code: pbcommon.ErrCode_ECInternalError,
 		})
 		ctx.Abort()
 		return

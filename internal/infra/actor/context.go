@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/godyy/gactor"
 	"github.com/godyy/ggskit/base/protocol"
 	"github.com/godyy/ggskit/infra/actor"
 	"google.golang.org/protobuf/proto"
@@ -25,6 +26,10 @@ func CtxKGet[V any](ctx *Context, k CtxK[V]) (V, bool) {
 
 func CtxActor[Actor actor.ActorBehavior](ctx *Context) Actor {
 	return actor.CtxActor[Actor](ctx)
+}
+
+func CtxActorModule[M actor.Module](ctx *Context, autocreate bool) (m M) {
+	return actor.CtxActorModule[M](ctx, autocreate)
 }
 
 // contextSugarUtil 全局上下文语法糖工具.
@@ -107,4 +112,9 @@ func (ctx ContextSugared) AsyncRPCWithContext(cctx context.Context, to ActorUID,
 // Cast
 func (ctx ContextSugared) Cast(to ActorUID, msg proto.Message) error {
 	return contextSugarUtil.Cast(ctx.Context, to, msg)
+}
+
+// NewContextSuspender 创建上下文挂起器.
+func NewContextSuspender(ctx *Context) *ContextSuspender {
+	return gactor.NewContextSuspender(ctx)
 }

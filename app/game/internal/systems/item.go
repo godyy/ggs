@@ -8,11 +8,19 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor/handler"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	"github.com/godyy/ggs/internal/infra/systems"
 )
 
-type itemsModule struct{}
+type itemsModule struct {
+}
 
-var Items = &itemsModule{}
+var Items = systems.RegisterSystem(&itemsModule{})
+
+func (m *itemsModule) OnStart() {
+}
+
+func (m *itemsModule) OnStop() {
+}
 
 func (m *itemsModule) init(p *actors.Player) {
 	items := actor.GetActorModule[*player.Items](p, true)

@@ -8,22 +8,22 @@ import (
 
 // handler 生命周期回调处理器.
 type handler interface {
-	// OnStart OnStart 回调.
-	OnStart(actor.Actor) error
+	// OnActorStart Actor OnStart 回调.
+	OnActorStart(actor.Actor) error
 
-	// OnStop OnStop 回调.
-	OnStop(actor.Actor)
+	// OnActorStop Actor OnStop 回调.
+	OnActorStop(actor.Actor)
 }
 
 // cHandler CActor 生命周期回调处理器.
 type cHandler interface {
 	handler
 
-	// OnConnected OnConnected 回调.
-	OnConnected(actor.CActor)
+	// OnActorConnected CActor OnConnected 回调.
+	OnActorConnected(actor.CActor)
 
-	// OnDisconnected OnDisconnected 回调.
-	OnDisconnected(actor.CActor)
+	// OnActorDisconnected CActor OnDisconnected 回调.
+	OnActorDisconnected(actor.CActor)
 }
 
 var handlers = map[actor.Category]handler{}
@@ -43,22 +43,22 @@ func getHandler(category actor.Category) handler {
 
 // Handler 生命周期回调处理器泛型封装.
 type Handler[Actor actor.Actor] interface {
-	// OnStart OnStart 回调.
-	OnStart(Actor) error
+	// OnActorStart Actor OnStart 回调.
+	OnActorStart(Actor) error
 
-	// OnStop OnStop 回调.
-	OnStop(Actor)
+	// OnActorStop Actor OnStop 回调.
+	OnActorStop(Actor)
 }
 
 // CHandler CActor 生命周期回调处理器泛型封装.
 type CHandler[Actor actor.CActor] interface {
 	Handler[Actor]
 
-	// OnConnected OnConnected 回调.
-	OnConnected(Actor)
+	// OnActorConnected CActor OnConnected 回调.
+	OnActorConnected(Actor)
 
-	// OnDisconnected OnDisconnected 回调.
-	OnDisconnected(Actor)
+	// OnActorDisconnected CActor OnDisconnected 回调.
+	OnActorDisconnected(Actor)
 }
 
 // hanndlerWrapper 生命周期回调处理器泛型包装器
@@ -66,12 +66,12 @@ type hanndlerWrapper[Actor actor.Actor] struct {
 	h Handler[Actor]
 }
 
-func (w *hanndlerWrapper[Actor]) OnStart(actor actor.Actor) error {
-	return w.h.OnStart(actor.(Actor))
+func (w *hanndlerWrapper[Actor]) OnActorStart(actor actor.Actor) error {
+	return w.h.OnActorStart(actor.(Actor))
 }
 
-func (w *hanndlerWrapper[Actor]) OnStop(actor actor.Actor) {
-	w.h.OnStop(actor.(Actor))
+func (w *hanndlerWrapper[Actor]) OnActorStop(actor actor.Actor) {
+	w.h.OnActorStop(actor.(Actor))
 }
 
 // cHanndlerWrapper CActor 生命周期回调处理器泛型包装器
@@ -79,20 +79,20 @@ type cHanndlerWrapper[Actor actor.CActor] struct {
 	h CHandler[Actor]
 }
 
-func (w *cHanndlerWrapper[Actor]) OnStart(actor actor.Actor) error {
-	return w.h.OnStart(actor.(Actor))
+func (w *cHanndlerWrapper[Actor]) OnActorStart(actor actor.Actor) error {
+	return w.h.OnActorStart(actor.(Actor))
 }
 
-func (w *cHanndlerWrapper[Actor]) OnStop(actor actor.Actor) {
-	w.h.OnStop(actor.(Actor))
+func (w *cHanndlerWrapper[Actor]) OnActorStop(actor actor.Actor) {
+	w.h.OnActorStop(actor.(Actor))
 }
 
-func (w *cHanndlerWrapper[Actor]) OnConnected(actor actor.CActor) {
-	w.h.OnConnected(actor.(Actor))
+func (w *cHanndlerWrapper[Actor]) OnActorConnected(actor actor.CActor) {
+	w.h.OnActorConnected(actor.(Actor))
 }
 
-func (w *cHanndlerWrapper[Actor]) OnDisconnected(actor actor.CActor) {
-	w.h.OnDisconnected(actor.(Actor))
+func (w *cHanndlerWrapper[Actor]) OnActorDisconnected(actor actor.CActor) {
+	w.h.OnActorDisconnected(actor.(Actor))
 }
 
 // RegisterHandler 注册生命周期回调处理器泛型封装.
@@ -112,7 +112,7 @@ func OnStart(a actor.Actor) error {
 	if handler == nil {
 		return nil
 	}
-	return handler.OnStart(a)
+	return handler.OnActorStart(a)
 }
 
 // OnStop 调用OnStop回调.
@@ -122,7 +122,7 @@ func OnStop(a actor.Actor) {
 	if handler == nil {
 		return
 	}
-	handler.OnStop(a)
+	handler.OnActorStop(a)
 }
 
 // OnConnected 调用OnConnected回调.
@@ -132,7 +132,7 @@ func OnConnected(a actor.CActor) {
 	if handler == nil {
 		return
 	}
-	handler.(cHandler).OnConnected(a)
+	handler.(cHandler).OnActorConnected(a)
 }
 
 // OnDisconnected 调用OnDisconnected回调.
@@ -142,5 +142,5 @@ func OnDisconnected(a actor.CActor) {
 	if handler == nil {
 		return
 	}
-	handler.(cHandler).OnDisconnected(a)
+	handler.(cHandler).OnActorDisconnected(a)
 }

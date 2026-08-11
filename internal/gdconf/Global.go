@@ -7,9 +7,12 @@ const TblNameGlobal = "Global"
 
 // global 全局配置表
 type global struct {
-	First     int32        `bson:"first,omitempty"`     // 测试1
-	Second    int64        `bson:"second,omitempty"`    // 测试2
-	InitItems []*ItemCount `bson:"initItems,omitempty"` // 初始道具
+	First                     int32                  `bson:"first,omitempty"`                     // 测试1
+	Second                    int64                  `bson:"second,omitempty"`                    // 测试2
+	InitItems                 []*ItemCount           `bson:"initItems,omitempty"`                 // 初始道具
+	DefaultChatRoomHistoryMax int32                  `bson:"DefaultChatRoomHistoryMax,omitempty"` // 聊天室最大历史记录
+	ChatRoomTypeHistoryMax    map[ChatRoomType]int32 `bson:"ChatRoomTypeHistoryMax,omitempty"`    // 聊天室类型对应的最大历史记录
+	ChatRoomMemberMax         map[ChatRoomType]int32 `bson:"ChatRoomMemberMax,omitempty"`         // 聊天室最大成员数量
 }
 
 // load 加载数据

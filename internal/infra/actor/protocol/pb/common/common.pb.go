@@ -21,18 +21,55 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// 通用请求成功返回占位.
+type Success struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Success) Reset() {
+	*x = Success{}
+	mi := &file_common_common_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Success) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Success) ProtoMessage() {}
+
+func (x *Success) ProtoReflect() protoreflect.Message {
+	mi := &file_common_common_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Success.ProtoReflect.Descriptor instead.
+func (*Success) Descriptor() ([]byte, []int) {
+	return file_common_common_proto_rawDescGZIP(), []int{0}
+}
+
 // 通用错误.
 type Error struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          int32                  `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"` // 错误码.
-	Args          []*ErrArg              `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`  // 错误参数.
+	Code          ErrCode                `protobuf:"varint,1,opt,name=code,proto3,enum=common.ErrCode" json:"code,omitempty"` // 错误码.
+	Args          []*ErrArg              `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`                      // 错误参数.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_common_common_proto_msgTypes[0]
+	mi := &file_common_common_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +81,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_common_common_proto_msgTypes[0]
+	mi := &file_common_common_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,14 +94,14 @@ func (x *Error) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Error.ProtoReflect.Descriptor instead.
 func (*Error) Descriptor() ([]byte, []int) {
-	return file_common_common_proto_rawDescGZIP(), []int{0}
+	return file_common_common_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Error) GetCode() int32 {
+func (x *Error) GetCode() ErrCode {
 	if x != nil {
 		return x.Code
 	}
-	return 0
+	return ErrCode_ECSuccess
 }
 
 func (x *Error) GetArgs() []*ErrArg {
@@ -89,7 +126,7 @@ type ErrArg struct {
 
 func (x *ErrArg) Reset() {
 	*x = ErrArg{}
-	mi := &file_common_common_proto_msgTypes[1]
+	mi := &file_common_common_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -101,7 +138,7 @@ func (x *ErrArg) String() string {
 func (*ErrArg) ProtoMessage() {}
 
 func (x *ErrArg) ProtoReflect() protoreflect.Message {
-	mi := &file_common_common_proto_msgTypes[1]
+	mi := &file_common_common_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -114,7 +151,7 @@ func (x *ErrArg) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrArg.ProtoReflect.Descriptor instead.
 func (*ErrArg) Descriptor() ([]byte, []int) {
-	return file_common_common_proto_rawDescGZIP(), []int{1}
+	return file_common_common_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ErrArg) GetValue() isErrArg_Value {
@@ -177,9 +214,10 @@ var File_common_common_proto protoreflect.FileDescriptor
 
 const file_common_common_proto_rawDesc = "" +
 	"\n" +
-	"\x13common/common.proto\x12\x06common\"?\n" +
-	"\x05Error\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\x05R\x04code\x12\"\n" +
+	"\x13common/common.proto\x12\x06common\x1a\x12common/error.proto\"\t\n" +
+	"\aSuccess\"P\n" +
+	"\x05Error\x12#\n" +
+	"\x04code\x18\x01 \x01(\x0e2\x0f.common.ErrCodeR\x04code\x12\"\n" +
 	"\x04args\x18\x02 \x03(\v2\x0e.common.ErrArgR\x04args\"A\n" +
 	"\x06ErrArg\x12\x0e\n" +
 	"\x01s\x18\x01 \x01(\tH\x00R\x01s\x12\x0e\n" +
@@ -199,18 +237,21 @@ func file_common_common_proto_rawDescGZIP() []byte {
 	return file_common_common_proto_rawDescData
 }
 
-var file_common_common_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_common_common_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_common_common_proto_goTypes = []any{
-	(*Error)(nil),  // 0: common.Error
-	(*ErrArg)(nil), // 1: common.ErrArg
+	(*Success)(nil), // 0: common.Success
+	(*Error)(nil),   // 1: common.Error
+	(*ErrArg)(nil),  // 2: common.ErrArg
+	(ErrCode)(0),    // 3: common.ErrCode
 }
 var file_common_common_proto_depIdxs = []int32{
-	1, // 0: common.Error.args:type_name -> common.ErrArg
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3, // 0: common.Error.code:type_name -> common.ErrCode
+	2, // 1: common.Error.args:type_name -> common.ErrArg
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_common_common_proto_init() }
@@ -218,7 +259,8 @@ func file_common_common_proto_init() {
 	if File_common_common_proto != nil {
 		return
 	}
-	file_common_common_proto_msgTypes[1].OneofWrappers = []any{
+	file_common_error_proto_init()
+	file_common_common_proto_msgTypes[2].OneofWrappers = []any{
 		(*ErrArg_S)(nil),
 		(*ErrArg_I)(nil),
 		(*ErrArg_F)(nil),
@@ -229,7 +271,7 @@ func file_common_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_common_common_proto_rawDesc), len(file_common_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -65,6 +65,8 @@ func getActorFixedNode(uid gactor.ActorUID) (string, bool) {
 	switch Category(uid.Category) {
 	case CategoryServer:
 		return cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(uid.ID)), true
+	case CategoryChatMgr:
+		return cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(uid.ID)), true
 	default:
 		return "", false
 	}
@@ -102,6 +104,8 @@ func getActorServerID(uid gactor.ActorUID, serverStore *ServerStore) (int64, boo
 			return 0, false
 		}
 		return serverID, true
+	case CategoryChatMgr:
+		return uid.ID, true
 	default:
 		return 0, false
 	}

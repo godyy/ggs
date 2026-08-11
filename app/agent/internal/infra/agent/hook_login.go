@@ -49,8 +49,8 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 
 	// 解析token
 	tokenInfo, errcode := parseLoginToken(a, req.Token)
-	if errcode != pbc2s.ErrCode_ECSuccess {
-		a.sendRespMessage(seq, &pbcommon.Error{Code: int32(errcode)})
+	if errcode != pbcommon.ErrCode_ECSuccess {
+		a.sendRespMessage(seq, &pbcommon.Error{Code: errcode})
 		a.Stop(pbc2s.DisconnectPush_Unknown)
 		return
 	}
@@ -133,18 +133,18 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 }
 
 // parseLoginToken 解析登录令牌.
-func parseLoginToken(a *Agent, token string) (*models.TokenInfo, pbc2s.ErrCode) {
+func parseLoginToken(a *Agent, token string) (*models.TokenInfo, pbcommon.ErrCode) {
 	// 解析token
 	claims, err := authjwt.ParseToken(tokenKey, token)
 	if err != nil {
 		a.infoFields("parse token failed", zap.String("token", token), zap.NamedError("error", err))
-		return nil, pbc2s.ErrCode_ECInvalidToken
+		return nil, pbcommon.ErrCode_ECInvalidToken
 	}
 
 	// 验证issuer
 	if !claims.VerifyIssuer(app.Env().Stage(), true) {
 		a.infoFields("token issuer error", zap.String("token", token))
-		return nil, pbc2s.ErrCode_ECInvalidToken
+		return nil, pbcommon.ErrCode_ECInvalidToken
 	}
 
 	// 解析subject
@@ -152,10 +152,10 @@ func parseLoginToken(a *Agent, token string) (*models.TokenInfo, pbc2s.ErrCode) 
 	sub, _ := authjwt.GetSub(claims)
 	if err := json.Unmarshal([]byte(sub), ti); err != nil {
 		a.infoFields("unmarshal token subject error", zap.String("token", token), zap.NamedError("error", err))
-		return nil, pbc2s.ErrCode_ECInvalidToken
+		return nil, pbcommon.ErrCode_ECInvalidToken
 	}
 
-	return ti, pbc2s.ErrCode_ECSuccess
+	return ti, pbcommon.ErrCode_ECSuccess
 }
 
 // handleLoginGameResp 处理登录游戏响应.

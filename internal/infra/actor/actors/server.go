@@ -44,15 +44,13 @@ func (s *Server) OnStop() error {
 
 func init() {
 	registerDefine(gactor.NewActorDefine(gactor.ActorDefineConfig{
-		Name:           actor.CategoryServer.String(),
-		Category:       actor.CategoryServer.ActorCategory(),
-		Priority:       0,
-		MessageBoxSize: 100,
+		Name:              actor.CategoryServer.String(),
+		Category:          actor.CategoryServer.ActorCategory(),
+		Priority:          0,
+		PriMessageBoxSize: 1000,
+		MessageBoxSize:    1000,
 		BehaviorCreator: func(a gactor.Actor) gactor.ActorBehavior {
 			return NewServer(a)
 		},
-	},
-		gactor.WithMaxTimerAmount(10),
-		gactor.WithMaxAsyncRPCAmount(10),
-	))
+	}))
 }

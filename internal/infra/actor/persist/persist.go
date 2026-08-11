@@ -176,7 +176,7 @@ func startSaveTimer(a ActorSaveWithTimer, db string, delay time.Duration, callba
 }
 
 // onSaveTimer 保存定时器回调
-func onSaveTimer(args *gactor.ActorTimerArgs) {
+func onSaveTimer(args gactor.ActorTimerArgs) {
 	a := args.Actor.Behavior().(ActorSaveWithTimer)
 	saveArgs := args.Args.(*saveTimerArgs)
 	if timerId := a.SaveTimerId(); timerId == args.TID {

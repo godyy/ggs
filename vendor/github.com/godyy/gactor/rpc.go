@@ -10,9 +10,6 @@ import (
 	"github.com/godyy/gutils/container/heap"
 )
 
-// ErrRPCTimeout RPC 超时错误.
-var ErrRPCTimeout = errors.New("gactor: rpc timeout")
-
 // errRPCCallDuplicate RPC 调用重复错误.
 var errRPCCallDuplicate = errors.New("gactor: rpc call duplicate")
 
@@ -49,7 +46,7 @@ func (resp *RPCResp) release() {
 
 // RPCFunc RPC回调.
 // RPCCall 对象只能在回调内部访问, 切记不要传递到回调函数外.
-type RPCFunc func(*RPCResp)
+type RPCFunc func(RPCResp)
 
 // rpcCall 内部 RPC 调用实例实现.
 type rpcCall struct {
@@ -196,13 +193,11 @@ func (m *rpcManager) enqueueCmd(c rpcCmd, ignoreBusy bool) error {
 	}
 	chStop := m.svc.getStopWait().C
 	if ignoreBusy {
-		const alarmThreshold = time.Millisecond * 50
 		begin := time.Now()
 		select {
 		case m.chCmds <- c:
-			if cost := time.Since(begin); cost > alarmThreshold {
+			if cost := time.Since(begin); cost > m.svc.getCfg().QueueWriteTimeAlarmThreshold {
 				m.svc.getLogger().Warnf("rpc enqueue slowly, cost:%dms", cost.Milliseconds())
-				return ErrRPCTimeout
 			}
 			return nil
 		case <-chStop:
@@ -249,7 +244,7 @@ func (m *rpcManager) invokeCallback(call *rpcCall) {
 		payload: call.respPayload,
 		err:     call.err,
 	}
-	call.cb(&resp)
+	call.cb(resp)
 	resp.release()
 	call.release()
 }
@@ -265,7 +260,7 @@ func (m *rpcManager) resetTimer(expiredAt int64) {
 	if d <= 0 {
 		d = time.Millisecond * 1
 	}
-	m.timerId = m.svc.StartTimer(d, false, nil, m.onTimer)
+	m.timerId = m.svc.startTimer(d, false, nil, m.onTimer, true)
 }
 
 // stopTimer 停止定时器
@@ -297,7 +292,7 @@ func (m *rpcManager) tick() {
 		}
 
 		m.rem(call)
-		m.handleCallDone(call, nil, ErrRPCTimeout)
+		m.handleCallDone(call, nil, ErrTimeout)
 	}
 }
 
@@ -347,7 +342,7 @@ func (m *rpcManager) handleCallDone(call *rpcCall, payload *Buffer, err error) {
 	// 更新监控数据.
 	if err == nil {
 		m.svc.monitorRPCAction(MonitorCARPC)
-	} else if errors.Is(err, ErrRPCTimeout) {
+	} else if errors.Is(err, ErrTimeout) {
 		m.svc.monitorRPCAction(MonitorCARPCTimeout)
 	} else {
 		m.svc.monitorRPCAction(MonitorCAResponseErr)

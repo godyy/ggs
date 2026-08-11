@@ -37,6 +37,7 @@ type commonMessageRegistration struct {
 
 var commonMessageRegistrations = []commonMessageRegistration{
 	{Name: "Error", Target: commonTargetC2S | commonTargetS2S},
+	{Name: "Success", Target: commonTargetC2S | commonTargetS2S},
 }
 
 func isRegistrableMessageName(name string) bool {

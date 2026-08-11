@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package c2s;
+
+import "common/chat.proto";
+
+option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s";
+
+// 发送聊天消息请求.
+message SendChatMsgReq {
+  int64 roomId = 1;   // 聊天室ID.
+  string content = 2; // 聊天内容
+}
+
+// 获取聊天历史请求.
+message ChatHistoryReq {
+  int64 roomId = 1;    // 聊天室ID.
+  int64 lastMsgId = 2; // 最后一条消息ID.
+}
+
+// 获取聊天历史响应.
+message ChatHistoryResp {
+  int64 roomId = 1;                 // 聊天室ID.
+  repeated common.ChatMsg msgs = 2; // 聊天消息列表.
+}
+
+// 聊天消息推送.
+message ChatMsgPush {
+  int64 roomId = 1;       // 聊天室ID
+  common.ChatMsg msg = 2; // 聊天消息.
+}
+
+// 创建群组聊天室请求.
+message CreateGroupChatRoomReq {
+  string name = 1;              // 群组名称.
+  repeated int64 memberIds = 2; // 成员ID列表.
+}
+
+// 加入聊天室推送.
+message JoinChatRoomPush {
+  common.ChatRoom room = 1; // 聊天室.
+}
+
+// 聊天室成员加入推送.
+message ChatRoomMemberJoinPush {
+  int64 roomId = 1;                              // 聊天室ID.
+  repeated common.ChatRoomMember newMembers = 2; // 新成员列表.
+}
+
+// 退出聊天室请求.
+message LeaveChatRoomReq {
+  int64 roomId = 1; // 聊天室ID.
+}
+
+// 退出聊天室响应.
+message LeaveChatRoomResp {
+  int64 roomId = 1; // 聊天室ID.
+}
+
+// 聊天室成员退出推送.
+message ChatRoomMemberLeavePush {
+  int64 roomId = 1;             // 聊天室ID.
+  repeated int64 memberIds = 2; // 成员ID.
+}
+
+// 邀请玩家加入聊天室请求.
+message ChatRoomInviteReq {
+  int64 roomId = 1;             // 聊天室ID.
+  repeated int64 targetIds = 2; // 目标玩家ID列表.
+}

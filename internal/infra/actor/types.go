@@ -14,6 +14,9 @@ type Actor = actor.Actor
 // CActor CActor类型映射.
 type CActor = actor.CActor
 
+// ActorBehavior Actor行为类型映射.
+type ActorBehavior = actor.ActorBehavior
+
 // TimerId TimerId类型映射.
 type TimerId = gactor.TimerId
 
@@ -41,8 +44,20 @@ type Context = actor.Context
 // HandlerFunc Actor处理函数类型映射.
 type HandlerFunc = actor.HandlerFunc
 
+// ActorRPCResp Actor RPC响应类型映射.
+type ActorRPCResp = actor.ActorRPCResp
+
 // ActorAsyncRPCCallback Actor异步RPC回调类型映射.
 type ActorAsyncRPCCallback = actor.ActorAsyncRPCCallback
 
+// ContextRPCResp 上下文RPC响应类型映射.
+type ContextRPCResp = actor.ContextRPCResp
+
 // ContextAsyncRPCCallback 上下文异步RPC回调类型映射.
 type ContextAsyncRPCCallback = actor.ContextAsyncRPCCallback
+
+// ActorAsyncCaller Actor 异步函数调用器
+type ActorAsyncCaller = actor.ActorAsyncCaller
+
+// ContextSuspender 上下文挂起器类型映射.
+type ContextSuspender = actor.ContextSuspender

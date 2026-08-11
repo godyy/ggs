@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/godyy/gactor"
+	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
 	"github.com/godyy/glog"
 	"google.golang.org/protobuf/proto"
 )
@@ -132,22 +133,28 @@ func (s *Service) RPCWithContext(ctx context.Context, to ActorUID, args proto.Me
 	return replyPayload.Msg, nil
 }
 
-// ServiceAsyncRPCCallback Service专用异步RPC回调.
-type ServiceAsyncRPCCallback func(reply proto.Message, err error)
+// ServiceRPCResp Service RPC 响应.
+type ServiceRPCResp struct {
+	Reply proto.Message // 回复消息.
+	Err   error         // 错误.
+}
 
-func (s *Service) handleAsyncRPCResp(r *gactor.RPCResp, callback ServiceAsyncRPCCallback) {
+// ServiceAsyncRPCCallback Service专用异步RPC回调.
+type ServiceAsyncRPCCallback func(resp ServiceRPCResp)
+
+func (s *Service) handleAsyncRPCResp(r gactor.RPCResp, callback ServiceAsyncRPCCallback) {
 	if err := r.Err(); err != nil {
-		callback(nil, err)
+		callback(ServiceRPCResp{Reply: nil, Err: err})
 		return
 	}
 
 	var replyPayload S2SPayload
 	if err := r.DecodeReply(&replyPayload); err != nil {
-		callback(nil, err)
+		callback(ServiceRPCResp{Reply: nil, Err: err})
 		return
 	}
 
-	callback(replyPayload.Msg, nil)
+	callback(ServiceRPCResp{Reply: replyPayload.Msg, Err: nil})
 }
 
 // AsyncRPCWithDeadline 向 to 指向的 Actor 发起异步 RPC 调用.
@@ -158,7 +165,7 @@ func (s *Service) AsyncRPCWithDeadline(to ActorUID, args proto.Message, callback
 		return err
 	}
 
-	return s.core.AsyncRPCWithDeadline(to, &argsPayload, func(r *gactor.RPCResp) {
+	return s.core.AsyncRPCWithDeadline(to, &argsPayload, func(r gactor.RPCResp) {
 		s.handleAsyncRPCResp(r, callback)
 	}, deadline)
 }
@@ -176,7 +183,7 @@ func (s *Service) AsyncRPC(to ActorUID, args proto.Message, callback ServiceAsyn
 		return err
 	}
 
-	return s.core.AsyncRPC(to, &argsPayload, func(r *gactor.RPCResp) {
+	return s.core.AsyncRPC(to, &argsPayload, func(r gactor.RPCResp) {
 		s.handleAsyncRPCResp(r, callback)
 	})
 }
@@ -189,7 +196,7 @@ func (s *Service) AsyncRPCWithContext(ctx context.Context, to ActorUID, args pro
 		return err
 	}
 
-	return s.core.AsyncRPCWithContext(ctx, to, &argsPayload, func(r *gactor.RPCResp) {
+	return s.core.AsyncRPCWithContext(ctx, to, &argsPayload, func(r gactor.RPCResp) {
 		s.handleAsyncRPCResp(r, callback)
 	})
 }
@@ -201,4 +208,13 @@ func (s *Service) Cast(to ActorUID, msg proto.Message) error {
 		return err
 	}
 	return s.core.Cast(to, &payload)
+}
+
+// Forward 向目标Actor透传消息.
+func (s *Service) Forward(to ActorUID, msg proto.Message) error {
+	payload, err := NewC2SPayload(codecc2s.PtPush, 0, msg, s.C2S)
+	if err != nil {
+		return err
+	}
+	return s.core.Forward(to, &payload)
 }

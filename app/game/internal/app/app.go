@@ -14,6 +14,7 @@ import (
 	"github.com/godyy/ggs/internal/gdconf"
 	"github.com/godyy/ggs/internal/infra/actor"
 	imongobd "github.com/godyy/ggs/internal/infra/mongobd"
+	"github.com/godyy/ggs/internal/infra/systems"
 	"github.com/godyy/ggskit/base/db/mongo"
 	"github.com/godyy/ggskit/base/db/redis"
 	"github.com/godyy/ggskit/base/flags"
@@ -108,6 +109,9 @@ func Start() {
 	}
 	logger.Get().Info("load gdconf success")
 
+	// 启动系统模块.
+	systems.Start()
+
 	// 启动 Actor 服务.
 	if err := appInst.startActor(); err != nil {
 		logger.Get().Fatalf("start actor failed, %v", err)
@@ -128,6 +132,9 @@ func Stop() {
 
 	// 停止 Actor 服务.
 	appInst.stopActor()
+
+	// 停止系统模块.
+	systems.Stop()
 
 	// 停止 mongo 后台.
 	appInst.mongobd.Stop()

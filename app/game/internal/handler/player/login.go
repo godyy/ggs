@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/godyy/ggs/app/game/internal/app"
+	"github.com/godyy/ggs/app/game/internal/base/event"
+	"github.com/godyy/ggs/app/game/internal/global"
 	"github.com/godyy/ggs/app/game/internal/handler"
 	"github.com/godyy/ggs/app/game/internal/systems"
 	"github.com/godyy/ggs/internal/infra/actor"
@@ -22,6 +24,10 @@ func handleLoginCharacter(ctx *actor.Context, req *pbc2s.LoginCharacterReq) (*pb
 	}
 
 	player.SetLogin()
+	if err := global.NewEventWrapperNoParams[*actors.Player]().DispatchKind(event.KindPlayerOnline, player); err != nil {
+		handler.Logger().Errorf("dispatch player online event, err:%v", err)
+		return nil, err
+	}
 
 	getServerNameResp, err := player.Sugared().RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: app.Env().ServerID()},
 		&s2s.GetServerNameReq{}, 5*time.Second)

@@ -1,0 +1,1 @@
+Event listen component implemented based on Go generics.

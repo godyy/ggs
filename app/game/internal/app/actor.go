@@ -89,6 +89,13 @@ func (a *app) startGlobalActors() error {
 		return pkgerrors.WithMessage(err, "start server actor")
 	}
 
+	// 启动chatmgr
+	if err := a.actorService.StartActor(ctx, gactor.ActorUID{
+		Category: actor.CategoryChatMgr.ActorCategory(),
+		ID:       a.env.ServerID(),
+	}); err != nil {
+		return pkgerrors.WithMessage(err, "start chat mgr actor")
+	}
 	return nil
 }
 

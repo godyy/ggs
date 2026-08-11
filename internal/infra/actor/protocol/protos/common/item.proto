@@ -6,6 +6,6 @@ option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/commo
 
 // Item 道具信息.
 message Item {
-    int32 id = 1; // 道具ID.
-    int64 count = 2; // 数量.
+  int32 id = 1;    // 道具ID.
+  int64 count = 2; // 数量.
 }

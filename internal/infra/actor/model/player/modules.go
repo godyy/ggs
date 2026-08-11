@@ -11,4 +11,5 @@ func init() {
 	// 注册模块
 	actor.RegisterModule[*BaseInfo](moduleRegistry)
 	actor.RegisterModule[*Items](moduleRegistry)
+	actor.RegisterModule[*Chat](moduleRegistry)
 }

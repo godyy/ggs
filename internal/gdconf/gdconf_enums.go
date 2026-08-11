@@ -19,3 +19,11 @@ const (
 	ItemSubTypeDiamond = ItemSubType(1) // 钻石
 	ItemSubTypeGold    = ItemSubType(2) // 金币
 )
+
+// ChatRoomType 聊天室类型
+type ChatRoomType int32
+
+const (
+	ChatRoomTypeServer = ChatRoomType(1) // 服务器聊天室
+	ChatRoomTypeGroup  = ChatRoomType(2) // 群组聊天室
+)

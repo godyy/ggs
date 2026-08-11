@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package s2s;
+
+import "common/chat.proto";
+
+option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s";
+
+// 发送聊天消息请求.
+message SendChatMsgReq {
+  int64 roomId = 1;   // 聊天室ID.
+  int64 senderId = 2; // 发送者ID.
+  string content = 3; // 聊天内容.
+}
+
+// 创建群组聊天室请求.
+message CreateGroupChatRoomReq {
+  string name = 1;              // 群组名称.
+  repeated int64 memberIds = 2; // 成员ID列表. 第一个成员为群主.
+}
+
+// 通知加入聊天室请求.
+message NotifyJoinChatRoomReq {
+  int64 roomId = 1;   // 聊天室ID.
+  int32 roomType = 2; // 聊天室类型.
+}
+
+// 加入聊天室请求.
+message JoinChatRoomReq {
+  common.ChatRoom room = 1; // 聊天室.
+}
+
+// 退出聊天室请求.
+message LeaveChatRoomReq {
+  int64 roomId = 1;   // 聊天室ID.
+  int64 memberId = 2; // 成员ID.
+}
+
+// 通知退出聊天室请求.
+message NotifyLeaveChatRoomReq {
+  int64 roomId = 1; // 聊天室ID.
+}
+
+// 邀请玩家加入聊天室请求.
+message ChatRoomInviteReq {
+  int64 roomId = 1;             // 聊天室ID.
+  int64 inviterId = 2;          // 邀请者ID.
+  repeated int64 targetIds = 3; // 目标玩家ID列表.
+}
+
+// 获取聊天历史请求.
+message ChatHistoryReq {
+  int64 memberId = 1;  // 成员ID.
+  int64 roomId = 2;    // 聊天室ID.
+  int64 lastMsgId = 3; // 最后一条消息ID.
+}
+
+// 获取聊天历史响应.
+message ChatHistoryResp {
+  int64 roomId = 1;                 // 聊天室ID.
+  repeated common.ChatMsg msgs = 2; // 聊天消息列表.
+}

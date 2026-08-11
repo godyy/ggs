@@ -10,9 +10,19 @@ import (
 
 func init() {
 	register((*common.Error)(nil))
+	register((*common.Success)(nil))
 	register((*s2s.ActorSaveResultNtf)(nil))
+	register((*s2s.ChatHistoryReq)(nil))
+	register((*s2s.ChatHistoryResp)(nil))
+	register((*s2s.ChatRoomInviteReq)(nil))
+	register((*s2s.CreateGroupChatRoomReq)(nil))
 	register((*s2s.GetServerNameReq)(nil))
 	register((*s2s.GetServerNameResp)(nil))
+	register((*s2s.JoinChatRoomReq)(nil))
+	register((*s2s.LeaveChatRoomReq)(nil))
+	register((*s2s.NotifyJoinChatRoomReq)(nil))
+	register((*s2s.NotifyLeaveChatRoomReq)(nil))
 	register((*s2s.ReloadGDConfReq)(nil))
 	register((*s2s.ReloadGDConfResp)(nil))
+	register((*s2s.SendChatMsgReq)(nil))
 }

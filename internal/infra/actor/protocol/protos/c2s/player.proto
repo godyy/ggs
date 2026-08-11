@@ -6,10 +6,10 @@ option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s";
 
 // 修改名称请求.
 message ModifyNameReq {
-    string name = 1; // 新名称.
+  string name = 1; // 新名称.
 }
 
 // 修改名称响应
 message ModifyNameResp {
-    string name = 1; // 新名称.
+  string name = 1; // 新名称.
 }

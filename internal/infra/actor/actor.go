@@ -5,6 +5,13 @@ import (
 	"github.com/godyy/ggskit/infra/actor"
 )
 
+// ToActor 将Actor转换为指定行为类型.
+func ToActor[AB ActorBehavior](a actor.Actor) AB {
+	return actor.ToActor[AB](a)
+}
+
+// GetActorModule 获取Actor的模块.
+// 若模块不存在, 则根据autoCreate参数创建.
 func GetActorModule[M actor.Module](a actor.ActorWithModule, autoCreate bool) M {
 	return actor.GetActorModule[M](a, autoCreate)
 }
@@ -38,10 +45,8 @@ func (a *ActorWithModel[Model]) GetModel() actor.Model {
 	return a.Model
 }
 
-func (a *ActorWithModel[Model]) OnModelDirty() {
-	if ok, _ := a.Model.IsDirty(); !ok {
-		return
-	}
+func (a *ActorWithModel[Model]) SetAllDirty() {
+	a.Model.SetAllDirty()
 	DelaySave(a, actorSaveDelay)
 }
 
@@ -54,8 +59,7 @@ func (a *ActorWithModel[Model]) OnStart() error {
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.Model.SetAllDirty()
-		a.OnModelDirty()
+		a.SetAllDirty()
 	}
 
 	return nil
@@ -97,13 +101,6 @@ func (a *ActorWithModule[Model]) GetModuleWithModule() actor.ModelWithModule {
 	return a.Model
 }
 
-func (a *ActorWithModule[Model]) OnModelDirty() {
-	if ok, _ := a.Model.IsDirty(); !ok {
-		return
-	}
-	DelaySave(a, actorSaveDelay)
-}
-
 func (a *ActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
 	if len(mk) == 0 {
 		return
@@ -111,12 +108,12 @@ func (a *ActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
 	for _, m := range mk {
 		a.Model.SetDirtyModule(m)
 	}
-	a.OnModelDirty()
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *ActorWithModule[Model]) SetAllDirty() {
 	a.Model.SetAllDirty()
-	a.OnModelDirty()
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *ActorWithModule[Model]) OnStart() error {
@@ -128,8 +125,7 @@ func (a *ActorWithModule[Model]) OnStart() error {
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.Model.SetAllDirty()
-		a.OnModelDirty()
+		a.SetAllDirty()
 	}
 
 	return nil
@@ -167,10 +163,8 @@ func (a *CActorWithModel[Model]) GetModel() actor.Model {
 	return a.Model
 }
 
-func (a *CActorWithModel[Model]) OnModelDirty() {
-	if ok, _ := a.Model.IsDirty(); !ok {
-		return
-	}
+func (a *CActorWithModel[Model]) SetAllDirty() {
+	a.Model.SetAllDirty()
 	DelaySave(a, actorSaveDelay)
 }
 
@@ -183,8 +177,7 @@ func (a *CActorWithModel[Model]) OnStart() error {
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.Model.SetAllDirty()
-		a.OnModelDirty()
+		a.SetAllDirty()
 	}
 
 	return nil
@@ -226,13 +219,6 @@ func (a *CActorWithModule[Model]) GetModelWithModule() actor.ModelWithModule {
 	return a.Model
 }
 
-func (a *CActorWithModule[Model]) OnModelDirty() {
-	if ok, _ := a.Model.IsDirty(); !ok {
-		return
-	}
-	DelaySave(a, actorSaveDelay)
-}
-
 func (a *CActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
 	if len(mk) == 0 {
 		return
@@ -240,12 +226,12 @@ func (a *CActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
 	for _, m := range mk {
 		a.Model.SetDirtyModule(m)
 	}
-	a.OnModelDirty()
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *CActorWithModule[Model]) SetAllDirty() {
 	a.Model.SetAllDirty()
-	a.OnModelDirty()
+	DelaySave(a, actorSaveDelay)
 }
 
 func (a *CActorWithModule[Model]) OnStart() error {
@@ -257,8 +243,7 @@ func (a *CActorWithModule[Model]) OnStart() error {
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.Model.SetAllDirty()
-		a.OnModelDirty()
+		a.SetAllDirty()
 	}
 
 	return nil

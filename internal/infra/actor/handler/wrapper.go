@@ -2,9 +2,7 @@ package handler
 
 import (
 	"github.com/godyy/ggs/internal/infra/actor"
-	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
 	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
-	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,11 +13,31 @@ func WrapReqFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 		req := GetArgs[Req](ctx)
 		resp, err := f(ctx, req)
 		if err != nil {
-			replyC2SError(ctx, err)
-			ctx.Abort()
+			ReplyErrorAbort(ctx, err)
 			return
 		}
-		actor.SugarContext(ctx).Reply(resp)
+		Reply(ctx, resp)
+	}
+}
+
+// WrapReqNoRespFunc 包装Req处理函数, 无返回值.
+func WrapReqNoRespFunc[Req proto.Message](f func(ctx *actor.Context, req Req) error) actor.HandlerFunc {
+	return WrapReqFunc(func(ctx *actor.Context, req Req) (*pbcommon.Success, error) {
+		if err := f(ctx, req); err != nil {
+			return nil, err
+		}
+		return &pbcommon.Success{}, nil
+	})
+}
+
+// WrapAsyncReqFunc 包装异步Req处理函数.
+func WrapAsyncReqFunc[Req proto.Message](f func(ctx *actor.Context, req Req) error) actor.HandlerFunc {
+	return func(ctx *actor.Context) {
+		req := GetArgs[Req](ctx)
+		if err := f(ctx, req); err != nil {
+			ReplyErrorAbort(ctx, err)
+			return
+		}
 	}
 }
 
@@ -29,11 +47,31 @@ func WrapRPCFunc[Req, Resp proto.Message](f func(ctx *actor.Context, req Req) (R
 		req := GetArgs[Req](ctx)
 		resp, err := f(ctx, req)
 		if err != nil {
-			replyS2SError(ctx, err)
-			ctx.Abort()
+			ReplyErrorAbort(ctx, err)
 			return
 		}
-		actor.SugarContext(ctx).Reply(resp)
+		Reply(ctx, resp)
+	}
+}
+
+// WrapRPCNoRespFunc 包装RPC处理函数, 无返回值.
+func WrapRPCNoRespFunc[Req proto.Message](f func(ctx *actor.Context, req Req) error) actor.HandlerFunc {
+	return WrapRPCFunc(func(ctx *actor.Context, req Req) (*pbcommon.Success, error) {
+		if err := f(ctx, req); err != nil {
+			return nil, err
+		}
+		return &pbcommon.Success{}, nil
+	})
+}
+
+// WrapAsyncRPCFunc 包装异步RPC处理函数.
+func WrapAsyncRPCFunc[Req proto.Message](f func(ctx *actor.Context, req Req) error) actor.HandlerFunc {
+	return func(ctx *actor.Context) {
+		req := GetArgs[Req](ctx)
+		if err := f(ctx, req); err != nil {
+			ReplyErrorAbort(ctx, err)
+			return
+		}
 	}
 }
 
@@ -47,32 +85,35 @@ func WrapCastFunc[Params proto.Message](f func(ctx *actor.Context, params Params
 	}
 }
 
-// replyC2SError 回复C2S错误.
-func replyC2SError(ctx *actor.Context, err error) {
+// Reply 回复消息.
+func Reply(ctx *actor.Context, msg proto.Message) {
+	actor.SugarContext(ctx).Reply(msg)
+}
+
+// ReplySuccess 回复成功.
+func ReplySuccess(ctx *actor.Context) {
+	Reply(ctx, &pbcommon.Success{})
+}
+
+// ReplyError 回复错误.
+func ReplyError(ctx *actor.Context, err error) {
 	var respErr *pbcommon.Error
 
 	switch e := err.(type) {
-	case *PbError:
+	case *actor.PbError:
 		respErr = e.Err
 	default:
-		loggerInst.Errorf("replyC2SError: none PbError, %v", err)
-		respErr = &pbcommon.Error{Code: int32(pbc2s.ErrCode_ECInternalError)}
+		loggerInst.Errorf("ReplyError: none PbError, %v", err)
+		respErr = &pbcommon.Error{Code: pbcommon.ErrCode_ECInternalError}
 	}
 
 	actor.SugarContext(ctx).Reply(respErr)
 }
 
-// replyS2SError 回复S2S错误.
-func replyS2SError(ctx *actor.Context, err error) {
-	var respErr *pbcommon.Error
-	switch e := err.(type) {
-	case *PbError:
-		respErr = e.Err
-	default:
-		loggerInst.Errorf("replyS2SError: none PbError, %v", err)
-		respErr = &pbcommon.Error{Code: int32(pbs2s.ErrCode_ECInternalError)}
-	}
-	actor.SugarContext(ctx).Reply(respErr)
+// ReplyErrorAbort 回复错误并Abort.
+func ReplyErrorAbort(ctx *actor.Context, err error) {
+	ReplyError(ctx, err)
+	ctx.Abort()
 }
 
 // handlePushMsgQueue 处理推送消息队列.

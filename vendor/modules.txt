@@ -124,7 +124,7 @@ github.com/goccy/go-yaml/parser
 github.com/goccy/go-yaml/printer
 github.com/goccy/go-yaml/scanner
 github.com/goccy/go-yaml/token
-# github.com/godyy/gactor v0.1.5
+# github.com/godyy/gactor v0.2.1
 ## explicit; go 1.23
 github.com/godyy/gactor
 github.com/godyy/gactor/internal/utils
@@ -134,6 +134,9 @@ github.com/godyy/gcluster
 github.com/godyy/gcluster/center
 github.com/godyy/gcluster/net
 github.com/godyy/gcluster/net/internal/protocol/pb
+# github.com/godyy/gevent v0.1.3
+## explicit; go 1.24
+github.com/godyy/gevent
 # github.com/godyy/gexcels v0.5.2
 ## explicit; go 1.24
 github.com/godyy/gexcels
@@ -143,7 +146,7 @@ github.com/godyy/gexcels/export/data
 github.com/godyy/gexcels/internal/log
 github.com/godyy/gexcels/internal/utils
 github.com/godyy/gexcels/parse
-# github.com/godyy/ggskit v0.0.18
+# github.com/godyy/ggskit v0.0.26
 ## explicit; go 1.25.0
 github.com/godyy/ggskit/base/auth/jwt
 github.com/godyy/ggskit/base/codec/c2s
@@ -184,11 +187,12 @@ github.com/godyy/grendezvous
 # github.com/godyy/gtimewheel v0.1.1
 ## explicit; go 1.18
 github.com/godyy/gtimewheel
-# github.com/godyy/gutils v0.0.4
+# github.com/godyy/gutils v0.0.5
 ## explicit; go 1.22
 github.com/godyy/gutils/buffer
 github.com/godyy/gutils/buffer/bytes
 github.com/godyy/gutils/container/heap
+github.com/godyy/gutils/container/lru
 github.com/godyy/gutils/debug
 github.com/godyy/gutils/deepcopy
 # github.com/gogo/protobuf v1.3.2

@@ -80,7 +80,7 @@ run_platform:
 
 docker_services := agent game login platform
 docker_image_prefix ?= ggs
-docker_tag ?= latest
+docker_tag ?= dev
 docker_file ?= ./Dockerfile
 docker_env ?= dev
 

@@ -6,5 +6,5 @@ option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/commo
 
 // 角色基础信息.
 message PlayerBase {
-    string name = 1; // 昵称.
+  string name = 1; // 昵称.
 }

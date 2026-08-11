@@ -5,6 +5,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor"
 	actorhandler "github.com/godyy/ggs/internal/infra/actor/handler"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -18,6 +19,13 @@ func initC2SHandler() {
 	registerC2SFunc((*pbc2s.HeartbeatReq)(nil), true, actorhandler.WrapReqFunc(handleHeartbeat))
 	registerC2SFunc((*pbc2s.ModifyNameReq)(nil), true, actorhandler.WrapReqFunc(handleModifyName))
 	registerC2SFunc((*pbc2s.UseItemReq)(nil), true, actorhandler.WrapReqFunc(handleUseItem))
+	registerC2SFunc((*pbc2s.SendChatMsgReq)(nil), true, actorhandler.WrapAsyncReqFunc(handleSendChatMsg))
+	registerC2SFunc((*pbc2s.CreateGroupChatRoomReq)(nil), true, actorhandler.WrapAsyncReqFunc(handleCreateGroupChatRoom))
+	registerS2SFunc((*pbs2s.NotifyJoinChatRoomReq)(nil), actorhandler.WrapRPCNoRespFunc(handleNotifyJoinChatRoom))
+	registerC2SFunc((*pbc2s.LeaveChatRoomReq)(nil), true, actorhandler.WrapAsyncReqFunc(handleLeaveChatRoom))
+	registerS2SFunc((*pbs2s.NotifyLeaveChatRoomReq)(nil), actorhandler.WrapRPCNoRespFunc(handleNotifyLeaveChatRoom))
+	registerC2SFunc((*pbc2s.ChatRoomInviteReq)(nil), true, actorhandler.WrapAsyncReqFunc(handleChatRoomInvite))
+	registerC2SFunc((*pbc2s.ChatHistoryReq)(nil), true, actorhandler.WrapAsyncReqFunc(handleChatHistory))
 }
 
 func initS2SHandler() {

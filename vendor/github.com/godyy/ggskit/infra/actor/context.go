@@ -13,6 +13,9 @@ import (
 // Context
 type Context = gactor.Context
 
+// ContextSuspender
+type ContextSuspender = gactor.ContextSuspender
+
 type ctxK struct{}
 
 // CtxK 上下文kv的key.
@@ -45,6 +48,11 @@ func CtxKGet[V CtxV](ctx *Context, k CtxK[V]) (v V, exists bool) {
 // CtxActor 获取上下文中的 Actor, 泛型支持.
 func CtxActor[Actor ActorBehavior](ctx *Context) Actor {
 	return ctx.Actor().Behavior().(Actor)
+}
+
+// CtxActorModule 获取上下文中的 Actor 模块, 泛型支持.
+func CtxActorModule[M Module](ctx *Context, autoCreate bool) M {
+	return GetActorModule[M](ctx.Actor().Behavior().(ActorWithModule), autoCreate)
 }
 
 // ctxKSeq	 用于存储请求序号的key.
@@ -169,23 +177,30 @@ func (h *ContextSugarUtil) RPCWithContext(ctx *Context, cctx context.Context, to
 	return replyPayload.Msg, nil
 }
 
-// ContextAsyncRPCCallback 上下文异步 RPC 回调.
-type ContextAsyncRPCCallback func(ctx *Context, reply proto.Message, err error)
+// ContextRPCResp 上下文 RPC 响应.
+type ContextRPCResp struct {
+	Ctx   *Context      // 上下文.
+	Reply proto.Message // 回复消息.
+	Err   error         // 错误.
+}
 
 // ContextAsyncRPCCallback 上下文异步 RPC 回调.
-func (h *ContextSugarUtil) handleAsyncRPCResp(ctx *Context, resp *gactor.RPCResp, callback ContextAsyncRPCCallback) {
+type ContextAsyncRPCCallback func(resp ContextRPCResp)
+
+// ContextAsyncRPCCallback 上下文异步 RPC 回调.
+func (h *ContextSugarUtil) handleAsyncRPCResp(ctx *Context, resp gactor.RPCResp, callback ContextAsyncRPCCallback) {
 	if err := resp.Err(); err != nil {
-		callback(ctx, nil, err)
+		callback(ContextRPCResp{Ctx: ctx, Reply: nil, Err: err})
 		return
 	}
 
 	var replyPayload S2SPayload
 	if err := resp.DecodeReply(&replyPayload); err != nil {
-		callback(ctx, nil, err)
+		callback(ContextRPCResp{Ctx: ctx, Reply: nil, Err: err})
 		return
 	}
 
-	callback(ctx, replyPayload.Msg, nil)
+	callback(ContextRPCResp{Ctx: ctx, Reply: replyPayload.Msg, Err: nil})
 }
 
 // AsyncRPCWithDeadline
@@ -195,7 +210,7 @@ func (h *ContextSugarUtil) AsyncRPCWithDeadline(ctx *Context, to ActorUID, args 
 		return err
 	}
 
-	return ctx.AsyncRPCWithDeadline(to, &argsPayload, func(ctx *Context, resp *gactor.RPCResp) {
+	return ctx.AsyncRPCWithDeadline(to, &argsPayload, func(ctx *Context, resp gactor.RPCResp) {
 		h.handleAsyncRPCResp(ctx, resp, callback)
 	}, deadline)
 }
@@ -212,7 +227,7 @@ func (h *ContextSugarUtil) AsyncRPC(ctx *Context, to ActorUID, args proto.Messag
 		return err
 	}
 
-	return ctx.AsyncRPC(to, &argsPayload, func(ctx *Context, resp *gactor.RPCResp) {
+	return ctx.AsyncRPC(to, &argsPayload, func(ctx *Context, resp gactor.RPCResp) {
 		h.handleAsyncRPCResp(ctx, resp, callback)
 	})
 }
@@ -224,7 +239,7 @@ func (h *ContextSugarUtil) AsyncRPCWithContext(ctx *Context, cctx context.Contex
 		return err
 	}
 
-	return ctx.AsyncRPCWithContext(cctx, to, &argsPayload, func(ctx *Context, resp *gactor.RPCResp) {
+	return ctx.AsyncRPCWithContext(cctx, to, &argsPayload, func(ctx *Context, resp gactor.RPCResp) {
 		h.handleAsyncRPCResp(ctx, resp, callback)
 	})
 }

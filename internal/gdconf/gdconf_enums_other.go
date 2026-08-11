@@ -21,3 +21,12 @@ var itemSubTypeStrings = map[ItemSubType]string{
 func (e ItemSubType) String() string {
 	return itemSubTypeStrings[e]
 }
+
+var chatRoomTypeStrings = map[ChatRoomType]string{
+	ChatRoomTypeServer: "Server",
+	ChatRoomTypeGroup:  "Group",
+}
+
+func (e ChatRoomType) String() string {
+	return chatRoomTypeStrings[e]
+}

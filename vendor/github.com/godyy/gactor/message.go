@@ -144,3 +144,108 @@ func (m *messageForward) release(a actorImpl) {
 func (m *messageForward) discard(s *Service) {
 	s.freeBuffer(&m.payload)
 }
+
+// messageCompletedAsyncRPC 封装异步 RPC 完成消息.
+type messageCompletedAsyncRPC struct {
+	payload Buffer       // 响应负载数据.
+	err     error        // 错误信息.
+	cb      ActorRPCFunc // 回调函数.
+}
+
+func newMessageCompletedAsyncRPC(payload Buffer, err error, cb ActorRPCFunc) *messageCompletedAsyncRPC {
+	return &messageCompletedAsyncRPC{
+		payload: payload,
+		err:     err,
+		cb:      cb,
+	}
+}
+
+// handle 处理消息.
+func (m *messageCompletedAsyncRPC) handle(a actorImpl) {
+	resp := RPCResp{
+		svc:     a.core().service(),
+		payload: m.payload,
+		err:     m.err,
+	}
+	m.cb(a, resp)
+	resp.release()
+}
+
+// handleError 处理错误.
+func (m *messageCompletedAsyncRPC) handleError(a actorImpl, err error) {}
+
+// release 在消息经由 Actor 处理完成后回收资源.
+func (m *messageCompletedAsyncRPC) release(a actorImpl) {
+	a.core().service().freeBuffer(&m.payload)
+}
+
+// discard 在消息未进入 Actor 信箱时回收资源.
+func (m *messageCompletedAsyncRPC) discard(s *Service) {
+	s.freeBuffer(&m.payload)
+}
+
+// messageTriggeredTimer 封装已触发定时器消息.
+type messageTriggeredTimer struct {
+	tid  TimerId        // 定时器ID.
+	f    ActorTimerFunc // 定时器方法.
+	args any            // 参数.
+}
+
+func newMessageTriggeredTimer(tid TimerId, f ActorTimerFunc, args any) *messageTriggeredTimer {
+	return &messageTriggeredTimer{
+		tid:  tid,
+		f:    f,
+		args: args,
+	}
+}
+
+// handle 处理消息.
+func (m *messageTriggeredTimer) handle(a actorImpl) {
+	core := a.core()
+	if !core.isRunning() || !core.service().isRunning() {
+		return
+	}
+	m.f(ActorTimerArgs{
+		Actor: a,
+		TID:   m.tid,
+		Args:  m.args,
+	})
+}
+
+// handleError 处理错误.
+func (m *messageTriggeredTimer) handleError(a actorImpl, err error) {}
+
+// release 在消息经由 Actor 处理完成后回收资源.
+func (m *messageTriggeredTimer) release(a actorImpl) {}
+
+// discard 在消息未进入 Actor 信箱时回收资源.
+func (m *messageTriggeredTimer) discard(s *Service) {}
+
+// messageAsynnCall 异步调用消息.
+type messageAsynnCall struct {
+	id   uint32
+	args any
+	err  error
+}
+
+func newMessageAsyncCall(id uint32, args any, err error) *messageAsynnCall {
+	return &messageAsynnCall{
+		id:   id,
+		args: args,
+		err:  err,
+	}
+}
+
+// handle 处理消息.
+func (m *messageAsynnCall) handle(a actorImpl) {
+	a.core().invokeAsyncCall(a, m.id, m.args, m.err)
+}
+
+// handleError 处理错误.
+func (m *messageAsynnCall) handleError(a actorImpl, err error) {}
+
+// release 在消息经由 Actor 处理完成后回收资源.
+func (m *messageAsynnCall) release(a actorImpl) {}
+
+// discard 在消息未进入 Actor 信箱时回收资源.
+func (m *messageAsynnCall) discard(s *Service) {}

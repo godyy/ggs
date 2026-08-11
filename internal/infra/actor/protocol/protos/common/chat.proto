@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common";
+
+// 聊天消息.
+message ChatMsg {
+  int64 id = 1;        // 消息ID.
+  int64 senderId = 2;  // 发送者ID.
+  string content = 3;  // 聊天内容
+  int64 createdAt = 4; // 创建时间.
+}
+
+// 聊天室成员.
+message ChatRoomMember {
+  int64 id = 1; // 成员ID.
+}
+
+// 聊天室基础信息
+message ChatRoomBase {
+  int64 id = 1;      // 聊天室ID.
+  int32 type = 2;    // 聊天室类型.
+  int64 ownerId = 3; // 拥有者ID.
+  string name = 4;   // 聊天室名称.
+}
+
+// 聊天室.
+message ChatRoom {
+  ChatRoomBase base = 1;               // 聊天室基础信息.
+  repeated ChatRoomMember members = 2; // 成员列表.
+}
