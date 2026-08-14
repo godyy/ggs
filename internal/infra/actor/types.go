@@ -50,11 +50,29 @@ type ActorRPCResp = actor.ActorRPCResp
 // ActorAsyncRPCCallback Actor异步RPC回调类型映射.
 type ActorAsyncRPCCallback = actor.ActorAsyncRPCCallback
 
+// ActorTimerArgs Actor定时器参数类型映射.
+type ActorTimerArgs = actor.ActorTimerArgs
+
+// ActorTimerFunc Actor定时器函数类型映射.
+type ActorTimerFunc = actor.ActorTimerFunc
+
+// ActorFuncArgs Actor函数参数类型映射.
+type ActorFuncArgs = actor.ActorFuncArgs
+
+// ActorFunc Actor函数类型映射.
+type ActorFunc = actor.ActorFunc
+
 // ContextRPCResp 上下文RPC响应类型映射.
 type ContextRPCResp = actor.ContextRPCResp
 
 // ContextAsyncRPCCallback 上下文异步RPC回调类型映射.
 type ContextAsyncRPCCallback = actor.ContextAsyncRPCCallback
+
+// ContextFuncArgs 上下文函数参数类型映射.
+type ContextFuncArgs = actor.ContextFuncArgs
+
+// ContextFunc 上下文函数类型映射.
+type ContextFunc = actor.ContextFunc
 
 // ActorAsyncCaller Actor 异步函数调用器
 type ActorAsyncCaller = actor.ActorAsyncCaller

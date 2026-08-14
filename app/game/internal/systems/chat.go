@@ -880,36 +880,36 @@ func (l *chatRoomLoader) asyncCall(ctx any) (actor.ActorAsyncCaller, error) {
 }
 
 // asyncCallback1 异步回调.
-func (l *chatRoomLoader) asyncCallback1(ctx *actor.Context, args any, err error) {
+func (l *chatRoomLoader) asyncCallback1(args actor.ContextFuncArgs) {
 	l.mtx.Lock()
 	if l.state == chatRoomLoaderStateEnd {
 		l.mtx.Unlock()
 		return
 	}
-	mgr := actor.CtxActor[*actors.ChatMgr](ctx)
+	mgr := actor.CtxActor[*actors.ChatMgr](args.Ctx)
 	if l.room != nil {
 		Chat.addRoom(mgr, l.room, false)
 	}
 	l.state = chatRoomLoaderStateEnd
 	l.mtx.Unlock()
-	l.invokeCallbacks(ctx)
+	l.invokeCallbacks(args.Ctx)
 	Chat.delRoomLoader(l.roomId)
 }
 
 // asyncCallback2 异步回调.
-func (l *chatRoomLoader) asyncCallback2(ctx actor.Actor, args any, err error) {
+func (l *chatRoomLoader) asyncCallback2(args actor.ActorFuncArgs) {
 	l.mtx.Lock()
 	if l.state == chatRoomLoaderStateEnd {
 		l.mtx.Unlock()
 		return
 	}
-	mgr := actor.ToActor[*actors.ChatMgr](ctx)
+	mgr := actor.ToActor[*actors.ChatMgr](args.Actor)
 	if l.room != nil {
 		Chat.addRoom(mgr, l.room, false)
 	}
 	l.state = chatRoomLoaderStateEnd
 	l.mtx.Unlock()
-	l.invokeCallbacks(ctx)
+	l.invokeCallbacks(mgr)
 	Chat.delRoomLoader(l.roomId)
 }
 

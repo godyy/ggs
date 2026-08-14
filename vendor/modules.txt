@@ -124,8 +124,8 @@ github.com/goccy/go-yaml/parser
 github.com/goccy/go-yaml/printer
 github.com/goccy/go-yaml/scanner
 github.com/goccy/go-yaml/token
-# github.com/godyy/gactor v0.2.1
-## explicit; go 1.23
+# github.com/godyy/gactor v0.3.0
+## explicit; go 1.24
 github.com/godyy/gactor
 github.com/godyy/gactor/internal/utils
 # github.com/godyy/gcluster v0.0.12
@@ -146,7 +146,7 @@ github.com/godyy/gexcels/export/data
 github.com/godyy/gexcels/internal/log
 github.com/godyy/gexcels/internal/utils
 github.com/godyy/gexcels/parse
-# github.com/godyy/ggskit v0.0.26
+# github.com/godyy/ggskit v0.1.0
 ## explicit; go 1.25.0
 github.com/godyy/ggskit/base/auth/jwt
 github.com/godyy/ggskit/base/codec/c2s
@@ -184,8 +184,8 @@ github.com/godyy/gnet
 # github.com/godyy/grendezvous v0.1.2
 ## explicit; go 1.18
 github.com/godyy/grendezvous
-# github.com/godyy/gtimewheel v0.1.1
-## explicit; go 1.18
+# github.com/godyy/gtimewheel v0.3.0
+## explicit; go 1.24
 github.com/godyy/gtimewheel
 # github.com/godyy/gutils v0.0.5
 ## explicit; go 1.22

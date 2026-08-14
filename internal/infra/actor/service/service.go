@@ -21,9 +21,6 @@ var timeWheelLevels = []gtimewheel.LevelConfig{
 	{Name: "month", Span: 1 * time.Hour * 24, Slots: 30},
 }
 
-// maxTimerDelay 最大定时器延迟时间.
-const maxTimerDelay = time.Hour * 24 * 7
-
 // maxRTT 最大RTT.
 const maxRTT = 50
 
@@ -46,7 +43,6 @@ func NewClientService(cfg *ServiceConfig) (*iactor.Service, error) {
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: timeWheelLevels,
-				MaxTimerDelay:   maxTimerDelay,
 				MaxTimerAmount:  10000,
 			},
 			RPCConfig: gactor.RPCConfig{
@@ -76,7 +72,6 @@ func NewInternalService(cfg *ServiceConfig) (*iactor.Service, error) {
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: timeWheelLevels,
-				MaxTimerDelay:   maxTimerDelay,
 				MaxTimerAmount:  10000,
 			},
 			RPCConfig: gactor.RPCConfig{
@@ -107,7 +102,6 @@ func NewOneWayService(cfg *ServiceConfig) (*iactor.Service, error) {
 			},
 			TimerConfig: gactor.TimerConfig{
 				TimeWheelLevels: timeWheelLevels,
-				MaxTimerDelay:   maxTimerDelay,
 				MaxTimerAmount:  100,
 			},
 			RPCConfig: gactor.RPCConfig{

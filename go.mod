@@ -5,12 +5,12 @@ go 1.25.0
 require (
 	github.com/chzyer/readline v1.5.1
 	github.com/gin-gonic/gin v1.12.0
-	github.com/godyy/gactor v0.2.1
+	github.com/godyy/gactor v0.3.0
 	github.com/godyy/gevent v0.1.3
 	github.com/godyy/gexcels v0.5.2
-	github.com/godyy/ggskit v0.0.26
+	github.com/godyy/ggskit v0.1.0
 	github.com/godyy/glog v0.1.2
-	github.com/godyy/gtimewheel v0.1.1
+	github.com/godyy/gtimewheel v0.3.0
 	github.com/godyy/gutils v0.0.5
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
