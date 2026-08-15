@@ -15,11 +15,15 @@ func (a *app) startActor() error {
 
 	// 创建注册表.
 	var err error
-	a.actorRegistry, err = actor.NewRegistry(a.redisClient)
+	a.actorRegistry, err = actor.CreateRegistry(&actor.RegistryConfig{
+		RedisCli: a.redisClient,
+	})
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor registry")
 	}
-	a.actorServerStore, err = actor.NewServerStore(a.redisClient)
+	a.actorServerStore, err = actor.CreateServerStore(&actor.ServerStoreConfig{
+		RedisCli: a.redisClient,
+	})
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor server store")
 	}

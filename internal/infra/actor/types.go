@@ -29,8 +29,14 @@ type Service = actor.Service
 // Codec Actor编码器类型映射.
 type Codec = actor.Codec
 
+// RegistryConfig Actor注册表配置类型映射.
+type RegistryConfig = actor.RegistryConfig
+
 // Registry Actor注册表类型映射.
 type Registry = actor.Registry
+
+// ServerStoreConfig Actor服务器存储配置类型映射.
+type ServerStoreConfig = actor.ServerStoreConfig
 
 // ServerStore Actor服务器存储类型映射.
 type ServerStore = actor.ServerStore

@@ -28,11 +28,15 @@ func NewCodec() *Codec {
 	return codec
 }
 
-// NewRegistry 创建Actor注册表函数映射.
-var NewRegistry = actor.NewRegistry
+// CreateRegistry 创建Actor注册表函数映射.
+func CreateRegistry(cfg *RegistryConfig) (*Registry, error) {
+	return actor.NewRegistry(cfg)
+}
 
-// NewServerStore 创建Actor服务器存储函数映射.
-var NewServerStore = actor.NewServerStore
+// CreateServerStore 创建Actor服务器存储函数映射.
+func CreateServerStore(cfg *ServerStoreConfig) (*ServerStore, error) {
+	return actor.NewServerStore(cfg)
+}
 
 // RouterConfig Actor路由配置.
 type RouterConfig struct {

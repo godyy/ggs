@@ -17,7 +17,9 @@ import (
 func (a *app) startActor() error {
 	// 创建注册表.
 	var err error
-	a.actorRegistry, err = actor.NewRegistry(a.redisClient)
+	a.actorRegistry, err = actor.CreateRegistry(&actor.RegistryConfig{
+		RedisCli: a.redisClient,
+	})
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor registry")
 	}
