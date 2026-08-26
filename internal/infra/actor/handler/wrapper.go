@@ -118,7 +118,7 @@ func ReplyErrorAbort(ctx *actor.Context, err error) {
 
 // handlePushMsgQueue 处理推送消息队列.
 func handlePushMsgQueue(ctx *actor.Context) {
-	sugared := actor.CSugared{CActor: ctx.Actor().(actor.CActor)}
+	sugared := actor.CActorSugared{CActor: ctx.Actor().(actor.CActor)}
 	msgQueue, _ := actor.CtxKGet(ctx, ctxKeyPushMsgQueue)
 	for _, msg := range msgQueue {
 		sugared.PushRawMessage(msg)

@@ -60,7 +60,7 @@ func (p *Player) OnDisconnected() {
 
 // ID 获取玩家ID.
 func (p *Player) ID() int64 {
-	return p.CActorSugared.ActorUID().ID
+	return p.GetActor().ActorUID().ID
 }
 
 // IsLogin 返回是否已登录.

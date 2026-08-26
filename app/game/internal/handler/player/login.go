@@ -29,7 +29,7 @@ func handleLoginCharacter(ctx *actor.Context, req *pbc2s.LoginCharacterReq) (*pb
 		return nil, err
 	}
 
-	getServerNameResp, err := player.Sugared().RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: app.Env().ServerID()},
+	getServerNameResp, err := player.RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: app.Env().ServerID()},
 		&s2s.GetServerNameReq{}, 5*time.Second)
 	if err != nil {
 		return nil, pkgerrors.WithMessage(err, "get server name")

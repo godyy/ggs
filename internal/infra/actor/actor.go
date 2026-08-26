@@ -1,8 +1,12 @@
 package actor
 
 import (
+	"context"
+	"time"
+
 	model1 "github.com/godyy/ggs/internal/infra/actor/model"
 	"github.com/godyy/ggskit/infra/actor"
+	"google.golang.org/protobuf/proto"
 )
 
 // ToActor 将Actor转换为指定行为类型.
@@ -264,4 +268,97 @@ func (a *CActorWithModule[Model]) OnStop() error {
 	}
 
 	return nil
+}
+
+// actorSugarUtil Actor 语法糖工具.
+var actorSugarUtil *actor.ActorSugarUtil
+
+// ActorSugared Actor语法糖基础封装.
+type ActorSugared struct {
+	Actor
+}
+
+func (a *ActorSugared) GetActor() Actor {
+	return a.Actor
+}
+
+func (a *ActorSugared) RPCWithDeadline(to ActorUID, args proto.Message, deadline time.Time) (proto.Message, error) {
+	return actorSugarUtil.RPCWithDeadline(a.Actor, to, args, deadline)
+}
+
+func (a *ActorSugared) RPCWithTimeout(to ActorUID, args proto.Message, timeout time.Duration) (proto.Message, error) {
+	return actorSugarUtil.RPCWithTimeout(a.Actor, to, args, timeout)
+}
+
+func (a *ActorSugared) RPC(to ActorUID, args proto.Message) (proto.Message, error) {
+	return actorSugarUtil.RPC(a.Actor, to, args)
+}
+
+func (a *ActorSugared) RPCWithContext(ctx context.Context, to ActorUID, args proto.Message) (proto.Message, error) {
+	return actorSugarUtil.RPCWithContext(ctx, a.Actor, to, args)
+}
+
+func (a *ActorSugared) AsyncRPCWithDeadline(to ActorUID, args proto.Message, callback ActorAsyncRPCCallback, deadline time.Time) error {
+	return actorSugarUtil.AsyncRPCWithDeadline(a.Actor, to, args, callback, deadline)
+}
+
+func (a *ActorSugared) AsyncRPCWithTimeout(to ActorUID, args proto.Message, callback ActorAsyncRPCCallback, timeout time.Duration) error {
+	return actorSugarUtil.AsyncRPCWithTimeout(a.Actor, to, args, callback, timeout)
+}
+
+func (a *ActorSugared) AsyncRPC(to ActorUID, args proto.Message, callback ActorAsyncRPCCallback) error {
+	return actorSugarUtil.AsyncRPC(a.Actor, to, args, callback)
+}
+
+func (a *ActorSugared) AsyncRPCWithContext(ctx context.Context, to ActorUID, args proto.Message, callback ActorAsyncRPCCallback) error {
+	return actorSugarUtil.AsyncRPCWithContext(ctx, a.Actor, to, args, callback)
+}
+
+// CActorSugared CActor语法糖基础封装.
+type CActorSugared struct {
+	CActor
+}
+
+func (a *CActorSugared) GetActor() Actor {
+	return a.CActor
+}
+
+func (a *CActorSugared) GetCActor() CActor {
+	return a.CActor
+}
+
+func (a *CActorSugared) PushRawMessage(msg proto.Message) error {
+	return actorSugarUtil.PushRawMessage(a.CActor, msg)
+}
+
+func (a *CActorSugared) RPCWithDeadline(to ActorUID, args proto.Message, deadline time.Time) (proto.Message, error) {
+	return actorSugarUtil.RPCWithDeadline(a.CActor, to, args, deadline)
+}
+
+func (a *CActorSugared) RPCWithTimeout(to ActorUID, args proto.Message, timeout time.Duration) (proto.Message, error) {
+	return actorSugarUtil.RPCWithTimeout(a.CActor, to, args, timeout)
+}
+
+func (a *CActorSugared) RPC(to ActorUID, args proto.Message) (proto.Message, error) {
+	return actorSugarUtil.RPC(a.CActor, to, args)
+}
+
+func (a *CActorSugared) RPCWithContext(ctx context.Context, to ActorUID, args proto.Message) (proto.Message, error) {
+	return actorSugarUtil.RPCWithContext(ctx, a.CActor, to, args)
+}
+
+func (a *CActorSugared) AsyncRPCWithDeadline(to ActorUID, args proto.Message, callback ActorAsyncRPCCallback, deadline time.Time) error {
+	return actorSugarUtil.AsyncRPCWithDeadline(a.CActor, to, args, callback, deadline)
+}
+
+func (a *CActorSugared) AsyncRPCWithTimeout(to ActorUID, args proto.Message, callback ActorAsyncRPCCallback, timeout time.Duration) error {
+	return actorSugarUtil.AsyncRPCWithTimeout(a.CActor, to, args, callback, timeout)
+}
+
+func (a *CActorSugared) AsyncRPC(to ActorUID, args proto.Message, callback ActorAsyncRPCCallback) error {
+	return actorSugarUtil.AsyncRPC(a.CActor, to, args, callback)
+}
+
+func (a *CActorSugared) AsyncRPCWithContext(ctx context.Context, to ActorUID, args proto.Message, callback ActorAsyncRPCCallback) error {
+	return actorSugarUtil.AsyncRPCWithContext(ctx, a.CActor, to, args, callback)
 }

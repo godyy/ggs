@@ -171,7 +171,7 @@ func startSaveTimer(a ActorSaveWithTimer, db string, delay time.Duration, callba
 		return
 	}
 
-	timerId := a.StartTimer(delay, false, &saveTimerArgs{db, callback}, onSaveTimer)
+	timerId := a.GetActor().StartTimer(delay, false, &saveTimerArgs{db, callback}, onSaveTimer)
 	a.SetSaveTimerId(timerId)
 }
 
@@ -183,8 +183,8 @@ func onSaveTimer(args gactor.ActorTimerArgs) {
 		a.SetSaveTimerId(gactor.TimerIdNone)
 	}
 
-	if err := AsyncSaveModel(a.ActorUID(), a.GetModel(), saveArgs.db, saveArgs.callback); err != nil {
-		uid := a.ActorUID()
+	if err := AsyncSaveModel(a.GetActor().ActorUID(), a.GetModel(), saveArgs.db, saveArgs.callback); err != nil {
+		uid := a.GetActor().ActorUID()
 		logger.Get().ErrorFields("persist async failed",
 			zap.Uint16("category", uid.Category),
 			zap.Int64("id", uid.ID),

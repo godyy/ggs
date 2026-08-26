@@ -41,7 +41,7 @@ func SaveModel(a ActorSaveWithTimer) error {
 // AsyncSaveModel 异步保存Actor模型.
 func AsyncSaveModel(a ActorSaveWithTimer) error {
 	checkState()
-	return persist.AsyncSaveModel(a.ActorUID(), a.GetModel(), db, asyncSaveModelCallback)
+	return persist.AsyncSaveModel(a.GetActor().ActorUID(), a.GetModel(), db, asyncSaveModelCallback)
 }
 
 // DelaySave 延迟保存Actor.

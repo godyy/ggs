@@ -17,6 +17,9 @@ type CActor = actor.CActor
 // ActorBehavior Actor行为类型映射.
 type ActorBehavior = actor.ActorBehavior
 
+// CActorBehavior CActor行为类型映射.
+type CActorBehavior = actor.CActorBehavior
+
 // TimerId TimerId类型映射.
 type TimerId = gactor.TimerId
 

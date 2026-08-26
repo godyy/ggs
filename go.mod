@@ -8,7 +8,7 @@ require (
 	github.com/godyy/gactor v0.3.1
 	github.com/godyy/gevent v0.1.3
 	github.com/godyy/gexcels v0.5.2
-	github.com/godyy/ggskit v0.1.1
+	github.com/godyy/ggskit v0.1.4
 	github.com/godyy/glog v0.1.2
 	github.com/godyy/gtimewheel v0.3.0
 	github.com/godyy/gutils v0.0.5
