@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/godyy/gactor"
 	model1 "github.com/godyy/ggs/internal/infra/actor/model"
 	"github.com/godyy/ggskit/infra/actor"
 	"google.golang.org/protobuf/proto"
@@ -69,15 +70,17 @@ func (a *ActorWithModel[Model]) OnStart() error {
 	return nil
 }
 
-func (a *ActorWithModel[Model]) OnStop() error {
-	// 持久化脏数据.
-	if ok, _ := a.Model.IsDirty(); ok {
-		if err := SaveModel(a); err != nil {
-			return err
+func (a *ActorWithModel[Model]) OnStop(ctx gactor.ActorStopContext) error {
+	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
+	if ctx.Reason != gactor.ActorStopReasonMigrated {
+		if ok, _ := a.Model.IsDirty(); ok {
+			if err := SaveModel(a); err != nil {
+				return err
+			}
 		}
 	}
 
-	// 释放model
+	// 释放model.
 	var zeroModel Model
 	if zeroModel != a.Model {
 		a.Model.Release()
@@ -135,11 +138,13 @@ func (a *ActorWithModule[Model]) OnStart() error {
 	return nil
 }
 
-func (a *ActorWithModule[Model]) OnStop() error {
-	// 持久化脏数据.
-	if ok, _ := a.Model.IsDirty(); ok {
-		if err := SaveModel(a); err != nil {
-			return err
+func (a *ActorWithModule[Model]) OnStop(ctx gactor.ActorStopContext) error {
+	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
+	if ctx.Reason != gactor.ActorStopReasonMigrated {
+		if ok, _ := a.Model.IsDirty(); ok {
+			if err := SaveModel(a); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -187,11 +192,13 @@ func (a *CActorWithModel[Model]) OnStart() error {
 	return nil
 }
 
-func (a *CActorWithModel[Model]) OnStop() error {
-	// 持久化脏数据.
-	if ok, _ := a.Model.IsDirty(); ok {
-		if err := SaveModel(a); err != nil {
-			return err
+func (a *CActorWithModel[Model]) OnStop(ctx gactor.ActorStopContext) error {
+	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
+	if ctx.Reason != gactor.ActorStopReasonMigrated {
+		if ok, _ := a.Model.IsDirty(); ok {
+			if err := SaveModel(a); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -253,11 +260,13 @@ func (a *CActorWithModule[Model]) OnStart() error {
 	return nil
 }
 
-func (a *CActorWithModule[Model]) OnStop() error {
-	// 持久化脏数据.
-	if ok, _ := a.Model.IsDirty(); ok {
-		if err := SaveModel(a); err != nil {
-			return err
+func (a *CActorWithModule[Model]) OnStop(ctx gactor.ActorStopContext) error {
+	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
+	if ctx.Reason != gactor.ActorStopReasonMigrated {
+		if ok, _ := a.Model.IsDirty(); ok {
+			if err := SaveModel(a); err != nil {
+				return err
+			}
 		}
 	}
 

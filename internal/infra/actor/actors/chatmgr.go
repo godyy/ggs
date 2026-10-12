@@ -38,9 +38,9 @@ func (cm *ChatMgr) OnStart() error {
 }
 
 // OnStop 停机行为.
-func (cm *ChatMgr) OnStop() error {
+func (cm *ChatMgr) OnStop(ctx gactor.ActorStopContext) error {
 	lifecycle.OnStop(cm)
-	return cm.ActorWithModel.OnStop()
+	return cm.ActorWithModel.OnStop(ctx)
 }
 
 // NextRoomID 获取下一个房间ID.

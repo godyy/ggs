@@ -35,11 +35,11 @@ func (s *Server) OnStart() error {
 }
 
 // OnStop 停机行为.
-func (s *Server) OnStop() error {
+func (s *Server) OnStop(ctx gactor.ActorStopContext) error {
 	// 调用生命周期回调
 	lifecycle.OnStop(s)
 
-	return s.ActorWithModel.OnStop()
+	return s.ActorWithModel.OnStop(ctx)
 }
 
 func init() {

@@ -41,11 +41,11 @@ func (p *Player) OnStart() error {
 }
 
 // OnStop 停机行为.
-func (p *Player) OnStop() error {
+func (p *Player) OnStop(ctx gactor.ActorStopContext) error {
 	// 调用生命周期回调
 	lifecycle.OnStop(p)
 
-	return p.CActorWithModule.OnStop()
+	return p.CActorWithModule.OnStop(ctx)
 }
 
 // OnConnected 已连接行为.
