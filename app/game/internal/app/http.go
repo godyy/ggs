@@ -21,6 +21,7 @@ func (a *app) startHttp() {
 
 	mux := http.NewServeMux()
 	a.registerHttpProbe(mux)
+        a.registerMigrationHTTP(mux)
 	if a.config.EnablePProf {
 		monitor.RegisterPProfHttp(mux, "")
 	}

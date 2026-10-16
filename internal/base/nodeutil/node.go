@@ -1,8 +1,10 @@
 package nodeutil
 
 import (
+	"errors"
 	"strconv"
 
+	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggskit/infra/cluster"
 )
 
@@ -19,4 +21,16 @@ func NewServerNode(category string, serverId int64, addr string) *cluster.Node {
 		Addr:     addr,
 		ServerId: serverId,
 	}
+}
+
+// NewWorkerNode 构造全局共享的可迁移 Actor worker 节点。
+func NewWorkerNode(workerID, addr string) (*cluster.Node, error) {
+	if workerID == "" {
+		return nil, errors.New("worker id is required")
+	}
+	return &cluster.Node{
+		Category: consts.NodeGameWorker,
+		Name:     workerID,
+		Addr:     addr,
+	}, nil
 }

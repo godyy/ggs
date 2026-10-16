@@ -71,3 +71,12 @@ Caller = true
 CallerSkip = 0
 # Development = true
 EnableStd = true
+
+[Migration]
+SnapshotTTL = "5m"
+ReadinessTTL = "15s"
+AdminToken = "dev-migration-token"
+BuildVersion = "dev"
+ProtocolVersion = "v1"
+MaxConcurrentActors = 16
+MaxConcurrentForwards = 256

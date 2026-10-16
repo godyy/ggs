@@ -50,31 +50,35 @@ func (a *ActorWithModel[Model]) GetModel() actor.Model {
 	return a.Model
 }
 
-func (a *ActorWithModel[Model]) SetAllDirty() {
-	a.Model.SetAllDirty()
-	DelaySave(a, actorSaveDelay)
+func (a *ActorWithModel[Model]) GetDB() string {
+	return db
 }
 
-func (a *ActorWithModel[Model]) OnStart() error {
+func (a *ActorWithModel[Model]) SetAllDirty(impl ActorSaveWithTimer) {
+	a.Model.SetAllDirty()
+	DelaySave(impl, actorSaveDelay)
+}
+
+func (a *ActorWithModel[Model]) OnStart(impl ActorSaveWithTimer) error {
 	// 加载model数据
-	exists, err := LoadModel(a)
+	exists, err := LoadModel(impl)
 	if err != nil {
 		return err
 	}
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.SetAllDirty()
+		a.SetAllDirty(impl)
 	}
 
 	return nil
 }
 
-func (a *ActorWithModel[Model]) OnStop(ctx gactor.ActorStopContext) error {
+func (a *ActorWithModel[Model]) OnStop(impl ActorSaveWithTimer, ctx gactor.ActorStopContext) error {
 	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
 	if ctx.Reason != gactor.ActorStopReasonMigrated {
 		if ok, _ := a.Model.IsDirty(); ok {
-			if err := SaveModel(a); err != nil {
+			if err := SaveModel(impl); err != nil {
 				return err
 			}
 		}
@@ -104,45 +108,49 @@ func (a *ActorWithModule[Model]) GetModel() actor.Model {
 	return a.Model
 }
 
+func (a *ActorWithModule[Model]) GetDB() string {
+	return db
+}
+
 func (a *ActorWithModule[Model]) GetModuleWithModule() actor.ModelWithModule {
 	return a.Model
 }
 
-func (a *ActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
+func (a *ActorWithModule[Model]) SetDirtyModules(impl ActorSaveWithTimer, mk ...actor.ModuleKey) {
 	if len(mk) == 0 {
 		return
 	}
 	for _, m := range mk {
 		a.Model.SetDirtyModule(m)
 	}
-	DelaySave(a, actorSaveDelay)
+	DelaySave(impl, actorSaveDelay)
 }
 
-func (a *ActorWithModule[Model]) SetAllDirty() {
+func (a *ActorWithModule[Model]) SetAllDirty(impl ActorSaveWithTimer) {
 	a.Model.SetAllDirty()
-	DelaySave(a, actorSaveDelay)
+	DelaySave(impl, actorSaveDelay)
 }
 
-func (a *ActorWithModule[Model]) OnStart() error {
+func (a *ActorWithModule[Model]) OnStart(impl ActorSaveWithTimer) error {
 	// 加载model数据
-	exists, err := LoadModel(a)
+	exists, err := LoadModel(impl)
 	if err != nil {
 		return err
 	}
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.SetAllDirty()
+		a.SetAllDirty(impl)
 	}
 
 	return nil
 }
 
-func (a *ActorWithModule[Model]) OnStop(ctx gactor.ActorStopContext) error {
+func (a *ActorWithModule[Model]) OnStop(impl ActorSaveWithTimer, ctx gactor.ActorStopContext) error {
 	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
 	if ctx.Reason != gactor.ActorStopReasonMigrated {
 		if ok, _ := a.Model.IsDirty(); ok {
-			if err := SaveModel(a); err != nil {
+			if err := SaveModel(impl); err != nil {
 				return err
 			}
 		}
@@ -172,31 +180,35 @@ func (a *CActorWithModel[Model]) GetModel() actor.Model {
 	return a.Model
 }
 
-func (a *CActorWithModel[Model]) SetAllDirty() {
-	a.Model.SetAllDirty()
-	DelaySave(a, actorSaveDelay)
+func (a *CActorWithModel[Model]) GetDB() string {
+	return db
 }
 
-func (a *CActorWithModel[Model]) OnStart() error {
+func (a *CActorWithModel[Model]) SetAllDirty(impl ActorSaveWithTimer) {
+	a.Model.SetAllDirty()
+	DelaySave(impl, actorSaveDelay)
+}
+
+func (a *CActorWithModel[Model]) OnStart(impl ActorSaveWithTimer) error {
 	// 加载model数据
-	exists, err := LoadModel(a)
+	exists, err := LoadModel(impl)
 	if err != nil {
 		return err
 	}
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.SetAllDirty()
+		a.SetAllDirty(impl)
 	}
 
 	return nil
 }
 
-func (a *CActorWithModel[Model]) OnStop(ctx gactor.ActorStopContext) error {
+func (a *CActorWithModel[Model]) OnStop(impl ActorSaveWithTimer, ctx gactor.ActorStopContext) error {
 	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
 	if ctx.Reason != gactor.ActorStopReasonMigrated {
 		if ok, _ := a.Model.IsDirty(); ok {
-			if err := SaveModel(a); err != nil {
+			if err := SaveModel(impl); err != nil {
 				return err
 			}
 		}
@@ -226,45 +238,49 @@ func (a *CActorWithModule[Model]) GetModel() actor.Model {
 	return a.Model
 }
 
+func (a *CActorWithModule[Model]) GetDB() string {
+	return db
+}
+
 func (a *CActorWithModule[Model]) GetModelWithModule() actor.ModelWithModule {
 	return a.Model
 }
 
-func (a *CActorWithModule[Model]) SetDirtyModules(mk ...actor.ModuleKey) {
+func (a *CActorWithModule[Model]) SetDirtyModules(impl ActorSaveWithTimer, mk ...actor.ModuleKey) {
 	if len(mk) == 0 {
 		return
 	}
 	for _, m := range mk {
 		a.Model.SetDirtyModule(m)
 	}
-	DelaySave(a, actorSaveDelay)
+	DelaySave(impl, actorSaveDelay)
 }
 
-func (a *CActorWithModule[Model]) SetAllDirty() {
+func (a *CActorWithModule[Model]) SetAllDirty(impl ActorSaveWithTimer) {
 	a.Model.SetAllDirty()
-	DelaySave(a, actorSaveDelay)
+	DelaySave(impl, actorSaveDelay)
 }
 
-func (a *CActorWithModule[Model]) OnStart() error {
+func (a *CActorWithModule[Model]) OnStart(impl ActorSaveWithTimer) error {
 	// 加载model数据
-	exists, err := LoadModel(a)
+	exists, err := LoadModel(impl)
 	if err != nil {
 		return err
 	}
 
 	// 若数据不存在. 准备存储新数据.
 	if !exists {
-		a.SetAllDirty()
+		a.SetAllDirty(impl)
 	}
 
 	return nil
 }
 
-func (a *CActorWithModule[Model]) OnStop(ctx gactor.ActorStopContext) error {
+func (a *CActorWithModule[Model]) OnStop(impl ActorSaveWithTimer, ctx gactor.ActorStopContext) error {
 	// 迁移完成后的源 Actor 不应写回已交接的业务状态。
 	if ctx.Reason != gactor.ActorStopReasonMigrated {
 		if ok, _ := a.Model.IsDirty(); ok {
-			if err := SaveModel(a); err != nil {
+			if err := SaveModel(impl); err != nil {
 				return err
 			}
 		}
@@ -323,6 +339,10 @@ func (a *ActorSugared) AsyncRPCWithContext(ctx context.Context, to ActorUID, arg
 	return actorSugarUtil.AsyncRPCWithContext(ctx, a.Actor, to, args, callback)
 }
 
+func (a *ActorSugared) Cast(to ActorUID, msg proto.Message) error {
+	return actorSugarUtil.Cast(a.Actor, to, msg)
+}
+
 // CActorSugared CActor语法糖基础封装.
 type CActorSugared struct {
 	CActor
@@ -370,4 +390,8 @@ func (a *CActorSugared) AsyncRPC(to ActorUID, args proto.Message, callback Actor
 
 func (a *CActorSugared) AsyncRPCWithContext(ctx context.Context, to ActorUID, args proto.Message, callback ActorAsyncRPCCallback) error {
 	return actorSugarUtil.AsyncRPCWithContext(ctx, a.CActor, to, args, callback)
+}
+
+func (a *CActorSugared) Cast(to ActorUID, msg proto.Message) error {
+	return actorSugarUtil.Cast(a.CActor, to, msg)
 }

@@ -90,17 +90,17 @@ func handleLoginReq(a *Agent, p []byte, msg proto.Message) {
 	}
 	if errors.Is(err, gactor.ErrActorNotExists) || !checkLocation(playerLocation) {
 		// 选择节点.
-		nodeIds := app.NodeSelector().PickGame(serverId, playerId, 1)
-		if len(nodeIds) == 0 {
-			a.errorFields("pick game node failed", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId))
+		nodeID, err := pickReadyWorker(serverId, playerId)
+		if err != nil {
+			a.errorFields("pick player worker failed", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId))
 			a.Stop(pbc2s.DisconnectPush_SystemError)
 			return
 		}
 
-		a.infoFields("pick game node", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId), log.FldNodeId(nodeIds[0]))
+		a.infoFields("pick player worker", log.FldUid(tokenInfo.UID), log.FldServerId(serverId), log.FldPlayerId(playerId), log.FldNodeId(nodeID))
 
 		// 更新节点信息.
-		if err := updatePlayerLocation(playerId, nodeIds[0]); err != nil {
+		if err := updatePlayerLocation(playerId, nodeID); err != nil {
 			a.errorFields("update player location failed", log.FldUid(tokenInfo.UID), log.FldPlayerId(playerId), log.FldError(err))
 			a.Stop(pbc2s.DisconnectPush_SystemError)
 			return

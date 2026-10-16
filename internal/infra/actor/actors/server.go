@@ -27,7 +27,7 @@ func (s *Server) OnStart() error {
 	s.Model = server.New(s, s.ActorUID().ID)
 	s.ServerName = fmt.Sprintf("server-%d", s.ActorUID().ID)
 
-	if err := s.ActorWithModel.OnStart(); err != nil {
+	if err := s.ActorWithModel.OnStart(s); err != nil {
 		return err
 	}
 
@@ -39,7 +39,7 @@ func (s *Server) OnStop(ctx gactor.ActorStopContext) error {
 	// 调用生命周期回调
 	lifecycle.OnStop(s)
 
-	return s.ActorWithModel.OnStop(ctx)
+	return s.ActorWithModel.OnStop(s, ctx)
 }
 
 func init() {

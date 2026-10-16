@@ -1,6 +1,9 @@
 package actors
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/godyy/gactor"
@@ -16,6 +19,7 @@ type Player struct {
 	actor.CActorWithModule[*player.Model] // 集成携带数据模型的Actor封装
 
 	isLogin           bool           // 是否已登录.
+	serverID          int64          // 玩家稳定所属的游戏服务器 ID.
 	heartbeatTimerId  gactor.TimerId // 心跳定时器ID.
 	lastHeartbeatTime int64          // 上一次心跳处理时间.
 }
@@ -30,10 +34,19 @@ func NewPlayer(a actor.CActor) *Player {
 
 // OnStart 启动行为.
 func (p *Player) OnStart() error {
+	serverID, ok, err := actor.GetActorServerID(p.ActorUID())
+	if err != nil {
+		return err
+	}
+	if !ok || serverID <= 0 {
+		return errors.New("player server ownership not found")
+	}
+	p.serverID = serverID
+
 	// 构造model
 	p.Model = player.New(p.ActorUID().ID)
 
-	if err := p.CActorWithModule.OnStart(); err != nil {
+	if err := p.CActorWithModule.OnStart(p); err != nil {
 		return err
 	}
 
@@ -45,7 +58,7 @@ func (p *Player) OnStop(ctx gactor.ActorStopContext) error {
 	// 调用生命周期回调
 	lifecycle.OnStop(p)
 
-	return p.CActorWithModule.OnStop(ctx)
+	return p.CActorWithModule.OnStop(p, ctx)
 }
 
 // OnConnected 已连接行为.
@@ -56,6 +69,64 @@ func (p *Player) OnConnected() {
 // OnDisconnected 已断开连接行为.
 func (p *Player) OnDisconnected() {
 	lifecycle.OnDisconnected(p)
+}
+
+// OnMigrateOut 持久化模型并保存需要恢复的短期会话状态.
+func (p *Player) OnMigrateOut(ctx gactor.ActorMigrationContext) error {
+	store := actor.GetMigrationStore()
+	if store == nil {
+		return errors.New("player migration store is not initialized")
+	}
+
+	// 迁移前建立 Mongo 持久化屏障，避免目标端读取旧模型。
+	p.Model.SetAllDirty()
+	if err := actor.SaveModel(p); err != nil {
+		return err
+	}
+	return store.SavePlayerSnapshot(context.Background(), p.ActorUID(), ctx.SourceLeaseID, actor.PlayerMigrationSnapshot{
+		ServerID:          p.serverID,
+		IsLogin:           p.isLogin,
+		LastHeartbeatTime: p.lastHeartbeatTime,
+	})
+}
+
+// OnMigrateIn 恢复迁移前的登录与心跳状态.
+func (p *Player) OnMigrateIn(ctx gactor.ActorMigrationContext) error {
+	store := actor.GetMigrationStore()
+	if store == nil {
+		return errors.New("player migration store is not initialized")
+	}
+	snapshot, err := store.LoadPlayerSnapshot(context.Background(), p.ActorUID(), ctx.SourceLeaseID)
+	if err != nil {
+		return err
+	}
+	if snapshot.ServerID != p.serverID {
+		return errors.New("player migration snapshot server id mismatch")
+	}
+	p.isLogin = snapshot.IsLogin
+	p.lastHeartbeatTime = snapshot.LastHeartbeatTime
+	if p.isLogin {
+		p.startHeartbeatTimer()
+	}
+	// 快照保留到 TTL 结束，允许重复迁移控制包幂等恢复状态。
+	return nil
+}
+
+func (p *Player) GetDB() string {
+	return fmt.Sprintf("game_%d", p.serverID)
+}
+
+func (p *Player) SetAllDirty() {
+	p.CActorWithModule.SetAllDirty(p)
+}
+
+func (p *Player) SetDirtyModules(mk ...actor.ModuleKey) {
+	p.CActorWithModule.SetDirtyModules(p, mk...)
+}
+
+// ServerID 返回玩家稳定所属的游戏服务器 ID。
+func (p *Player) ServerID() int64 {
+	return p.serverID
 }
 
 // ID 获取玩家ID.

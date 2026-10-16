@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/godyy/ggs/app/game/internal/app"
 	"github.com/godyy/ggs/app/game/internal/base/event"
@@ -16,6 +17,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	"github.com/godyy/ggs/internal/infra/actor/lifecycle"
 	"github.com/godyy/ggs/internal/infra/actor/model/player"
+	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	"github.com/godyy/ggs/internal/infra/systems"
 	"google.golang.org/protobuf/proto"
 )
@@ -58,8 +60,9 @@ func (m *playerModule) OnActorConnected(p *actors.Player) {
 func (m *playerModule) OnActorDisconnected(p *actors.Player) {
 	if err := global.NewEventWrapperNoParams[*actors.Player]().DispatchKind(event.KindPlayerOffline, p); err != nil {
 		handler.Logger().Errorf("dispatch player offline event, err:%v", err)
-		return
 	}
+
+	m.NotifyOffline(p)
 }
 
 // InitPlayer 初始化player.
@@ -75,6 +78,14 @@ func (m *playerModule) InitPlayer(p *actors.Player) error {
 	p.SetAllDirty()
 
 	return nil
+}
+
+func (m *playerModule) AddOnlinePlayer(playerId int64) {
+	m.onlinePlayers.Store(playerId, time.Now().Unix())
+}
+
+func (m *playerModule) DelOnlinePlayer(playerId int64) {
+	m.onlinePlayers.Delete(playerId)
 }
 
 func (m *playerModule) IsPlayerOnline(id int64) bool {
@@ -123,5 +134,19 @@ func (m *playerModule) send2OnlinePlayers(msg proto.Message, includes []int64, t
 			continue
 		}
 		m.send2Player(playerId, msg)
+	}
+}
+
+func (m *playerModule) NotifyOnline(p *actors.Player) {
+	if err := p.Cast(actor.ActorUID{actor.CategoryServer.ActorCategory(), p.ServerID()}, &pbs2s.PlayerOnlineNtf{}); err != nil {
+		logger.Get().Errorf("cast player %d online ntf to server %d failed, err:%v", p.ID(), p.ServerID(), err)
+		return
+	}
+}
+
+func (m *playerModule) NotifyOffline(p *actors.Player) {
+	if err := p.Cast(actor.ActorUID{actor.CategoryServer.ActorCategory(), p.ServerID()}, &pbs2s.PlayerOfflineNtf{}); err != nil {
+		logger.Get().Errorf("cast player %d offline ntf to server %d failed, err:%v", p.ID(), p.ServerID(), err)
+		return
 	}
 }

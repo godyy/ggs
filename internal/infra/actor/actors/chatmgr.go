@@ -31,7 +31,7 @@ func NewChatMgr(a actor.Actor) *ChatMgr {
 // OnStart 启动行为.
 func (cm *ChatMgr) OnStart() error {
 	cm.Model = chat.NewMgr()
-	if err := cm.ActorWithModel.OnStart(); err != nil {
+	if err := cm.ActorWithModel.OnStart(cm); err != nil {
 		return err
 	}
 	return lifecycle.OnStart(cm)
@@ -40,13 +40,13 @@ func (cm *ChatMgr) OnStart() error {
 // OnStop 停机行为.
 func (cm *ChatMgr) OnStop(ctx gactor.ActorStopContext) error {
 	lifecycle.OnStop(cm)
-	return cm.ActorWithModel.OnStop(ctx)
+	return cm.ActorWithModel.OnStop(cm, ctx)
 }
 
 // NextRoomID 获取下一个房间ID.
 func (cm *ChatMgr) NextRoomID() int64 {
 	roomId := cm.Model.NextRoomID()
-	cm.SetAllDirty()
+	cm.SetAllDirty(cm)
 	return roomId
 }
 

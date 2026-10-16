@@ -48,6 +48,30 @@ type Config struct {
 		// SaveRetryDelay 保存重试延迟.
 		SaveRetryDelay time.Duration
 	}
+
+	// Migration 仅在 worker 角色生效.
+	Migration struct {
+		// SnapshotTTL 会话迁移快照存活时间.
+		SnapshotTTL time.Duration
+
+		// ReadinessTTL worker 就绪记录存活时间.
+		ReadinessTTL time.Duration
+
+		// AdminToken worker 迁移管理接口令牌.
+		AdminToken string
+
+		// BuildVersion 构建版本.
+		BuildVersion string
+
+		// ProtocolVersion 协议版本.
+		ProtocolVersion string
+
+		// MaxConcurrentActors 最大并发迁移 Actor 数.
+		MaxConcurrentActors int
+
+		// MaxConcurrentForwards 最大并发转发数.
+		MaxConcurrentForwards int
+	}
 }
 
 // Load 从指定路径加载配置文件.

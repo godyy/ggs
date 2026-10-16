@@ -88,3 +88,6 @@ type ActorAsyncCaller = actor.ActorAsyncCaller
 
 // ContextSuspender 上下文挂起器类型映射.
 type ContextSuspender = actor.ContextSuspender
+
+// ModuleKey 模块键类型映射.
+type ModuleKey = actor.ModuleKey

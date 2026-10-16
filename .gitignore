@@ -5,3 +5,5 @@ docker/dev/configs
 .design
 .vscode
 .trae
+tmp/
+docs/

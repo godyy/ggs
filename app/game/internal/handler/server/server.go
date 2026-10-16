@@ -41,3 +41,13 @@ func handleReloadGDConf(ctx *actor.Context, req *pbs2s.ReloadGDConfReq) (*pbs2s.
 	}
 	return resp, nil
 }
+
+func handlePlayerOnline(ctx *actor.Context, req *pbs2s.PlayerOnlineNtf) bool {
+	systems.Player.AddOnlinePlayer(ctx.FromActorUID().ID)
+	return true
+}
+
+func handlePlayerOffline(ctx *actor.Context, req *pbs2s.PlayerOfflineNtf) bool {
+	systems.Player.DelOnlinePlayer(ctx.FromActorUID().ID)
+	return true
+}

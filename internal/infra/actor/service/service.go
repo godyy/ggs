@@ -28,6 +28,8 @@ type ServiceConfig struct {
 	NodeId         string                // 节点 ID.
 	Handler        gactor.ServiceHandler // 处理器.
 	RequestHandler gactor.HandlerFunc    // 请求处理函数.
+	ClientCategory gactor.ActorCategory  // CActor 类别.
+	Migration      gactor.MigrationConfig
 }
 
 // NewClientService 创建对接客户端的Actor服务.
@@ -38,7 +40,7 @@ func NewClientService(cfg *ServiceConfig) (*iactor.Service, error) {
 			NodeId: cfg.NodeId,
 			ActorConfig: gactor.ActorConfig{
 				ActorDefines:        actors.GetDefineList(),
-				ClientActorCategory: iactor.CategoryPlayer.ActorCategory(),
+				ClientActorCategory: clientCategory(cfg),
 				Handler:             cfg.RequestHandler,
 			},
 			TimerConfig: gactor.TimerConfig{
@@ -48,8 +50,9 @@ func NewClientService(cfg *ServiceConfig) (*iactor.Service, error) {
 			RPCConfig: gactor.RPCConfig{
 				MaxRPCCallAmount: 10000,
 			},
-			MaxRTT:  maxRTT,
-			Handler: cfg.Handler,
+			MaxRTT:    maxRTT,
+			Handler:   cfg.Handler,
+			Migration: cfg.Migration,
 		},
 		Logger:        logger.Get(),
 		ProtoRegistry: iactor.ProtoRegistry,
@@ -77,8 +80,9 @@ func NewInternalService(cfg *ServiceConfig) (*iactor.Service, error) {
 			RPCConfig: gactor.RPCConfig{
 				MaxRPCCallAmount: 10000,
 			},
-			MaxRTT:  maxRTT,
-			Handler: cfg.Handler,
+			MaxRTT:    maxRTT,
+			Handler:   cfg.Handler,
+			Migration: cfg.Migration,
 		},
 		Logger:        logger.Get(),
 		ProtoRegistry: iactor.ProtoRegistry,
@@ -87,6 +91,13 @@ func NewInternalService(cfg *ServiceConfig) (*iactor.Service, error) {
 		actorConfig.Core.DefRPCTimeout = time.Hour * 1
 	}
 	return actor.NewService(actorConfig)
+}
+
+func clientCategory(cfg *ServiceConfig) gactor.ActorCategory {
+	if cfg.ClientCategory != 0 {
+		return cfg.ClientCategory
+	}
+	return iactor.CategoryPlayer.ActorCategory()
 }
 
 // NewOneWayService 创建单向Actor服务.

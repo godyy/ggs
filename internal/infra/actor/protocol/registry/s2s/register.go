@@ -22,6 +22,8 @@ func init() {
 	register((*s2s.LeaveChatRoomReq)(nil))
 	register((*s2s.NotifyJoinChatRoomReq)(nil))
 	register((*s2s.NotifyLeaveChatRoomReq)(nil))
+	register((*s2s.PlayerOfflineNtf)(nil))
+	register((*s2s.PlayerOnlineNtf)(nil))
 	register((*s2s.ReloadGDConfReq)(nil))
 	register((*s2s.ReloadGDConfResp)(nil))
 	register((*s2s.SendChatMsgReq)(nil))

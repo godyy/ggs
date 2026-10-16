@@ -3,7 +3,6 @@ package player
 import (
 	"time"
 
-	"github.com/godyy/ggs/app/game/internal/app"
 	"github.com/godyy/ggs/app/game/internal/base/event"
 	"github.com/godyy/ggs/app/game/internal/global"
 	"github.com/godyy/ggs/app/game/internal/handler"
@@ -24,12 +23,13 @@ func handleLoginCharacter(ctx *actor.Context, req *pbc2s.LoginCharacterReq) (*pb
 	}
 
 	player.SetLogin()
+	systems.Player.NotifyOnline(player)
 	if err := global.NewEventWrapperNoParams[*actors.Player]().DispatchKind(event.KindPlayerOnline, player); err != nil {
 		handler.Logger().Errorf("dispatch player online event, err:%v", err)
 		return nil, err
 	}
 
-	getServerNameResp, err := player.RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: app.Env().ServerID()},
+	getServerNameResp, err := player.RPCWithTimeout(actor.ActorUID{Category: actor.CategoryServer.ActorCategory(), ID: player.ServerID()},
 		&s2s.GetServerNameReq{}, 5*time.Second)
 	if err != nil {
 		return nil, pkgerrors.WithMessage(err, "get server name")

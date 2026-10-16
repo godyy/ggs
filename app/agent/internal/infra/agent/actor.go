@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"time"
 
 	"github.com/godyy/gactor"
@@ -37,6 +38,18 @@ func getPlayerLocation(playerId int64) (gactor.ActorLocation, error) {
 		Category: actor.CategoryPlayer.ActorCategory(),
 		ID:       playerId,
 	})
+}
+
+// pickReadyWorker 从全局 serving worker 池中选择节点。
+func pickReadyWorker(_ int64, playerID int64) (string, error) {
+	nodeIDs := app.NodeSelector().PickWorker(playerID, 10)
+	for _, nodeID := range nodeIDs {
+		readiness, err := actor.GetWorkerReadiness(context.Background(), app.RedisClient(), nodeID)
+		if err == nil && readiness.State == actor.WorkerStateServing && readiness.NodeID == nodeID {
+			return nodeID, nil
+		}
+	}
+	return "", gactor.ErrNoAvailableNode
 }
 
 // genSessionId 生成session id.

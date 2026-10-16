@@ -60,10 +60,11 @@ func (m *chatModule) OnActorStop(mgr *actors.ChatMgr) {
 	}
 }
 
-func (m *chatModule) MgrUID() actor.ActorUID {
+// MgrUID 获取指定区服的 ChatMgr Actor ID.
+func (m *chatModule) MgrUID(serverID int64) actor.ActorUID {
 	return actor.ActorUID{
 		Category: actor.CategoryChatMgr.ActorCategory(),
-		ID:       app.Env().ServerID(),
+		ID:       serverID,
 	}
 }
 
@@ -303,7 +304,7 @@ func (m *chatModule) forwardMsg(room *chat.Room, record *chat.MessageRecord) {
 
 // PlayerSendMsg 玩家发送聊天消息.
 func (m *chatModule) PlayerSendMsg(p *actors.Player, roomId int64, content string, cb func(p *actors.Player, err error)) {
-	if err := p.AsyncRPCWithTimeout(m.MgrUID(), &pbs2s.SendChatMsgReq{
+	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.SendChatMsgReq{
 		RoomId:   roomId,
 		SenderId: p.ID(),
 		Content:  content,
@@ -361,7 +362,7 @@ func (m *chatModule) PlayerCreateRoom(p *actors.Player, params PlayerCreateRoomP
 // playerDoCreateGroupChatRoom 玩家创建群聊室.
 func (m *chatModule) playerDoCreateGroupChatRoom(p *actors.Player, params PlayerCreateRoomParams, cb func(p *actors.Player, err error)) {
 	// 异步创建聊天室
-	if err := p.AsyncRPCWithTimeout(m.MgrUID(), &pbs2s.CreateGroupChatRoomReq{
+	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.CreateGroupChatRoomReq{
 		Name:      params.RoomName,
 		MemberIds: append([]int64{p.ID()}, params.MemberIds...),
 	}, func(resp actor.ActorRPCResp) {
@@ -531,7 +532,7 @@ func (m *chatModule) PlayerLeaveChatRoom(p *actors.Player, roomId int64, cb func
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECChatRoomCantLeave))
 		return
 	}
-	if err := p.AsyncRPCWithTimeout(m.MgrUID(), &pbs2s.LeaveChatRoomReq{RoomId: roomId, MemberId: p.ID()},
+	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.LeaveChatRoomReq{RoomId: roomId, MemberId: p.ID()},
 		func(resp actor.ActorRPCResp) {
 			result := actor.NewRPCResult(resp.Reply, resp.Err)
 			if !result.Success() {
@@ -652,7 +653,7 @@ func (m *chatModule) PlayerChatRoomInvite(p *actors.Player, roomId int64, target
 		}
 		targetMap[id] = struct{}{}
 	}
-	if err := p.AsyncRPCWithTimeout(m.MgrUID(), &pbs2s.ChatRoomInviteReq{
+	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.ChatRoomInviteReq{
 		RoomId:    roomId,
 		InviterId: p.ID(),
 		TargetIds: targetIds,

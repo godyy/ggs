@@ -61,7 +61,14 @@ func getNodeGroup(node *cluster.Node) (string, bool) {
 	if node == nil {
 		return "", false
 	}
-	return makeNodeGroup(node.Category, node.ServerId), true
+	switch node.Category {
+	case consts.NodeGame:
+		return makeFixedNodeGroup(node.ServerId), true
+	case consts.NodeGameWorker:
+		return makeWorkerNodeGroup(), true
+	default:
+		return "", false
+	}
 }
 
 // getActorFixedNode 获取 Actor 固定节点.
@@ -80,11 +87,11 @@ func getActorFixedNode(uid gactor.ActorUID) (string, bool) {
 func getActorNodeGroup(uid gactor.ActorUID, serverStore *ServerStore) (string, bool) {
 	switch Category(uid.Category) {
 	case CategoryPlayer:
-		serverID, ok := getActorServerID(uid, serverStore)
-		if !ok {
+		// 玩家必须有稳定区服归属，但所有 worker 共同承载玩家。
+		if _, ok := getActorServerID(uid, serverStore); !ok {
 			return "", false
 		}
-		return makeNodeGroup(consts.NodeGame, serverID), true
+		return makeWorkerNodeGroup(), true
 	default:
 		return "", false
 	}
@@ -115,10 +122,10 @@ func getActorServerID(uid gactor.ActorUID, serverStore *ServerStore) (int64, boo
 	}
 }
 
-// makeNodeGroup 生成节点分组.
-func makeNodeGroup(category string, serverId int64) string {
-	if category == consts.NodeGame {
-		return fmt.Sprintf("%s/%d", consts.NodeGame, serverId)
-	}
-	return category
+func makeFixedNodeGroup(serverID int64) string {
+	return fmt.Sprintf("%s/%d", consts.NodeGame, serverID)
+}
+
+func makeWorkerNodeGroup() string {
+	return consts.NodeGameWorker
 }

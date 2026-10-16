@@ -124,12 +124,72 @@ services:
         condition: service_healthy
       etcd:
         condition: service_healthy
-    command: ["-env-server-id", "${GGS_GAME_SERVER_ID:-1}", "-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}"]
+    command: ["-env-server-id", "${GGS_GAME_SERVER_ID:-1}", "-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}","-env-role","fixed"]
     ports:
       - "${GGS_GAME_CLUSTER_PORT:-22002}:20002"
       - "${GGS_GAME_MONITOR_PORT:-22088}:8888"
     volumes:
       - ./configs/game.toml:/app/configs/config.toml:rw
+    networks:
+      - ggs_network
+
+  # 动态迁移 E2E：迁移源 worker。
+  game-worker-w1:
+    image: ${GGS_IMAGE_PREFIX:-ggs}/game:${GGS_IMAGE_TAG:-dev}
+    container_name: ggs_game_worker_w1
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    command: ["-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}", "-env-role", "worker", "-env-worker-id", "w1", "-env-state", "serving"]
+    ports:
+      - "${GGS_GAME_WORKER_W1_MONITOR_PORT:-22089}:8888"
+    volumes:
+      - ./configs/game-worker-w1.toml:/app/configs/config.toml:ro
+    networks:
+      - ggs_network
+
+  # 动态迁移 E2E：standby 迁移目标。
+  game-worker-w2:
+    image: ${GGS_IMAGE_PREFIX:-ggs}/game:${GGS_IMAGE_TAG:-dev}
+    container_name: ggs_game_worker_w2
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    command: ["-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}", "-env-role", "worker", "-env-worker-id", "w2", "-env-state", "standby"]
+    ports:
+      - "${GGS_GAME_WORKER_W2_MONITOR_PORT:-22090}:8888"
+    volumes:
+      - ./configs/game-worker-w2.toml:/app/configs/config.toml:ro
+    networks:
+      - ggs_network
+
+  # 动态迁移 E2E：迁移期间持续承接新玩家。
+  game-worker-w3:
+    image: ${GGS_IMAGE_PREFIX:-ggs}/game:${GGS_IMAGE_TAG:-dev}
+    container_name: ggs_game_worker_w3
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+    command: ["-env-gdconf-db", "${GGS_GDCONF_DB:-gdconf_dev}", "-env-role", "worker", "-env-worker-id", "w3", "-env-state", "serving"]
+    ports:
+      - "${GGS_GAME_WORKER_W3_MONITOR_PORT:-22091}:8888"
+    volumes:
+      - ./configs/game-worker-w3.toml:/app/configs/config.toml:ro
     networks:
       - ggs_network
 

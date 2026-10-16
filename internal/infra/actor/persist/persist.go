@@ -29,9 +29,10 @@ type BD interface {
 }
 
 // LoadModel 同步加载Model.
-func LoadModel(m actor.Model, db string) (exists bool, err error) {
+func LoadModel(a actor.ActorWithModel) (exists bool, err error) {
 	checkState()
-	op := mongobd.NewOp[mongobd.OpLoad](db, m.GetCollection()).
+	m := a.GetModel()
+	op := mongobd.NewOp[mongobd.OpLoad](a.GetDB(), m.GetCollection()).
 		SetFilter(m.GetFilter()).
 		SetPrimary(true).
 		SetTarget(m)
@@ -84,8 +85,9 @@ func clearModelDirty(m actor.Model) {
 }
 
 // SaveModel 同步保存Model.
-func SaveModel(m actor.Model, db string) (err error) {
+func SaveModel(a actor.ActorWithModel) (err error) {
 	checkState()
+	m := a.GetModel()
 
 	update, upsert, err := extractModelDirty(m)
 	if err != nil {
@@ -93,7 +95,7 @@ func SaveModel(m actor.Model, db string) (err error) {
 	}
 
 	// 执行操作符
-	op := mongobd.NewOp[mongobd.OpUpdate](db, m.GetCollection()).
+	op := mongobd.NewOp[mongobd.OpUpdate](a.GetDB(), m.GetCollection()).
 		SetFilter(m.GetFilter()).
 		SetUpdate(bson.Raw(update)).
 		SetUpsert(upsert)
@@ -116,8 +118,10 @@ func SaveModel(m actor.Model, db string) (err error) {
 type AsyncSaveModelCallback func(uid gactor.ActorUID, err error)
 
 // AsyncSaveModel 异步保存Model.
-func AsyncSaveModel(uid gactor.ActorUID, m actor.Model, db string, callback AsyncSaveModelCallback) (err error) {
+func AsyncSaveModel(a actor.ActorWithModel, callback AsyncSaveModelCallback) (err error) {
 	checkState()
+	uid := a.GetActor().ActorUID()
+	m := a.GetModel()
 
 	update, upsert, err := extractModelDirty(m)
 	if err != nil {
@@ -125,7 +129,7 @@ func AsyncSaveModel(uid gactor.ActorUID, m actor.Model, db string, callback Asyn
 	}
 
 	// 添加操作符.
-	op := mongobd.NewOp[mongobd.OpUpdate](db, m.GetCollection()).
+	op := mongobd.NewOp[mongobd.OpUpdate](a.GetDB(), m.GetCollection()).
 		SetFilter(m.GetFilter()).
 		SetUpdate(bson.Raw(update)).
 		SetUpsert(upsert)
@@ -154,24 +158,23 @@ type ActorSaveWithTimer interface {
 
 // DelaySaveActorModel 延迟保存.
 // 启动延迟保存timer, 等待timer触发进行保存操作.
-func DelaySaveActorModel(a ActorSaveWithTimer, db string, delay time.Duration, callback AsyncSaveModelCallback) {
+func DelaySaveActorModel(a ActorSaveWithTimer, delay time.Duration, callback AsyncSaveModelCallback) {
 	checkState()
 	delay = delay + time.Duration(rand.Int64N(int64(delayRandom)))
-	startSaveTimer(a, db, delay, callback)
+	startSaveTimer(a, delay, callback)
 }
 
 type saveTimerArgs struct {
-	db       string
 	callback AsyncSaveModelCallback
 }
 
 // startSaveTimer 启动保存timer.
-func startSaveTimer(a ActorSaveWithTimer, db string, delay time.Duration, callback AsyncSaveModelCallback) {
+func startSaveTimer(a ActorSaveWithTimer, delay time.Duration, callback AsyncSaveModelCallback) {
 	if a.SaveTimerId() != gactor.TimerIdNone {
 		return
 	}
 
-	timerId := a.GetActor().StartTimer(delay, false, &saveTimerArgs{db, callback}, onSaveTimer)
+	timerId := a.GetActor().StartTimer(delay, false, &saveTimerArgs{callback}, onSaveTimer)
 	a.SetSaveTimerId(timerId)
 }
 
@@ -183,7 +186,7 @@ func onSaveTimer(args gactor.ActorTimerArgs) {
 		a.SetSaveTimerId(gactor.TimerIdNone)
 	}
 
-	if err := AsyncSaveModel(a.GetActor().ActorUID(), a.GetModel(), saveArgs.db, saveArgs.callback); err != nil {
+	if err := AsyncSaveModel(a, saveArgs.callback); err != nil {
 		uid := a.GetActor().ActorUID()
 		logger.Get().ErrorFields("persist async failed",
 			zap.Uint16("category", uid.Category),
@@ -193,7 +196,7 @@ func onSaveTimer(args gactor.ActorTimerArgs) {
 
 		// 尝试重新持久化
 		retryDelay := retryDelay + time.Duration(rand.Int64N(int64(delayRandom)))
-		startSaveTimer(a, saveArgs.db, retryDelay, saveArgs.callback)
+		startSaveTimer(a, retryDelay, saveArgs.callback)
 	}
 }
 

@@ -16,57 +16,51 @@ func TestNodeSelector_SetNodes(t *testing.T) {
 
 	// 准备测试节点数据
 	nodes := []*cluster.Node{
-		{Category: consts.NodeGame, Name: "game1", ServerId: 101, Addr: "addr1"},
-		{Category: consts.NodeGame, Name: "game2", ServerId: 101, Addr: "addr2"}, // 同 ServerId 副本
-		{Category: consts.NodeGame, Name: "game3", ServerId: 102, Addr: "addr3"}, // 不同 ServerId
-		{Category: "gate", Name: "gate1", ServerId: 0, Addr: "addr4"},            // 非 Game 节点
+		{Category: consts.NodeGameWorker, Name: "worker1", Addr: "addr1"},
+		{Category: consts.NodeGameWorker, Name: "worker2", Addr: "addr2"},
+		{Category: consts.NodeGameWorker, Name: "worker3", Addr: "addr3"},
+		{Category: consts.NodeGame, Name: "game101", ServerId: 101, Addr: "addr4"}, // 固定节点不承载 Player
+		{Category: "gate", Name: "gate1", ServerId: 0, Addr: "addr5"},              // 非 worker 节点
 	}
 
 	// 设置节点
 	selector.SetNodes(nodes, true)
 
-	// 验证 Game 节点分组 (ServerId=101)
-	// 对于 ServerId=101，应该只能选到 game1 或 game2
-	candidates := selector.PickGame(101, 12345, 10)
-	t.Logf("PickGame(101, 12345, 10) = %v", candidates)
-	expected := []string{cluster.MakeNodeID(consts.NodeGame, "game1"), cluster.MakeNodeID(consts.NodeGame, "game2")}
+	candidates := selector.PickWorker(12345, 10)
+	expected := []string{
+		cluster.MakeNodeID(consts.NodeGameWorker, "worker1"),
+		cluster.MakeNodeID(consts.NodeGameWorker, "worker2"),
+		cluster.MakeNodeID(consts.NodeGameWorker, "worker3"),
+	}
 	assert.Contains(t, expected, candidates[0])
 	for _, id := range candidates {
 		assert.Contains(t, expected, id)
 	}
 
-	// 验证 Game 节点分组 (ServerId=102)
-	candidates = selector.PickGame(102, 12345, 10)
-	assert.Equal(t, 1, len(candidates))
-	assert.Equal(t, cluster.MakeNodeID(consts.NodeGame, "game3"), candidates[0])
+	assert.Len(t, candidates, 3)
 }
 
-func TestNodeSelector_PickGame_FaultTolerance(t *testing.T) {
+func TestNodeSelector_PickWorker_FaultTolerance(t *testing.T) {
 	baseSelector := noderouter.NewRendezvousSelector()
 	selector := NewNodeSelector(baseSelector)
 
 	// 模拟 3 个副本
 	nodes := []*cluster.Node{
-		{Category: consts.NodeGame, Name: "n1", ServerId: 101},
-		{Category: consts.NodeGame, Name: "n2", ServerId: 101},
-		{Category: consts.NodeGame, Name: "n3", ServerId: 101},
+		{Category: consts.NodeGameWorker, Name: "n1"},
+		{Category: consts.NodeGameWorker, Name: "n2"},
+		{Category: consts.NodeGameWorker, Name: "n3"},
 	}
 	selector.SetNodes(nodes, true)
 
 	// 请求选 3 个，验证能否返回所有副本以供重试
-	candidates := selector.PickGame(101, 999, 3)
+	candidates := selector.PickWorker(999, 3)
 	assert.Equal(t, 3, len(candidates))
-	assert.Contains(t, candidates, cluster.MakeNodeID(consts.NodeGame, "n1"))
-	assert.Contains(t, candidates, cluster.MakeNodeID(consts.NodeGame, "n2"))
-	assert.Contains(t, candidates, cluster.MakeNodeID(consts.NodeGame, "n3"))
+	assert.Contains(t, candidates, cluster.MakeNodeID(consts.NodeGameWorker, "n1"))
+	assert.Contains(t, candidates, cluster.MakeNodeID(consts.NodeGameWorker, "n2"))
+	assert.Contains(t, candidates, cluster.MakeNodeID(consts.NodeGameWorker, "n3"))
 }
 
-func TestMakeGroup(t *testing.T) {
-	assert.Equal(t, consts.NodeGame+"/100", makeGroup(consts.NodeGame, 100))
-	assert.Equal(t, "gate", makeGroup("gate", 100))
-}
-
-func TestNodeSelector_UpdateEventsIgnoreNonGame(t *testing.T) {
+func TestNodeSelector_UpdateEventsIgnoreNonWorker(t *testing.T) {
 	baseSelector := noderouter.NewRendezvousSelector()
 	selector := NewNodeSelector(baseSelector)
 
@@ -77,10 +71,10 @@ func TestNodeSelector_UpdateEventsIgnoreNonGame(t *testing.T) {
 		},
 		{
 			Type: cluster.NodeEventAdd,
-			Node: &cluster.Node{Category: consts.NodeGame, Name: "game1", ServerId: 101, Addr: "addr2"},
+			Node: &cluster.Node{Category: consts.NodeGameWorker, Name: "worker1", Addr: "addr2"},
 		},
 	})
 
-	candidates := selector.PickGame(101, 12345, 10)
-	assert.Equal(t, []string{cluster.MakeNodeID(consts.NodeGame, "game1")}, candidates)
+	candidates := selector.PickWorker(12345, 10)
+	assert.Equal(t, []string{cluster.MakeNodeID(consts.NodeGameWorker, "worker1")}, candidates)
 }

@@ -20,7 +20,7 @@ Port = 20002 # 集群端口
 [Cluster.Core]
 EtcdEndPoints = ["localhost:2379"]
 EtcdRoot = "/ggs/cluster"
-EtcdWatchPrefix = "/game"
+EtcdWatchPrefix = "/game-worder"
 ExpectedConcurrentSessions = 1000 # 预期同时存在的会话数量
 
 # 握手配置（严格匹配结构体字段名）

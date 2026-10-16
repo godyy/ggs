@@ -1,4 +1,4 @@
-.PHONY: all protos secret_key run_client run_game run_agent run_login run_platform gdconf docker docker-agent docker-game docker-login docker-platform
+.PHONY: all protos secret_key run_client run_game run_game_worker run_agent run_login run_platform gdconf docker docker-agent docker-game docker-login docker-platform
 
 protos:
 	cd internal/infra/actor/protocol && make protos
@@ -57,7 +57,18 @@ run_game: server_id := 1
 run_game:
 	go run github.com/godyy/ggs/app/game \
 		-config-path "$(config_path)" \
-		-env-server-id "$(server_id)"
+                -env-server-id "$(server_id)" \
+                -env-role fixed
+
+run_game_worker: config_path := ./app/game/configs/dev.toml
+run_game_worker: worker_id := w1
+run_game_worker: state := serving
+run_game_worker:
+	go run github.com/godyy/ggs/app/game \
+		-config-path "$(config_path)" \
+		-env-role worker \
+		-env-worker-id "$(worker_id)" \
+		-env-state "$(state)"
 
 run_agent: config_path := ./app/agent/configs/dev.toml
 run_agent: server_id := 1

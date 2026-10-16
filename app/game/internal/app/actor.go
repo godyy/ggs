@@ -6,9 +6,7 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/handler"
-	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
-	"github.com/godyy/ggs/internal/base/nodeutil"
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/persist"
 	pbs2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
@@ -24,16 +22,17 @@ func ActorService() *actor.Service {
 }
 
 func (a *app) startActor() error {
-	selfNodeId := cluster.MakeNodeID(consts.NodeGame, nodeutil.MakeServerNodeName(Env().ServerID()))
+	selfNodeID := selfNode("").GetNodeId()
 
-	// 初始化 actors.
-	actor.Init(&actor.InitConfig{
-		Persist:           &persist.InitConfig{BD: a.mongobd},
-		DB:                a.env.DB(),
-		AsyncSaveCallback: a.actorAsyncSaveCallback,
-	})
+	if a.env.IsWorker() {
+		var err error
+		a.migrationStore, err = actor.NewMigrationStore(a.redisClient, a.config.Migration.SnapshotTTL)
+		if err != nil {
+			return pkgerrors.WithMessage(err, "new migration store")
+		}
+	}
 
-	// 创建注册表.
+	// 创建注册表与稳定归属存储。
 	var err error
 	a.actorRegistry, err = actor.CreateRegistry(&actor.RegistryConfig{
 		RedisCli: a.redisClient,
@@ -47,37 +46,60 @@ func (a *app) startActor() error {
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor server store")
 	}
+
+	// 初始化 Actor；Player 会通过 ServerStore 取得其所属区服。
+	actor.Init(&actor.InitConfig{
+		Persist:           &persist.InitConfig{BD: a.mongobd},
+		DB:                a.env.DB(),
+		AsyncSaveCallback: a.actorAsyncSaveCallback,
+		MigrationStore:    a.migrationStore,
+		ServerStore:       a.actorServerStore,
+	})
 	a.actorRouter = actor.NewRouter(actor.RouterConfig{ServerStore: a.actorServerStore})
 	a.actorRouter.SetNodes([]*cluster.Node{
 		selfNode(""),
 	}, true)
 
-	// 创建Actor服务.
-	a.actorService, err = service.NewClientService(&service.ServiceConfig{
-		NodeId:         selfNodeId,
+	serviceCfg := &service.ServiceConfig{
+		NodeId:         selfNodeID,
 		Handler:        a,
 		RequestHandler: handler.Handle,
-	})
+	}
+	if a.env.IsWorker() {
+		serviceCfg.ClientCategory = actor.CategoryPlayer.ActorCategory()
+		serviceCfg.Migration = a.migrationConfig()
+		a.actorService, err = service.NewClientService(serviceCfg)
+	} else {
+		a.actorService, err = service.NewInternalService(serviceCfg)
+	}
 
 	if err != nil {
 		return pkgerrors.WithMessage(err, "new actor service")
 	}
 	a.actorCodec = actor.NewCodec()
-	if err != nil {
-		return pkgerrors.WithMessage(err, "new actor codec")
-	}
 
 	// 启动actor服务
 	if err := a.actorService.Start(); err != nil {
 		return err
 	}
 
-	// 启动全局Actor.
-	if err := a.startGlobalActors(); err != nil {
-		return err
+	if !a.env.IsWorker() {
+		// 固定节点只启动全局 Actor.
+		if err := a.startGlobalActors(); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+// migrationConfig 构造 worker 使用的 gactor 迁移并发限制。
+func (a *app) migrationConfig() gactor.MigrationConfig {
+	cfg := a.config.Migration
+	return gactor.MigrationConfig{
+		MigrationMaxConcurrentActors:   cfg.MaxConcurrentActors,
+		MigrationMaxConcurrentForwards: cfg.MaxConcurrentForwards,
+	}
 }
 
 // startGlobalActors 启动全局Actor.

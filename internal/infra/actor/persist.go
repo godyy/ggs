@@ -6,6 +6,7 @@ import (
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor/persist"
+	"github.com/godyy/ggskit/infra/actor"
 	"go.uber.org/zap"
 )
 
@@ -27,27 +28,27 @@ func (p *persistor) SetSaveTimerId(timerId TimerId) {
 }
 
 // LoadModel 加载Actor模型.
-func LoadModel(a ActorSaveWithTimer) (bool, error) {
+func LoadModel(a actor.ActorWithModel) (bool, error) {
 	checkState()
-	return persist.LoadModel(a.GetModel(), db)
+	return persist.LoadModel(a)
 }
 
 // SaveModel 保存Actor模型.
-func SaveModel(a ActorSaveWithTimer) error {
+func SaveModel(a actor.ActorWithModel) error {
 	checkState()
-	return persist.SaveModel(a.GetModel(), db)
+	return persist.SaveModel(a)
 }
 
 // AsyncSaveModel 异步保存Actor模型.
-func AsyncSaveModel(a ActorSaveWithTimer) error {
+func AsyncSaveModel(a actor.ActorWithModel) error {
 	checkState()
-	return persist.AsyncSaveModel(a.GetActor().ActorUID(), a.GetModel(), db, asyncSaveModelCallback)
+	return persist.AsyncSaveModel(a, asyncSaveModelCallback)
 }
 
 // DelaySave 延迟保存Actor.
 func DelaySave(a ActorSaveWithTimer, delay time.Duration) {
 	checkState()
-	persist.DelaySaveActorModel(a, db, delay, asyncSaveModelCallback)
+	persist.DelaySaveActorModel(a, delay, asyncSaveModelCallback)
 }
 
 func asyncSaveModelCallback(uid gactor.ActorUID, err error) {

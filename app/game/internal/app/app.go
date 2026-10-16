@@ -36,11 +36,14 @@ type app struct {
 
 	cluster *cluster.Service // cluster.
 
-	actorCodec       *actor.Codec         // actor编解码
-	actorRegistry    gactor.ActorRegistry // actor 注册表
-	actorServerStore *actor.ServerStore   // actor 所属服务器存储
-	actorRouter      *actor.Router        // actor 节点路由
-	actorService     *actor.Service       // actor 服务
+	actorCodec       *actor.Codec          // actor编解码
+	actorRegistry    gactor.ActorRegistry  // actor 注册表
+	actorServerStore *actor.ServerStore    // actor 所属服务器存储
+	actorRouter      *actor.Router         // actor 节点路由
+	actorService     *actor.Service        // actor 服务
+	migrationStore   *actor.MigrationStore // worker 状态与会话快照存储
+	readinessStop    chan struct{}         // 关闭 worker 存活续期协程
+	workerInstanceID string                // 当前 worker 进程实例 ID
 
 	httpServer *http.Server // http 服务
 }
@@ -122,6 +125,10 @@ func Start() {
 		logger.Get().Fatalf("start cluster failed, %v", err)
 	}
 
+	if err := appInst.startWorkerReadiness(); err != nil {
+		logger.Get().Fatalf("start worker readiness failed, %v", err)
+	}
+
 	// 启动http服务.
 	appInst.startHttp()
 }
@@ -129,6 +136,9 @@ func Start() {
 func Stop() {
 	// 停止 http 服务.
 	appInst.stopHttp()
+
+	// 先移除 worker 就绪记录，避免新玩家落到正在停机的节点。
+	appInst.stopWorkerReadiness()
 
 	// 停止 Actor 服务.
 	appInst.stopActor()

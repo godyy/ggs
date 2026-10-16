@@ -77,5 +77,12 @@ func (a *app) OnNodesSync(nodes []*cluster.Node) {
 }
 
 func selfNode(addr string) *cluster.Node {
+	if Env().IsWorker() {
+		node, err := nodeutil.NewWorkerNode(Env().WorkerID(), addr)
+		if err != nil {
+			panic(err)
+		}
+		return node
+	}
 	return nodeutil.NewServerNode(consts.NodeGame, Env().ServerID(), addr)
 }

@@ -87,7 +87,7 @@ func handleChatRoomInvite(ctx *actor.Context, req *pbc2s.ChatRoomInviteReq) erro
 // handleChatHistory 处理获取聊天历史请求.
 func handleChatHistory(ctx *actor.Context, req *pbc2s.ChatHistoryReq) error {
 	p := actor.CtxActor[*actors.Player](ctx)
-	if err := actor.SugarContext(ctx).AsyncRPCWithTimeout(systems.Chat.MgrUID(), &pbs2s.ChatHistoryReq{
+	if err := actor.SugarContext(ctx).AsyncRPCWithTimeout(systems.Chat.MgrUID(p.ServerID()), &pbs2s.ChatHistoryReq{
 		MemberId:  p.ID(),
 		RoomId:    req.RoomId,
 		LastMsgId: req.LastMsgId,

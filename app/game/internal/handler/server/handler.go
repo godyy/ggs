@@ -9,4 +9,6 @@ import (
 func init() {
 	handler.RegisterS2S((*pbs2s.GetServerNameReq)(nil), actorhandler.WrapRPCFunc(handleGetServerName))
 	handler.RegisterS2S((*pbs2s.ReloadGDConfReq)(nil), actorhandler.WrapRPCFunc(handleReloadGDConf))
+	handler.RegisterS2S((*pbs2s.PlayerOnlineNtf)(nil), actorhandler.WrapCastFunc(handlePlayerOnline))
+	handler.RegisterS2S((*pbs2s.PlayerOfflineNtf)(nil), actorhandler.WrapCastFunc(handlePlayerOffline))
 }
