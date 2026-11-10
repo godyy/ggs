@@ -105,3 +105,8 @@ func (a *app) HandleDisconnect(id int64, sid uint32) {
 	}
 	agent.Stop(pbc2s.DisconnectPush_SystemError)
 }
+
+// FreeBuffer 释放缓冲区.
+func FreeBuffer(b *gactor.Buffer) {
+	b.Release()
+}

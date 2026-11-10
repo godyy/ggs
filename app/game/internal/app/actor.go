@@ -97,8 +97,8 @@ func (a *app) startActor() error {
 func (a *app) migrationConfig() gactor.MigrationConfig {
 	cfg := a.config.Migration
 	return gactor.MigrationConfig{
-		MigrationMaxConcurrentActors:   cfg.MaxConcurrentActors,
-		MigrationMaxConcurrentForwards: cfg.MaxConcurrentForwards,
+		MaxConcurrentActors:   cfg.MaxConcurrentActors,
+		MaxConcurrentForwards: cfg.MaxConcurrentForwards,
 	}
 }
 

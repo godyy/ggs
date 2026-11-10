@@ -19,9 +19,10 @@ type TimerFunc func(TimerArgs)
 
 // TimerArgs 定时器参数.
 type TimerArgs struct {
-	TID  TimerId // 定时器ID.
-	Args any     // 定时器参数.
-	Err  error   // 错误.
+	TID      TimerId // 定时器ID.
+	Periodic bool    // 是否为周期定时器.
+	Args     any     // 定时器参数.
+	Err      error   // 错误.
 }
 
 // TimerConfig 定时器配置.
@@ -67,11 +68,14 @@ func (t *timer) release() {}
 
 func (t *timer) trigger() {
 	defer t.release()
-	t.f(TimerArgs{
-		TID:  t.id,
-		Args: t.args,
-		Err:  t.err,
-	})
+	if t.f != nil {
+		t.f(TimerArgs{
+			TID:      t.id,
+			Periodic: t.periodic,
+			Args:     t.args,
+			Err:      t.err,
+		})
+	}
 }
 
 // timerCmd 定时器命令.
@@ -141,7 +145,6 @@ func (m *timerManager) run() {
 			c.release()
 		case <-m.svc.getStopWait().C:
 			m.timeWheel.Stop()
-			close(m.chTriggerd)
 			return
 		}
 	}

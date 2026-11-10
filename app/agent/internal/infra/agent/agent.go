@@ -8,6 +8,7 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/agent/internal"
+	"github.com/godyy/ggs/app/agent/internal/app"
 	"github.com/godyy/ggs/app/agent/internal/base/log"
 	"github.com/godyy/ggs/internal/base/crypto"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
@@ -32,7 +33,7 @@ type Agent struct {
 	mtx              sync.RWMutex                // 互斥锁.
 	playerId         int64                       // 角色ID.
 	sessionId        uint32                      // 会话ID.
-	chPendingPackets chan gactor.Buffer          // 待处理的上游数据包.
+	chPendingPackets chan *gactor.Buffer         // 待处理的上游数据包.
 	stopFlag         int32                       // 停机标志.
 	stopReason       pbc2s.DisconnectPush_Reason // 停机原因.
 	chStop           chan struct{}               // 用于提供停止信号.
@@ -48,7 +49,7 @@ func NewAgent(conn net.Conn, secretKey []byte) (*Agent, error) {
 	return &Agent{
 		conn:             conn,
 		crypto:           crypto,
-		chPendingPackets: make(chan gactor.Buffer, maxPendingPackets),
+		chPendingPackets: make(chan *gactor.Buffer, maxPendingPackets),
 		chStop:           make(chan struct{}),
 	}, nil
 }
@@ -134,6 +135,7 @@ write_loop:
 	for {
 		select {
 		case p := <-a.chPendingPackets:
+			defer app.FreeBuffer(p)
 			unread := p.UnreadData()
 
 			// hook
@@ -194,7 +196,7 @@ var ErrPacketLen = errors.New("packet len error")
 var ErrPacketPt = errors.New("packet pt error")
 
 // ReceivePacket 接收上游数据包.
-func (a *Agent) ReceivePacket(p gactor.Buffer) error {
+func (a *Agent) ReceivePacket(p *gactor.Buffer) error {
 	// 检查数据包
 	unread := p.UnreadData()
 	if len(unread) < codecc2s.HeadLen {
@@ -207,7 +209,7 @@ func (a *Agent) ReceivePacket(p gactor.Buffer) error {
 
 	// 数据包入列
 	select {
-	case a.chPendingPackets <- p:
+	case a.chPendingPackets <- p.CloneAndClear():
 		return nil
 	case <-a.chStop:
 		return ErrStopped

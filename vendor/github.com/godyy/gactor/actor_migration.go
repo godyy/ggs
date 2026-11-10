@@ -44,14 +44,15 @@ func (a *actorCore) startMigration(ai actorImpl) {
 		session = ca.session
 	}
 
-	// 当前只支持一对一迁移，因此目标节点始终由 Service 统一提供。
-	targetNodeID := a.service().migrationTarget()
+	// 目标节点由本 Actor 的冻结迁移计划决定，重试时不会重新规划。
+	targetNodeID := a.service().migrationTargetOf(ai.ActorUID())
 	if targetNodeID == "" {
 		a.service().releaseMigrationSlot(ai.ActorUID())
 		a.scheduleMigrationRetry(ai)
 		return
 	}
 	head := newS2SMigrateStartHead(a.service().genSeq(), ai.ActorUID(), a.service().nodeId(), a.leaseID, isCActorImpl(ai), session)
+	defer head.release()
 	// 先记录本轮序号，确保 OnMigrateOut 失败时 restoreMigration 也能释放槽位并安排重试。
 	migration := a.ensureMigrationRuntime()
 	migration.startSeq = head.seq
@@ -70,7 +71,7 @@ func (a *actorCore) startMigration(ai actorImpl) {
 			return
 		}
 	}
-	if err := a.service().sendRemotePacket(targetNodeID, &head, nil); err != nil {
+	if err := a.service().sendRemotePacket(targetNodeID, head, nil); err != nil {
 		a.getLogger().ErrorFields("send migrate start failed", lfdError(err))
 		a.restoreMigration(ai, err)
 		return
@@ -105,7 +106,6 @@ func (a *actorCore) restoreMigration(ai actorImpl, cause error) {
 }
 
 // scheduleMigrationRetry 在迁移失败后安排一次自动重试。
-// 当前仅支持一对一迁移，因此重试时直接复用 Service 级锁定的目标节点。
 func (a *actorCore) scheduleMigrationRetry(ai actorImpl) {
 	if !a.service().isMigrating() || a.isMigrated() {
 		return
@@ -184,8 +184,8 @@ func actorOnMigrationRetry(args ActorTimerArgs) {
 		return
 	}
 
-	// 迁移目标由 Service 统一锁定，重试时直接重新进入 draining 流程即可。
-	if core.service().migrationTarget() == "" {
+	// 迁移目标已按 Actor 冻结，重试时只重新进入 draining 流程。
+	if core.service().migrationTargetOf(ai.ActorUID()) == "" {
 		return
 	}
 	core.updateFlag(actorFlagMigrationDraining, true)
@@ -249,13 +249,13 @@ func canForwardMigrationMessage(msg message) bool {
 
 // forwardMigrationMessage 将已迁移源 Actor 收到的消息转发到目标节点。
 // 转发时会保留原始来源节点，确保目标节点处理后的回复仍然返回给真正的请求方。
-// 这里统一复用 Service 级锁定的迁移目标和计划内记录的 sourceLeaseID。
+// 这里复用 Actor 级冻结目标和计划内记录的 sourceLeaseID。
 func forwardMigrationMessage(s *Service, uid ActorUID, msg message) error {
 	if !s.isMigrationForwarding() {
 		return ErrCodeMigrationForwardingClosed
 	}
 	st := s.getMigrationState(uid)
-	targetNodeID := s.migrationTarget()
+	targetNodeID := s.migrationTargetOf(uid)
 	if st == nil || targetNodeID == "" || st.sourceLeaseID == "" {
 		return ErrCodeMigrationInProgress
 	}
@@ -277,23 +277,25 @@ func forwardMigrationMessage(s *Service, uid ActorUID, msg message) error {
 		s.recordMigrationForwardResult(err)
 		return err
 	case *messageConnect:
-		innerHead := newConnectHead(s.genSeq(), uid.ID, m.sid)
-		innerPacket, err := s.encodeRawPacket(&innerHead, nil)
+		innerPacket, err := s.encodeRawPacket(newConnectHead(s.genSeq(), uid.ID, m.sid), nil)
 		if err != nil {
 			return err
 		}
-		outerHead := newS2SMigrateForwardHead(s.genSeq(), uid, st.sourceLeaseID, m.nodeId, PacketTypeConnect)
-		err = s.sendRemoteRawPacket(targetNodeID, &outerHead, innerPacket)
+		head := newS2SMigrateForwardHead(s.genSeq(), uid, st.sourceLeaseID, m.nodeId, PacketTypeConnect)
+		defer head.release()
+		err = s.sendRemoteRawPacket(targetNodeID, head, innerPacket)
 		s.recordMigrationForwardResult(err)
 		return err
 	case *messageDisconnect:
-		innerHead := newDisconnectHead(s.genSeq(), uid.ID, m.sid)
-		innerPacket, err := s.encodeRawPacket(&innerHead, nil)
+		head := newDisconnectHead(s.genSeq(), uid.ID, m.sid)
+		defer head.release()
+		innerPacket, err := s.encodeRawPacket(head, nil)
 		if err != nil {
 			return err
 		}
-		outerHead := newS2SMigrateForwardHead(s.genSeq(), uid, st.sourceLeaseID, m.nodeId, PacketTypeDisconnect)
-		err = s.sendRemoteRawPacket(targetNodeID, &outerHead, innerPacket)
+		forwardHead := newS2SMigrateForwardHead(s.genSeq(), uid, st.sourceLeaseID, m.nodeId, PacketTypeDisconnect)
+		defer forwardHead.release()
+		err = s.sendRemoteRawPacket(targetNodeID, forwardHead, innerPacket)
 		s.recordMigrationForwardResult(err)
 		return err
 	default:

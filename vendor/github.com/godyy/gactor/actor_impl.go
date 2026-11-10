@@ -755,8 +755,6 @@ func (a *actorCore) receiveCompletedAsyncRPC(resp RPCResp, cb ActorRPCFunc) erro
 	}
 
 	msg := newMessageCompletedAsyncRPC(resp.payload, resp.err, cb)
-	resp.payload.SetBuf(nil)
-
 	begin := time.Now()
 	a.priMessageBox <- msg
 	if d := time.Since(begin); d > a.svc.getCfg().QueueWriteTimeAlarmThreshold {
@@ -909,14 +907,40 @@ type actorAsyncRPCFunc struct {
 	cb  ActorRPCFunc
 }
 
+var poolOfActorAsyncRPCFunc = &sync.Pool{
+	New: func() any {
+		return &actorAsyncRPCFunc{}
+	},
+}
+
+func newActorAsyncRPCFunc(svc *Service, uid ActorUID, cb ActorRPCFunc) *actorAsyncRPCFunc {
+	f := poolOfActorAsyncRPCFunc.Get().(*actorAsyncRPCFunc)
+	f.svc = svc
+	f.uid = uid
+	f.cb = cb
+	return f
+}
+
+func (f *actorAsyncRPCFunc) release() {
+	f.svc = nil
+	f.cb = nil
+	poolOfActorAsyncRPCFunc.Put(f)
+}
+
 func (f *actorAsyncRPCFunc) invoke(resp RPCResp) {
+	defer f.release()
+
 	if actor, err := f.svc.getActor(f.uid); err != nil {
+		f.svc.freeBuffer(resp.payload)
 		f.svc.getLogger().ErrorFields("get actor failed inside actorAsyncRPCFunc", f.svc.lfdActorUID("uid", f.uid), lfdError(err))
+		return
 	} else if actor == nil {
+		f.svc.freeBuffer(resp.payload)
 		f.svc.getLogger().WarnFields("actor not found inside actorAsyncRPCFunc", f.svc.lfdActorUID("uid", f.uid))
 	} else {
 		defer actor.core().deref()
 		if err := actor.core().receiveCompletedAsyncRPC(resp, f.cb); err != nil {
+			f.svc.freeBuffer(resp.payload)
 			actor.core().getLogger().ErrorFields("receive async rpc call failed", lfdError(err))
 		}
 	}
@@ -929,13 +953,9 @@ func (a *actorCore) AsyncRPCWithDeadline(to ActorUID, params any, cb ActorRPCFun
 		return err
 	}
 
-	asyncFunc := &actorAsyncRPCFunc{
-		svc: a.svc,
-		uid: a.ActorUID(),
-		cb:  cb,
-	}
-
+	asyncFunc := newActorAsyncRPCFunc(a.svc, a.ActorUID(), cb)
 	if err := a.svc.asyncRPCWithDeadline(a.ActorUID(), to, params, asyncFunc.invoke, deadline); err != nil {
+		asyncFunc.release()
 		_ = a.deref()
 		return err
 	}
@@ -964,13 +984,9 @@ func (a *actorCore) AsyncRPCWithContext(ctx context.Context, to ActorUID, params
 		return err
 	}
 
-	asyncFunc := &actorAsyncRPCFunc{
-		svc: a.svc,
-		uid: a.ActorUID(),
-		cb:  cb,
-	}
-
+	asyncFunc := newActorAsyncRPCFunc(a.svc, a.ActorUID(), cb)
 	if err := a.svc.asyncRPCWithContext(ctx, a.ActorUID(), to, params, asyncFunc.invoke); err != nil {
+		asyncFunc.release()
 		_ = a.deref()
 		return err
 	}
@@ -997,8 +1013,28 @@ type actorFuncCaller struct {
 	id  uint32   // 异步调用 ID
 }
 
+var poolOfActorFuncCaller = &sync.Pool{
+	New: func() any {
+		return &actorFuncCaller{}
+	},
+}
+
+func newActorFuncCaller(svc *Service, uid ActorUID, id uint32) *actorFuncCaller {
+	c := poolOfActorFuncCaller.Get().(*actorFuncCaller)
+	c.svc = svc
+	c.uid = uid
+	c.id = id
+	return c
+}
+
 func (c *actorFuncCaller) invoke(value any, err error) error {
+	defer c.release()
 	return c.svc.asyncCallActorFunc(c.uid, c.id, value, err)
+}
+
+func (c *actorFuncCaller) release() {
+	c.svc = nil
+	poolOfActorFuncCaller.Put(c)
 }
 
 // nextAsyncCallId 获取下一个异步调用 ID.
@@ -1029,12 +1065,7 @@ func (a *actorCore) asyncCall(ai actorImpl, f ActorFunc, timeout time.Duration) 
 		f:          f,
 		timeoutTid: timeoutTid,
 	}
-	caller := &actorFuncCaller{
-		svc: a.svc,
-		uid: a.ActorUID(),
-		id:  callId,
-	}
-	return caller.invoke, nil
+	return newActorFuncCaller(a.svc, a.ActorUID(), callId).invoke, nil
 }
 
 // actor Actor 内部实现.
@@ -1146,8 +1177,7 @@ func (a *cactor) PushRawMessage(payload any) error {
 	if a.session.NodeId == "" {
 		return ErrCodeActorNotConnected
 	}
-	ph := newRawPushHead(a.service().genSeq(), a.id, a.session.SID)
-	return a.svc.sendRemotePacket(a.session.NodeId, &ph, payload)
+	return a.svc.sendRemotePacket(a.session.NodeId, newRawPushHead(a.service().genSeq(), a.id, a.session.SID), payload)
 }
 
 // pushRawPayload 向客户端直推已编码 payload.
@@ -1156,8 +1186,7 @@ func (a *cactor) pushRawPayload(payload []byte) error {
 	if a.session.NodeId == "" {
 		return ErrCodeActorNotConnected
 	}
-	ph := newRawPushHead(a.service().genSeq(), a.id, a.session.SID)
-	return a.svc.sendRemoteRawPacket(a.session.NodeId, &ph, payload)
+	return a.svc.sendRemoteRawPacket(a.session.NodeId, newRawPushHead(a.service().genSeq(), a.id, a.session.SID), payload)
 }
 
 // Disconnect 端开与客户端的连接.
@@ -1166,8 +1195,7 @@ func (a *cactor) Disconnect() {
 		return
 	}
 
-	ph := newDisconnectHead(a.svc.genSeq(), a.id, a.session.SID)
-	if err := a.svc.sendRemotePacket(a.session.NodeId, &ph, nil); err != nil {
+	if err := a.svc.sendRemotePacket(a.session.NodeId, newDisconnectHead(a.svc.genSeq(), a.id, a.session.SID), nil); err != nil {
 		a.getLogger().ErrorFields("send disconnect packet failed", lfdSession(a.session), lfdError(err))
 	} else {
 		a.getLogger().DebugFields("disconnect", lfdSession(a.session))

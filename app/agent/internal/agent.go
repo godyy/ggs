@@ -17,7 +17,7 @@ type Agent interface {
 	SessionId() uint32
 
 	// ReceivePacket 接收上游数据包.
-	ReceivePacket(p gactor.Buffer) error
+	ReceivePacket(p *gactor.Buffer) error
 
 	// Stop Agent 停机.
 	Stop(reason pbc2s.DisconnectPush_Reason)

@@ -12,43 +12,70 @@ import (
 
 // MigrationConfig Service 动态迁移配置.
 type MigrationConfig struct {
-	// MigrationMaxConcurrentActors 限制同时等待目标节点结果的 Actor 数量。
+	// MaxConcurrentActors 限制同时等待目标节点结果的 Actor 数量。
 	// 默认值 256；小于等于 0 时使用默认值。
-	MigrationMaxConcurrentActors int
+	MaxConcurrentActors int
 
-	// MigrationMaxConcurrentForwards 限制源节点同时发送的迁移转发请求数量。
+	// MaxConcurrentInboundActors 限制目标节点同时接管的 Actor 数量。
 	// 默认值 256；小于等于 0 时使用默认值。
-	MigrationMaxConcurrentForwards int
+	MaxConcurrentInboundActors int
+
+	// MaxConcurrentForwards 限制源节点同时发送的迁移转发请求数量。
+	// 默认值 256；小于等于 0 时使用默认值。
+	MaxConcurrentForwards int
 }
+
+// inboundMigrationAttempt 唯一标识目标节点正在处理的一次迁移接管。
+// 同一 UID 的重复迁移包复用该尝试，避免重复占用接管容量。
+type inboundMigrationAttempt struct {
+	sourceNodeID  string
+	sourceLeaseID string
+}
+
+// inboundMigrationRuntime 收拢本节点作为迁移目标时的接管运行时状态。
+// 所有字段必须在持有 Service.mtxInboundMigration 时访问。
+type inboundMigrationRuntime struct {
+	inFlight map[ActorUID]inboundMigrationAttempt // 正在接管的 Actor。
+}
+
+type inboundMigrationSlotResult uint8
+
+const (
+	inboundMigrationSlotAcquired inboundMigrationSlotResult = iota
+	inboundMigrationSlotDuplicate
+	inboundMigrationSlotConflict
+	inboundMigrationSlotBusy
+)
 
 // serviceMigrationRuntime 收拢单轮 Service 迁移的可变运行时状态。
 // 所有字段必须在持有 Service.mtxMigration 时访问。
 type serviceMigrationRuntime struct {
-	migrationStarted         bool                              // 是否迁移中.
-	migrationConverged       bool                              // 迁移计划是否已经收敛完成.
-	migrationConvergedAt     time.Time                         // 迁移收敛时间.
-	migrationTargetNodeID    string                            // Service 级统一迁移目标节点.
-	migrationActors          map[ActorUID]*actorMigrationState // 迁移中的 Actor 局部迁移状态.
-	migrationCounters        migrationPhaseCounters            // 迁移阶段统计.
-	migrationConvergedCh     chan struct{}                     // 本轮迁移收敛完成通知.
-	migrationStoppedCh       chan struct{}                     // 本轮迁移被 Service 停止中断通知.
-	migrationWaitStopped     bool                              // 是否已中断迁移等待.
-	migrationConvergedCb     ServiceMigrationConvergedFunc     // 迁移收敛回调.
-	migrationCallbackFired   bool                              // 迁移收敛回调是否已触发.
-	migrationForwarding      bool                              // 是否继续由源节点转发已迁移 Actor 的业务消息.
-	migrationInFlight        map[ActorUID]struct{}             // 已占用迁移并发槽位的 Actor.
-	migrationForwardInFlight int                               // 正在发送的迁移转发请求数量.
-	migrationForwarded       uint64                            // 已成功发送的迁移转发包数量.
-	migrationForwardFailed   uint64                            // 迁移转发失败数量.
-	migrationForwardBusy     uint64                            // 因转发背压被拒绝的业务消息数量.
-	migrationStartedAt       time.Time                         // 本轮迁移开始时间，用于计算收敛耗时.
-	migrationRetryCount      uint64                            // 本轮迁移累计安排的重试次数.
-	migrationMaxRetry        uint32                            // 单个 Actor 的最大累计重试次数.
+	started         bool                              // 是否迁移中.
+	converged       bool                              // 迁移计划是否已经收敛完成.
+	convergedAt     time.Time                         // 迁移收敛时间.
+	targetNodeID    string                            // 单目标计划的 Service 级目标；混合目标时为空.
+	actors          map[ActorUID]*actorMigrationState // 迁移中的 Actor 局部迁移状态.
+	counters        migrationPhaseCounters            // 迁移阶段统计.
+	convergedCh     chan struct{}                     // 本轮迁移收敛完成通知.
+	stoppedCh       chan struct{}                     // 本轮迁移被 Service 停止中断通知.
+	waitStopped     bool                              // 是否已中断迁移等待.
+	convergedCb     ServiceMigrationConvergedFunc     // 迁移收敛回调.
+	callbackFired   bool                              // 迁移收敛回调是否已触发.
+	forwarding      bool                              // 是否继续由源节点转发已迁移 Actor 的业务消息.
+	inFlight        map[ActorUID]struct{}             // 已占用迁移并发槽位的 Actor.
+	forwardInFlight int                               // 正在发送的迁移转发请求数量.
+	forwarded       uint64                            // 已成功发送的迁移转发包数量.
+	forwardFailed   uint64                            // 迁移转发失败数量.
+	forwardBusy     uint64                            // 因转发背压被拒绝的业务消息数量.
+	startedAt       time.Time                         // 本轮迁移开始时间，用于计算收敛耗时.
+	retryCount      uint64                            // 本轮迁移累计安排的重试次数.
+	maxRetry        uint32                            // 单个 Actor 的最大累计重试次数.
 }
 
 // actorMigrationState 记录源节点侧针对某个 Actor 的迁移上下文。
-// 当前只支持 Service 级一对一迁移，因此这里仅保留 Actor 自己这一轮迁移的局部状态。
+// 目标节点在计划冻结时确定，后续重试和转发不会修改。
 type actorMigrationState struct {
+	targetNodeID  string              // 本 Actor 在冻结计划中的目标节点。
 	phase         ActorMigrationPhase // 当前迁移阶段。
 	sourceLeaseID string              // 已发起迁移时使用的源租约。
 	startSeq      uint32              // 当前迁移开始包序号，用于过滤迟到结果。
@@ -135,6 +162,7 @@ const (
 // ActorMigrationSnapshot 描述单个 Actor 当前的迁移快照。
 type ActorMigrationSnapshot struct {
 	UID           ActorUID            // Actor 唯一标识。
+	TargetNodeID  string              // 本 Actor 在冻结计划中的目标节点。
 	Phase         ActorMigrationPhase // 当前迁移阶段。
 	SourceLeaseID string              // 当前迁移代际对应的源租约。
 	StartSeq      uint32              // 当前迁移开始包序号。
@@ -150,7 +178,7 @@ type ServiceMigrationSnapshot struct {
 	Started               bool                     // 是否已开始本轮迁移。
 	Converged             bool                     // 冻结计划内所有 Actor 是否均已进入终态。
 	ConvergedAt           time.Time                // 零值表示当前尚未收敛完成。
-	TargetNodeID          string                   // 本轮迁移锁定的目标节点。
+	TargetNodeID          string                   // 单目标计划的锁定目标；混合目标计划时为空。
 	TrackedActorCount     int                      // 本轮冻结计划中的 Actor 数量。
 	PendingActorCount     int                      // 尚未开始处理迁移的 Actor 数量。
 	DrainingActorCount    int                      // 等待异步闭环完成的 Actor 数量。
@@ -178,6 +206,11 @@ type ServiceMigrationSnapshot struct {
 // 回调入参为触发时刻的迁移快照。
 type ServiceMigrationConvergedFunc func(snapshot ServiceMigrationSnapshot)
 
+// ServiceMigrationPlanner 为冻结计划中的每个 Actor 返回本轮固定的目标节点。
+// 它在迁移开始前同步调用一次；实现必须快速、无阻塞，且不得反向创建或迁移本 Service 的 Actor。
+// 返回错误会使整轮迁移在开始前失败。
+type ServiceMigrationPlanner func(uid ActorUID) (targetNodeID string, err error)
+
 // migrationStartRetryTimerArgs 标记 Service 侧的迁移启动消息重试。
 // Actor 尚未收到启动消息时，重试必须由 Service 负责。
 type migrationStartRetryTimerArgs struct {
@@ -188,23 +221,33 @@ type migrationStartRetryTimerArgs struct {
 func (s *Service) isMigrating() bool {
 	s.mtxMigration.RLock()
 	defer s.mtxMigration.RUnlock()
-	return s.migration != nil && s.migration.migrationStarted
+	return s.migration != nil && s.migration.started
 }
 
-func (s *Service) migrationTarget() string {
+func (s *Service) migrationTargetOf(uid ActorUID) string {
 	s.mtxMigration.RLock()
 	defer s.mtxMigration.RUnlock()
-	if s.migration == nil {
+	if s.migration == nil || !s.migration.started {
 		return ""
 	}
-	return s.migration.migrationTargetNodeID
+	if st := s.migration.actors[uid]; st != nil {
+		return st.targetNodeID
+	}
+	// 兼容包内直接构造的单目标迁移运行时。
+	return s.migration.targetNodeID
 }
 
-// isMigrationTarget 校验迁移控制结果是否来自当前锁定的目标节点。
-func (s *Service) isMigrationTarget(nodeID string) bool {
+// isMigrationTargetOf 校验迁移控制结果是否来自该 Actor 锁定的目标节点。
+func (s *Service) isMigrationTargetOf(uid ActorUID, nodeID string) bool {
 	s.mtxMigration.RLock()
 	defer s.mtxMigration.RUnlock()
-	return s.migration != nil && s.migration.migrationStarted && s.migration.migrationTargetNodeID == nodeID
+	if s.migration == nil || !s.migration.started {
+		return false
+	}
+	if st := s.migration.actors[uid]; st != nil {
+		return st.targetNodeID == nodeID
+	}
+	return s.migration.targetNodeID == nodeID
 }
 
 // denyMigrationControl 记录因来源校验而拒绝的迁移控制包。
@@ -224,38 +267,39 @@ func (s *Service) cloneMigrationSnapshotLocked() ServiceMigrationSnapshot {
 		}
 	}
 	snapshot := ServiceMigrationSnapshot{
-		Started:               s.migration.migrationStarted,
-		Converged:             s.migration.migrationConverged,
-		ConvergedAt:           s.migration.migrationConvergedAt,
-		TargetNodeID:          s.migration.migrationTargetNodeID,
-		TrackedActorCount:     len(s.migration.migrationActors),
-		PendingActorCount:     s.migration.migrationCounters.pending,
-		DrainingActorCount:    s.migration.migrationCounters.draining,
-		WaitingSlotActorCount: s.migration.migrationCounters.waitingSlot,
-		MigratingOutCount:     s.migration.migrationCounters.migratingOut,
-		MigratedActorCount:    s.migration.migrationCounters.migrated,
-		RetryingActorCount:    s.migration.migrationCounters.retrying,
-		StoppedActorCount:     s.migration.migrationCounters.stopped,
-		InFlightActorCount:    len(s.migration.migrationInFlight),
-		MaxConcurrentActors:   s.cfg.Migration.MigrationMaxConcurrentActors,
-		ForwardInFlightCount:  s.migration.migrationForwardInFlight,
-		MaxConcurrentForwards: s.cfg.Migration.MigrationMaxConcurrentForwards,
-		ForwardingEnabled:     s.migration.migrationForwarding,
-		ForwardedCount:        s.migration.migrationForwarded,
-		ForwardFailedCount:    s.migration.migrationForwardFailed,
-		ForwardBusyCount:      s.migration.migrationForwardBusy,
+		Started:               s.migration.started,
+		Converged:             s.migration.converged,
+		ConvergedAt:           s.migration.convergedAt,
+		TargetNodeID:          s.migration.targetNodeID,
+		TrackedActorCount:     len(s.migration.actors),
+		PendingActorCount:     s.migration.counters.pending,
+		DrainingActorCount:    s.migration.counters.draining,
+		WaitingSlotActorCount: s.migration.counters.waitingSlot,
+		MigratingOutCount:     s.migration.counters.migratingOut,
+		MigratedActorCount:    s.migration.counters.migrated,
+		RetryingActorCount:    s.migration.counters.retrying,
+		StoppedActorCount:     s.migration.counters.stopped,
+		InFlightActorCount:    len(s.migration.inFlight),
+		MaxConcurrentActors:   s.cfg.Migration.MaxConcurrentActors,
+		ForwardInFlightCount:  s.migration.forwardInFlight,
+		MaxConcurrentForwards: s.cfg.Migration.MaxConcurrentForwards,
+		ForwardingEnabled:     s.migration.forwarding,
+		ForwardedCount:        s.migration.forwarded,
+		ForwardFailedCount:    s.migration.forwardFailed,
+		ForwardBusyCount:      s.migration.forwardBusy,
 		ControlDeniedCount:    s.migrationControlDenied,
-		RetryCount:            s.migration.migrationRetryCount,
-		MaxRetryAttempts:      s.migration.migrationMaxRetry,
-		StartedAt:             s.migration.migrationStartedAt,
-		Actors:                make([]ActorMigrationSnapshot, 0, len(s.migration.migrationActors)),
+		RetryCount:            s.migration.retryCount,
+		MaxRetryAttempts:      s.migration.maxRetry,
+		StartedAt:             s.migration.startedAt,
+		Actors:                make([]ActorMigrationSnapshot, 0, len(s.migration.actors)),
 	}
-	for uid, st := range s.migration.migrationActors {
+	for uid, st := range s.migration.actors {
 		if st == nil {
 			continue
 		}
 		actorSnapshot := ActorMigrationSnapshot{
 			UID:           uid,
+			TargetNodeID:  st.targetNodeID,
 			Phase:         st.phase,
 			SourceLeaseID: st.sourceLeaseID,
 			StartSeq:      st.startSeq,
@@ -319,25 +363,25 @@ func canTransitMigrationPhase(from, to ActorMigrationPhase) bool {
 // 只有当计划内所有 Actor 都进入终态时，才会标记收敛并准备触发一次性回调。
 // 这里不会主动退出 migrationStarted，因为源节点仍可能需要继续承担转发职责。
 func (s *Service) tryMarkMigrationConvergedLocked() (ServiceMigrationSnapshot, ServiceMigrationConvergedFunc, bool) {
-	if !s.migration.migrationStarted || s.migration.migrationConverged || s.migration.migrationWaitStopped {
+	if !s.migration.started || s.migration.converged || s.migration.waitStopped {
 		return ServiceMigrationSnapshot{}, nil, false
 	}
 	// 收敛判定改为基于增量维护的非终态计数，避免每次状态推进都在锁内全量扫描。
-	if s.migration.migrationCounters.nonTerminal > 0 {
+	if s.migration.counters.nonTerminal > 0 {
 		return ServiceMigrationSnapshot{}, nil, false
 	}
-	s.migration.migrationConverged = true
-	s.migration.migrationConvergedAt = time.Now()
+	s.migration.converged = true
+	s.migration.convergedAt = time.Now()
 	// 监控实现可能回查迁移快照，不能在 mtxMigration 锁内同步调用。
-	go s.monitorMigrationConverged(s.migration.migrationConvergedAt.Sub(s.migration.migrationStartedAt))
+	go s.monitorMigrationConverged(s.migration.convergedAt.Sub(s.migration.startedAt))
 	// 关闭完成 channel 唤醒所有等待者。阶段转换不允许从终态回退，
 	// 因此收敛状态一经成立便保持不可逆。
-	close(s.migration.migrationConvergedCh)
-	if s.migration.migrationConvergedCb == nil || s.migration.migrationCallbackFired {
+	close(s.migration.convergedCh)
+	if s.migration.convergedCb == nil || s.migration.callbackFired {
 		return ServiceMigrationSnapshot{}, nil, false
 	}
-	s.migration.migrationCallbackFired = true
-	return s.cloneMigrationSnapshotLocked(), s.migration.migrationConvergedCb, true
+	s.migration.callbackFired = true
+	return s.cloneMigrationSnapshotLocked(), s.migration.convergedCb, true
 }
 
 // notifyMigrationConverged 在锁外异步触发收敛回调。
@@ -357,30 +401,31 @@ func (s *Service) notifyMigrationConverged(snapshot ServiceMigrationSnapshot, cb
 
 // initMigrationPlan 冻结本轮迁移计划。
 // 迁移收敛判定仅基于这份冻结快照，不受迁移过程中动态新增 Actor 影响。
-func (s *Service) initMigrationPlan(uids []ActorUID) {
+func (s *Service) initMigrationPlan(targets map[ActorUID]string) {
 	s.mtxMigration.Lock()
 	if s.migration == nil {
 		s.migration = &serviceMigrationRuntime{}
 	}
-	s.migration.migrationActors = make(map[ActorUID]*actorMigrationState, len(uids))
-	s.migration.migrationCounters = newMigrationPhaseCounters(len(uids))
-	if s.migration.migrationConvergedCh == nil {
+	s.migration.actors = make(map[ActorUID]*actorMigrationState, len(targets))
+	s.migration.counters = newMigrationPhaseCounters(len(targets))
+	if s.migration.convergedCh == nil {
 		// 仅用于内部测试或直接初始化计划的场景；正常路径会在 beginMigration 创建。
-		s.migration.migrationConvergedCh = make(chan struct{})
+		s.migration.convergedCh = make(chan struct{})
 	}
-	if s.migration.migrationStoppedCh == nil {
+	if s.migration.stoppedCh == nil {
 		// 与收敛完成 channel 分离，避免 Service 停机被错误视作迁移成功。
-		s.migration.migrationStoppedCh = make(chan struct{})
+		s.migration.stoppedCh = make(chan struct{})
 	}
-	for _, uid := range uids {
-		s.migration.migrationActors[uid] = &actorMigrationState{
-			phase: ActorMigrationPhasePending,
+	for uid, targetNodeID := range targets {
+		s.migration.actors[uid] = &actorMigrationState{
+			targetNodeID: targetNodeID,
+			phase:        ActorMigrationPhasePending,
 		}
 	}
-	s.migration.migrationConverged = false
-	s.migration.migrationConvergedAt = time.Time{}
-	s.migration.migrationWaitStopped = false
-	s.migration.migrationCallbackFired = false
+	s.migration.converged = false
+	s.migration.convergedAt = time.Time{}
+	s.migration.waitStopped = false
+	s.migration.callbackFired = false
 	snapshot, cb, ok := s.tryMarkMigrationConvergedLocked()
 	s.mtxMigration.Unlock()
 
@@ -395,7 +440,7 @@ func (s *Service) updateMigrationActor(uid ActorUID, update func(st *actorMigrat
 		s.mtxMigration.Unlock()
 		return
 	}
-	st := s.migration.migrationActors[uid]
+	st := s.migration.actors[uid]
 	if st == nil {
 		s.mtxMigration.Unlock()
 		return
@@ -410,11 +455,11 @@ func (s *Service) updateMigrationActor(uid ActorUID, update func(st *actorMigrat
 		)
 		return
 	}
-	s.migration.migrationCounters.transition(st.phase, next.phase)
+	s.migration.counters.transition(st.phase, next.phase)
 	if next.retryAttempts > st.retryAttempts {
-		s.migration.migrationRetryCount += uint64(next.retryAttempts - st.retryAttempts)
-		if next.retryAttempts > s.migration.migrationMaxRetry {
-			s.migration.migrationMaxRetry = next.retryAttempts
+		s.migration.retryCount += uint64(next.retryAttempts - st.retryAttempts)
+		if next.retryAttempts > s.migration.maxRetry {
+			s.migration.maxRetry = next.retryAttempts
 		}
 	}
 	if st.phase == ActorMigrationPhasePending && next.phase != ActorMigrationPhasePending {
@@ -490,16 +535,16 @@ func (s *Service) markMigrationActorStopped(uid ActorUID) {
 func (s *Service) tryAcquireMigrationSlot(uid ActorUID) bool {
 	s.mtxMigration.Lock()
 	defer s.mtxMigration.Unlock()
-	if s.migration == nil || !s.migration.migrationStarted || s.migration.migrationWaitStopped {
+	if s.migration == nil || !s.migration.started || s.migration.waitStopped {
 		return false
 	}
-	if _, ok := s.migration.migrationInFlight[uid]; ok {
+	if _, ok := s.migration.inFlight[uid]; ok {
 		return true
 	}
-	if len(s.migration.migrationInFlight) >= s.cfg.Migration.MigrationMaxConcurrentActors {
+	if len(s.migration.inFlight) >= s.cfg.Migration.MaxConcurrentActors {
 		return false
 	}
-	s.migration.migrationInFlight[uid] = struct{}{}
+	s.migration.inFlight[uid] = struct{}{}
 	return true
 }
 
@@ -518,7 +563,7 @@ func (s *Service) markMigrationActorWaitingSlot(uid ActorUID) {
 func (s *Service) releaseMigrationSlot(uid ActorUID) {
 	s.mtxMigration.Lock()
 	if s.migration != nil {
-		delete(s.migration.migrationInFlight, uid)
+		delete(s.migration.inFlight, uid)
 	}
 	s.mtxMigration.Unlock()
 }
@@ -531,9 +576,9 @@ func (s *Service) recordMigrationForwardResult(err error) {
 		return
 	}
 	if err == nil {
-		s.migration.migrationForwarded++
+		s.migration.forwarded++
 	} else {
-		s.migration.migrationForwardFailed++
+		s.migration.forwardFailed++
 	}
 	s.mtxMigration.Unlock()
 	if err == nil {
@@ -547,22 +592,22 @@ func (s *Service) recordMigrationForwardResult(err error) {
 func (s *Service) tryAcquireMigrationForwardSlot() bool {
 	s.mtxMigration.Lock()
 	defer s.mtxMigration.Unlock()
-	if s.migration == nil || !s.migration.migrationStarted || !s.migration.migrationForwarding ||
-		s.migration.migrationForwardInFlight >= s.cfg.Migration.MigrationMaxConcurrentForwards {
+	if s.migration == nil || !s.migration.started || !s.migration.forwarding ||
+		s.migration.forwardInFlight >= s.cfg.Migration.MaxConcurrentForwards {
 		if s.migration != nil {
-			s.migration.migrationForwardBusy++
+			s.migration.forwardBusy++
 		}
 		return false
 	}
-	s.migration.migrationForwardInFlight++
+	s.migration.forwardInFlight++
 	return true
 }
 
 // releaseMigrationForwardSlot 释放转发发送槽位。
 func (s *Service) releaseMigrationForwardSlot() {
 	s.mtxMigration.Lock()
-	if s.migration != nil && s.migration.migrationForwardInFlight > 0 {
-		s.migration.migrationForwardInFlight--
+	if s.migration != nil && s.migration.forwardInFlight > 0 {
+		s.migration.forwardInFlight--
 	}
 	s.mtxMigration.Unlock()
 }
@@ -590,16 +635,16 @@ func (s *Service) WaitMigrationConverged(ctx context.Context) error {
 	}
 
 	s.mtxMigration.RLock()
-	if s.migration == nil || !s.migration.migrationStarted {
+	if s.migration == nil || !s.migration.started {
 		s.mtxMigration.RUnlock()
 		return ErrCodeMigrationNotStarted
 	}
-	if s.migration.migrationConverged {
+	if s.migration.converged {
 		s.mtxMigration.RUnlock()
 		return nil
 	}
-	done := s.migration.migrationConvergedCh
-	stopped := s.migration.migrationStoppedCh
+	done := s.migration.convergedCh
+	stopped := s.migration.stoppedCh
 	s.mtxMigration.RUnlock()
 
 	// 收敛完成、Service 停机和调用方取消三种结果必须区分返回，
@@ -621,7 +666,7 @@ func (s *Service) getMigrationState(uid ActorUID) *actorMigrationState {
 		return nil
 	}
 
-	st := s.migration.migrationActors[uid]
+	st := s.migration.actors[uid]
 	if st == nil {
 		return nil
 	}
@@ -630,46 +675,43 @@ func (s *Service) getMigrationState(uid ActorUID) *actorMigrationState {
 	return &cp
 }
 
-// beginMigration 将 Service 切换为迁移中状态，并记录本轮冻结的目标节点与收敛回调。
+// beginMigration 将 Service 切换为迁移中状态，并记录本轮冻结计划的收敛回调。
 func (s *Service) beginMigration(targetNodeID string, cb ServiceMigrationConvergedFunc) error {
 	if err := s.lockState(serviceStateStarted, false); err != nil {
 		return err
 	}
 	defer s.unlockState(false)
 
-	if targetNodeID == "" || targetNodeID == s.nodeId() {
-		return ErrCodeMigrationTargetInvalid
-	}
 	s.mtxMigration.Lock()
 	defer s.mtxMigration.Unlock()
 	if s.migration == nil {
 		s.migration = &serviceMigrationRuntime{}
 	}
-	if s.migration.migrationStarted {
+	if s.migration.started {
 		return ErrCodeMigrationInProgress
 	}
-	s.migration.migrationStarted = true
-	s.migration.migrationTargetNodeID = targetNodeID
-	s.migration.migrationConverged = false
-	s.migration.migrationConvergedAt = time.Time{}
+	s.migration.started = true
+	s.migration.targetNodeID = targetNodeID
+	s.migration.converged = false
+	s.migration.convergedAt = time.Time{}
 	// 每轮迁移独立创建通知 channel，避免复用上一轮已关闭的 channel。
-	s.migration.migrationConvergedCh = make(chan struct{})
-	s.migration.migrationStoppedCh = make(chan struct{})
-	s.migration.migrationWaitStopped = false
-	s.migration.migrationForwarding = true
-	s.migration.migrationInFlight = make(map[ActorUID]struct{})
-	s.migration.migrationForwarded = 0
-	s.migration.migrationForwardFailed = 0
-	s.migration.migrationForwardBusy = 0
-	s.migration.migrationForwardInFlight = 0
+	s.migration.convergedCh = make(chan struct{})
+	s.migration.stoppedCh = make(chan struct{})
+	s.migration.waitStopped = false
+	s.migration.forwarding = true
+	s.migration.inFlight = make(map[ActorUID]struct{})
+	s.migration.forwarded = 0
+	s.migration.forwardFailed = 0
+	s.migration.forwardBusy = 0
+	s.migration.forwardInFlight = 0
 	s.migrationControlDenied = 0
-	s.migration.migrationRetryCount = 0
-	s.migration.migrationMaxRetry = 0
-	s.migration.migrationStartedAt = time.Now()
+	s.migration.retryCount = 0
+	s.migration.maxRetry = 0
+	s.migration.startedAt = time.Now()
 	// 回调与迁移目标一样都属于“本轮迁移计划”的一部分，
 	// 因此在开始迁移时一并冻结下来，避免后续动态改写语义。
-	s.migration.migrationConvergedCb = cb
-	s.migration.migrationCallbackFired = false
+	s.migration.convergedCb = cb
+	s.migration.callbackFired = false
 	// 监控实现是外部代码，异步触发避免其回查快照时重入迁移锁。
 	go s.monitorMigrationAction(MonitorMigrationStart)
 	return nil
@@ -681,13 +723,13 @@ func (s *Service) beginMigration(targetNodeID string, cb ServiceMigrationConverg
 func (s *Service) FinishMigrationForwarding() error {
 	s.mtxMigration.Lock()
 	defer s.mtxMigration.Unlock()
-	if s.migration == nil || !s.migration.migrationStarted {
+	if s.migration == nil || !s.migration.started {
 		return ErrCodeMigrationNotStarted
 	}
-	if !s.migration.migrationConverged {
+	if !s.migration.converged {
 		return ErrCodeMigrationInProgress
 	}
-	s.migration.migrationForwarding = false
+	s.migration.forwarding = false
 	return nil
 }
 
@@ -700,20 +742,20 @@ func (s *Service) FinalizeMigration(ctx context.Context) error {
 	}
 
 	s.mtxMigration.RLock()
-	if s.migration == nil || !s.migration.migrationStarted {
+	if s.migration == nil || !s.migration.started {
 		s.mtxMigration.RUnlock()
 		return ErrCodeMigrationNotStarted
 	}
-	if !s.migration.migrationConverged {
+	if !s.migration.converged {
 		s.mtxMigration.RUnlock()
 		return ErrCodeMigrationInProgress
 	}
-	if s.migration.migrationForwarding {
+	if s.migration.forwarding {
 		s.mtxMigration.RUnlock()
 		return ErrCodeMigrationForwardingActive
 	}
-	uids := make([]ActorUID, 0, s.migration.migrationCounters.migrated)
-	for uid, st := range s.migration.migrationActors {
+	uids := make([]ActorUID, 0, s.migration.counters.migrated)
+	for uid, st := range s.migration.actors {
 		if st != nil && st.phase == ActorMigrationPhaseMigrated {
 			uids = append(uids, uid)
 		}
@@ -752,46 +794,83 @@ func (s *Service) FinalizeMigration(ctx context.Context) error {
 func (s *Service) isMigrationFinalized() bool {
 	s.mtxMigration.RLock()
 	defer s.mtxMigration.RUnlock()
-	if s.migration == nil || !s.migration.migrationStarted || s.migration.migrationForwarding {
+	if s.migration == nil || !s.migration.started || s.migration.forwarding {
 		return false
 	}
-	return s.migration.migrationCounters.migrated == 0
+	return s.migration.counters.migrated == 0
 }
 
 // clearFinalizedMigration 仅在所有 migrated Actor 已停止后清空本轮迁移状态。
 func (s *Service) clearFinalizedMigration() {
 	s.mtxMigration.Lock()
 	defer s.mtxMigration.Unlock()
-	if s.migration == nil || !s.migration.migrationStarted || s.migration.migrationForwarding || s.migration.migrationCounters.migrated != 0 {
+	if s.migration == nil || !s.migration.started || s.migration.forwarding || s.migration.counters.migrated != 0 {
 		return
 	}
 	s.migration = nil
 	go s.monitorMigrationAction(MonitorMigrationFinalized)
 }
 
-// StartMigration 开始将当前 Service 上的 Actor 迁移到目标节点。
-// Service 仅负责冻结迁移计划并按优先级逐层投递迁移消息，
-// 业务快照、失败重试和最终状态推进都由 Actor 自己完成。
-// cb 可选；若不关心收敛通知，直接传 nil 即可。
+// StartMigration 开始将当前 Service 上的 Actor 迁移到同一目标节点。
+// 它是 StartMigrationWithPlanner 的单目标兼容入口。
 func (s *Service) StartMigration(targetNodeID string, cb ServiceMigrationConvergedFunc) error {
-	// 阻止普通 Actor 在“切换迁移中标记”和“冻结计划”之间完成创建。
-	s.mtxMigrationAdmission.Lock()
-	if err := s.beginMigration(targetNodeID, cb); err != nil {
-		s.mtxMigrationAdmission.Unlock()
-		return err
+	// 单目标 API 的参数校验不依赖冻结计划，空 Service 也必须拒绝无效目标。
+	if targetNodeID == "" || targetNodeID == s.nodeId() {
+		return ErrCodeMigrationTargetInvalid
+	}
+	return s.StartMigrationWithPlanner(func(ActorUID) (string, error) {
+		return targetNodeID, nil
+	}, cb)
+}
+
+// StartMigrationWithPlanner 将当前 Service 上的全部 Actor 按规划函数返回的目标节点迁移。
+// 规划结果会在开始前冻结，后续重试和转发均复用该结果。
+// cb 可选；若不关心收敛通知，直接传 nil 即可。
+func (s *Service) StartMigrationWithPlanner(planner ServiceMigrationPlanner, cb ServiceMigrationConvergedFunc) error {
+	if planner == nil {
+		return ErrCodeMigrationTargetInvalid
 	}
 
-	// 一次抓取完成“冻结计划”和“实际投递”所需的 UID 批次，
-	// 避免两次快照之间 Actor 生命周期变化导致计划与投递对象不一致。
-	planUIDs := make([]ActorUID, 0, 16)
+	// 阻止普通 Actor 在“切换迁移中标记”和“冻结计划”之间完成创建。
+	s.mtxMigrationAdmission.Lock()
+	// 一次抓取完成“冻结计划”和“实际投递”所需的 UID 批次。
 	planBatches := make([][]ActorUID, 0, len(s.priorityList))
 	for priorityIndex := len(s.priorityList) - 1; priorityIndex >= 0; priorityIndex-- {
 		priority := s.getPriority(priorityIndex)
 		uids := s.snapshotPriorityActorUIDs(priority)
-		planUIDs = append(planUIDs, uids...)
 		planBatches = append(planBatches, uids)
 	}
-	s.initMigrationPlan(planUIDs)
+
+	targets := make(map[ActorUID]string)
+	commonTarget := ""
+	multipleTargets := false
+	for _, uids := range planBatches {
+		for _, uid := range uids {
+			targetNodeID, err := planner(uid)
+			if err != nil {
+				s.mtxMigrationAdmission.Unlock()
+				return pkgerrors.WithMessagef(err, "plan migration target for actor %v", uid)
+			}
+			if targetNodeID == "" || targetNodeID == s.nodeId() {
+				s.mtxMigrationAdmission.Unlock()
+				return ErrCodeMigrationTargetInvalid
+			}
+			targets[uid] = targetNodeID
+			if commonTarget == "" {
+				commonTarget = targetNodeID
+			} else if commonTarget != targetNodeID {
+				multipleTargets = true
+			}
+		}
+	}
+	if multipleTargets || len(targets) == 0 {
+		commonTarget = ""
+	}
+	if err := s.beginMigration(commonTarget, cb); err != nil {
+		s.mtxMigrationAdmission.Unlock()
+		return err
+	}
+	s.initMigrationPlan(targets)
 	s.mtxMigrationAdmission.Unlock()
 
 	// 按优先级由低到高逐层触发迁移，保证依赖更弱的 Actor 先迁走。
@@ -853,16 +932,16 @@ func (s *Service) scheduleMigrationStartRetry(uid ActorUID, cause error) {
 		s.mtxMigration.Unlock()
 		return
 	}
-	st := s.migration.migrationActors[uid]
-	if st == nil || st.phase != ActorMigrationPhasePending || st.startRetryScheduled || s.migration.migrationWaitStopped {
+	st := s.migration.actors[uid]
+	if st == nil || st.phase != ActorMigrationPhasePending || st.startRetryScheduled || s.migration.waitStopped {
 		s.mtxMigration.Unlock()
 		return
 	}
 	st.startRetryScheduled = true
 	st.retryAttempts++
-	s.migration.migrationRetryCount++
-	if st.retryAttempts > s.migration.migrationMaxRetry {
-		s.migration.migrationMaxRetry = st.retryAttempts
+	s.migration.retryCount++
+	if st.retryAttempts > s.migration.maxRetry {
+		s.migration.maxRetry = st.retryAttempts
 	}
 	st.lastRetryAt = time.Now()
 	if cause != nil {
@@ -892,9 +971,9 @@ func (s *Service) consumeMigrationStartRetry(retry migrationStartRetryTimerArgs)
 	if s.migration == nil {
 		return false
 	}
-	st := s.migration.migrationActors[retry.UID]
+	st := s.migration.actors[retry.UID]
 	if st == nil || st.phase != ActorMigrationPhasePending || !st.startRetryScheduled ||
-		st.retryAttempts != retry.Attempt || s.migration.migrationWaitStopped {
+		st.retryAttempts != retry.Attempt || s.migration.waitStopped {
 		return false
 	}
 	st.startRetryScheduled = false
@@ -907,7 +986,7 @@ func (s *Service) clearMigrationStartRetry(uid ActorUID, attempt uint32) {
 	defer s.mtxMigration.Unlock()
 
 	if s.migration != nil {
-		if st := s.migration.migrationActors[uid]; st != nil && st.retryAttempts == attempt {
+		if st := s.migration.actors[uid]; st != nil && st.retryAttempts == attempt {
 			st.startRetryScheduled = false
 			st.nextRetryAt = time.Time{}
 		}
@@ -955,12 +1034,12 @@ func (s *Service) abortMigrationWaiters() {
 	s.mtxMigration.Lock()
 	defer s.mtxMigration.Unlock()
 
-	if s.migration == nil || !s.migration.migrationStarted || s.migration.migrationConverged || s.migration.migrationWaitStopped {
+	if s.migration == nil || !s.migration.started || s.migration.converged || s.migration.waitStopped {
 		return
 	}
-	s.migration.migrationWaitStopped = true
+	s.migration.waitStopped = true
 	// 停机后禁止再将 Actor 状态推进为“迁移收敛”，并唤醒所有阻塞等待者。
-	close(s.migration.migrationStoppedCh)
+	close(s.migration.stoppedCh)
 }
 
 // snapshotPriorityActorUIDs 抓取当前优先级下的 Actor 快照列表。
@@ -977,24 +1056,93 @@ func (s *Service) snapshotPriorityActorUIDs(priority int) []ActorUID {
 	return uids
 }
 
+// tryAcquireInboundMigrationSlot 为目标端接管预留并发容量。
+// 重复包不会重复占用容量，不同源租约则拒绝覆盖正在处理的接管。
+func (s *Service) tryAcquireInboundMigrationSlot(head *s2sMigrateStartPacketHead) inboundMigrationSlotResult {
+	attempt := inboundMigrationAttempt{
+		sourceNodeID:  head.sourceNodeID,
+		sourceLeaseID: head.sourceLeaseID,
+	}
+	s.mtxInboundMigration.Lock()
+	defer s.mtxInboundMigration.Unlock()
+
+	if s.inboundMigration != nil {
+		if current, ok := s.inboundMigration.inFlight[head.uid]; ok {
+			if current == attempt {
+				return inboundMigrationSlotDuplicate
+			}
+			return inboundMigrationSlotConflict
+		}
+	}
+	if s.inboundMigration != nil &&
+		len(s.inboundMigration.inFlight) >= s.cfg.Migration.MaxConcurrentInboundActors {
+		return inboundMigrationSlotBusy
+	}
+	if s.inboundMigration == nil {
+		s.inboundMigration = &inboundMigrationRuntime{
+			inFlight: make(map[ActorUID]inboundMigrationAttempt),
+		}
+	}
+	s.inboundMigration.inFlight[head.uid] = attempt
+	return inboundMigrationSlotAcquired
+}
+
+// releaseInboundMigrationSlot 在目标端接管完成或启动失败后归还并发容量。
+func (s *Service) releaseInboundMigrationSlot(uid ActorUID, sourceNodeID, sourceLeaseID string) {
+	s.mtxInboundMigration.Lock()
+	defer s.mtxInboundMigration.Unlock()
+
+	if s.inboundMigration == nil {
+		return
+	}
+	if current, ok := s.inboundMigration.inFlight[uid]; ok &&
+		current.sourceNodeID == sourceNodeID && current.sourceLeaseID == sourceLeaseID {
+		delete(s.inboundMigration.inFlight, uid)
+	}
+	if len(s.inboundMigration.inFlight) == 0 {
+		s.inboundMigration = nil
+	}
+}
+
+func (s *Service) sendInboundMigrationResult(head *s2sMigrateStartPacketHead, errCode ErrCode) error {
+	resultHead := newS2SMigrateResultHead(s.genSeq(), head.uid, head.sourceLeaseID, head.seq, errCode)
+	defer resultHead.release()
+	return s.sendRemotePacket(head.sourceNodeID, resultHead, nil)
+}
+
 // startInboundMigration 在目标节点接收迁移开始包后拉起对应 Actor。
 // 若同一轮迁移已经接管完成，则直接回复成功，保持幂等。
-func (s *Service) startInboundMigration(head s2sMigrateStartPacketHead) error {
+func (s *Service) startInboundMigration(head *s2sMigrateStartPacketHead) error {
 	if actor, err := s.getActor(head.uid); err == nil && actor != nil {
 		if migration := actor.core().migrationRuntime(); migration != nil &&
 			migration.acceptedSourceNodeID == head.sourceNodeID &&
 			migration.acceptedSourceLeaseID == head.sourceLeaseID {
 			resultHead := newS2SMigrateResultHead(s.genSeq(), head.uid, head.sourceLeaseID, head.seq, ErrCodeOK)
-			return s.sendRemotePacket(head.sourceNodeID, &resultHead, nil)
+			defer resultHead.release()
+			return s.sendRemotePacket(head.sourceNodeID, resultHead, nil)
 		}
 		// 目标节点已经承载同一 UID 的另一轮迁移，旧租约不能覆盖当前实例。
 		// 立即通知源端失败，避免其被动等待迁移结果超时。
 		resultHead := newS2SMigrateResultHead(s.genSeq(), head.uid, head.sourceLeaseID, head.seq, ErrCodeMigrationInProgress)
-		return s.sendRemotePacket(head.sourceNodeID, &resultHead, nil)
+		defer resultHead.release()
+		return s.sendRemotePacket(head.sourceNodeID, resultHead, nil)
+	}
+
+	switch s.tryAcquireInboundMigrationSlot(head) {
+	case inboundMigrationSlotDuplicate:
+		// 同一接管已在执行，完成后会统一回复迁移结果。
+		return nil
+	case inboundMigrationSlotConflict:
+		return s.sendInboundMigrationResult(head, ErrCodeMigrationInProgress)
+	case inboundMigrationSlotBusy:
+		// 源端收到 ErrCodeActorBusy 后会按既有退避逻辑重试。
+		s.monitorMigrationAction(MonitorMigrationTakeOverFailure)
+		return s.sendInboundMigrationResult(head, ErrCodeActorBusy)
 	}
 
 	define := s.getDefine(head.uid.Category)
 	if define == nil {
+		s.releaseInboundMigrationSlot(head.uid, head.sourceNodeID, head.sourceLeaseID)
 		return ErrCodeActorUndefined
 	}
 	defineBase := define.base()
@@ -1009,17 +1157,22 @@ func (s *Service) startInboundMigration(head s2sMigrateStartPacketHead) error {
 			SID:    head.sessionSID,
 		}
 		starter.migrationStartSeq = head.seq
+		starter.inboundMigrationSlotHeld = true
 	})
 	// inbound migration 不会经过普通 startActor 调用链。
 	// 这里补齐 starter 的引用释放，避免目标 Actor 保留启动期引用而无法停机。
 	if !starter.ref() {
+		s.releaseInboundMigrationSlot(head.uid, head.sourceNodeID, head.sourceLeaseID)
 		return ErrCodeActorStartFailed
 	}
 	defer starter.deref()
 
 	if !starter.isCompleted() && !categoryActors.isActorStopping(head.uid.ID) {
 		starter.start(s)
+		return nil
 	}
+	// starter 已由本地启动或停机流程占用，当前迁移不会进入 starter.start。
+	s.releaseInboundMigrationSlot(head.uid, head.sourceNodeID, head.sourceLeaseID)
 	return nil
 }
 
@@ -1040,7 +1193,7 @@ func (s *Service) shouldForwardMissingActor(msg message) bool {
 func (s *Service) isMigrationForwarding() bool {
 	s.mtxMigration.RLock()
 	defer s.mtxMigration.RUnlock()
-	return s.migration != nil && s.migration.migrationStarted && s.migration.migrationForwarding
+	return s.migration != nil && s.migration.started && s.migration.forwarding
 }
 
 func (s *Service) tryForwardMissingActor(uid ActorUID, msg message) error {
