@@ -1,6 +1,6 @@
 ---
-name: "ggs-actor-feature"
-description: "Playbook for adding an Actor-based feature: model modules + systems + c2s/s2s protos (PID/error segments) + handler wiring + regeneration/tests. Invoke when adding/modifying actor features or protocols."
+name: ggs-actor-feature
+description: Playbook for adding an Actor-based feature, covering model modules, systems, c2s/s2s protos, handler wiring, regeneration and tests. Invoke when adding or modifying actor features or protocols.
 ---
 
 # GGS Actor Feature Playbook
@@ -12,7 +12,7 @@ description: "Playbook for adding an Actor-based feature: model modules + system
 - **Module（Model 模块）**：只做状态与状态操作（增删改查 + SetDirty），不做协议、不做跨模块编排、不做外部 IO。
 - **systems（系统/用例层）**：聚合多个模块、实现领域动作与规则；输入是 Actor + 领域参数；输出是领域结果（不返回 pb）。
 - **handlers（协议层）**：只做“pb → 领域参数”的转换、调用 systems、再把结果/错误映射回“领域结果 → pb”。
-- **protocol（协议层）**：proto 按功能拆文件；PID 与错误码按“功能分段”预留区间；变更后必须重新生成。
+- **protocol（协议层）**：proto 按功能拆文件；消息后缀决定方向与语义（`Req`/`Resp`/`Push`/`Ntf`）；错误码按“功能分段”预留区间；变更后必须重新生成。协议细节见 `ggs-add-protocol` 技能。
 
 ## 0.1 协议类型选择（c2s vs s2s）
 
@@ -22,6 +22,7 @@ description: "Playbook for adding an Actor-based feature: model modules + system
   - Player：主要处理 c2s；当需要服务内/服务间协作时，也可能处理 s2s。
   - Server：只处理 s2s（不直接对接前端 c2s）。
   - 其他 Actor：根据职责决定是否暴露 c2s，是否需要 s2s；优先最小暴露面。
+- **后缀约定**：`Req` 请求、`Resp` 响应、`Push` s2c 推送、`Ntf` 服务间通知/Cast；名字必须以四者之一结尾，否则不会被注册。
 
 ## 1. 开发流程（推荐顺序）
 
@@ -50,50 +51,50 @@ description: "Playbook for adding an Actor-based feature: model modules + system
 - 协议参数合法性（如 0/负数）可以在 handler 拦截；领域规则（如数量不足/状态不允许）放 systems。
 - systems 内部通过 `actors.GetModule[*xxx](p, true)` 访问模块。
 
-### 1.3 新增/修改协议（proto + PID + error code）
+### 1.3 新增/修改协议（proto + error code）
 
 1) 选择协议类型：
-   - 面向前端：`internal/protocol/protos/c2s/`
-   - 服务内/服务间：`internal/protocol/protos/s2s/`
-2) 按域新增 proto 文件（例如 `item.proto`）。
-3) 在对应的 `pid.proto` 中为该域分配专属 PID 段并写注释：
-   - 示例：道具 PID `[100,199]`，从 `100` 开始递增
-4) 在对应的 `error.proto` 中为该域分配专属错误码段并写注释：
+   - 面向前端：`internal/infra/actor/protocol/protos/c2s/`
+   - 服务内/服务间：`internal/infra/actor/protocol/protos/s2s/`
+   - 通用嵌套结构：`internal/infra/actor/protocol/protos/common/`
+2) 按域新增 proto 文件（例如 `item.proto`），消息名必须以 `Req`/`Resp`/`Push`/`Ntf` 结尾（s2c 推送用 `Push`，服务间推送用 `Ntf`）。
+3) 在 `common/error.proto` 的 `ErrCode` 中为该域分配专属错误码段并写注释：
    - 示例：道具错误码 `[1000,1999]`，从 `1000` 开始递增
-5) 生成代码：
+4) 生成代码：
    - `make protos`
 
 **硬约束**
-- 不直接修改 `internal/protocol/pb/**` 与 `internal/protocol/registry/*_register.go`（生成物）。
+- 不直接修改 `internal/infra/actor/protocol/pb/**` 与 `internal/infra/actor/protocol/registry/{c2s,s2s}/register.go`（生成物）。
+- 协议结构、分层、生成流程的完整说明见 `ggs-add-protocol` 技能。
 
 ### 1.4 新增/修改 handler（协议适配）
 
-1) 在 `app/<service>/internal/handlers/<actor>/` 下按域新增 handler 文件（例如 `item.go`）。
+1) 在 `app/<service>/internal/handler/<actor>/` 下按域新增 handler 文件（例如 `item.go`），注册入口在同目录 `handler.go` 的 `init`。
 2) handler 只做：
    - pb 参数校验（非法 → `ECInvalidPacket`）
    - 调用 `systems.<Domain>.<Func>(...)`
    - 将领域失败映射为 pb 错误码（例如数量不足 → `ECItemNotEnough`）
    - 组装并返回 pb resp
-3) 在 `handlers/<actor>/handlers.go` 注册 PID：
-   - c2s：`registerC2SFunc(pbc2s.PID_PYourReq, checkLogin, handlers.WrapC2SFunc(handleYour))`
-   - s2s：`registerS2SFunc(pbs2s.PID_PYourReq, handlers.WrapS2SRPCFunc(handleYour))` 或 `WrapS2SCastFunc`
+3) 在 handler 的注册文件（`init`）中按消息类型登记（不是按 PID）：
+   - c2s：`registerC2SFunc((*pbc2s.YourReq)(nil), checkLogin, actorhandler.WrapReqFunc(handleYour))`；异步请求用 `WrapAsyncReqFunc`。
+   - s2s：`registerS2SFunc((*pbs2s.YourReq)(nil), actorhandler.WrapRPCFunc(handleYour))`；无响应用 `WrapRPCNoRespFunc`，单向通知 `Ntf` 用 `WrapCastFunc`。
 
-## 2. PID / 错误码分段模板
+## 2. 消息后缀与错误码分段
 
-### 2.1 PID（c2s/pid.proto、s2s/pid.proto）
+### 2.1 消息后缀（决定方向与语义）
 
-- 文件头写清分段表（示例）：
-  - `[0, 99]` 基础/通用
-  - `[100, 199]` 道具
-  - `[200, 299]` 邮件
-- 每个域单独留一段，便于以后扩展与查找。
+- `Req`：请求（c2s 客户端请求 / s2s RPC 请求）。
+- `Resp`：响应，与 `Req` 配对。
+- `Push`：s2c 推送，服务端主动下发给客户端（仅 c2s）。
+- `Ntf`：服务间通知/Cast，单向无响应（仅 s2s）。
+- 只有这四种后缀会被注册；不存在 `pid.proto`，PID 由消息全名哈希生成，无需手工分配（见 `ggs-add-protocol`）。
 
-### 2.2 ErrCode（c2s/error.proto、s2s/error.proto）
+### 2.2 ErrCode（common/error.proto）
 
-- 文件头写清分段表（示例）：
+- 在 `common/error.proto` 的 `ErrCode` 枚举中按功能域分段并写注释（示例）：
   - `[0, 999]` 基础/通用
   - `[1000, 1999]` 道具
-  - `[2000, 2999]` 邮件
+  - `[2000, 2999]` 聊天
 
 ## 3. 最小验证闭环
 

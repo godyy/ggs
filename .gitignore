@@ -4,6 +4,6 @@ docker/dev/.env
 docker/dev/configs
 .design
 .vscode
-.trae
+.trae/documents
 tmp/
 docs/
