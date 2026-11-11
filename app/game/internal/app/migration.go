@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,11 +13,62 @@ import (
 	"github.com/godyy/ggs/internal/base/consts"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/infra/actor"
+	"github.com/godyy/ggskit/infra/noderouter"
 	pkgerrors "github.com/pkg/errors"
 )
 
 type migrationStartRequest struct {
-	TargetNodeID string `json:"targetNodeId"`
+	TargetNodeIDs []string `json:"targetNodeIds"`
+}
+
+// targets 保留旧的单目标请求格式，并拒绝空值和重复目标。
+func (r migrationStartRequest) targets() ([]string, error) {
+	if len(r.TargetNodeIDs) == 0 {
+		return nil, errors.New("migration targets are required")
+	}
+	seen := make(map[string]struct{}, len(r.TargetNodeIDs))
+	for _, id := range r.TargetNodeIDs {
+		if id == "" {
+			return nil, errors.New("migration target is empty")
+		}
+		if _, ok := seen[id]; ok {
+			return nil, errors.New("duplicate migration target")
+		}
+		seen[id] = struct{}{}
+	}
+	return r.TargetNodeIDs, nil
+}
+
+// migrationPlanner 使用与 agent 选点一致的 Player ID 和 Rendezvous 哈希。
+func migrationPlanner(targets []string) gactor.ServiceMigrationPlanner {
+	selector := noderouter.NewRendezvousSelector()
+	selector.Set(map[string][]string{consts.NodeGameWorker: targets}, true)
+	return func(uid gactor.ActorUID) (string, error) {
+		var key [8]byte
+		binary.NativeEndian.PutUint64(key[:], uint64(uid.ID))
+		selected := selector.Pick(consts.NodeGameWorker, key[:], 1)
+		if len(selected) == 0 {
+			return "", errors.New("no migration target available")
+		}
+		return selected[0], nil
+	}
+}
+
+// reserveMigrationTargets 逐一预约目标，失败时释放此前已预约的目标。
+func reserveMigrationTargets(ctx context.Context, targets []actor.WorkerReadiness, migrationID string,
+	reserve func(context.Context, actor.WorkerReadiness, string) error,
+	release func(context.Context, actor.WorkerReadiness, string),
+) error {
+	for i, target := range targets {
+		if err := reserve(ctx, target, migrationID); err != nil {
+			// 超时可能发生在 Redis 已执行之后，也要尝试释放当前目标。
+			for _, reserved := range targets[:i+1] {
+				release(context.Background(), reserved, migrationID)
+			}
+			return pkgerrors.WithMessagef(err, "reserve migration target %s", target.NodeID)
+		}
+	}
+	return nil
 }
 
 // registerMigrationHTTP 注册仅 worker 可用的迁移管理接口。
@@ -57,10 +109,19 @@ func (a *app) handleMigrationStart(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	target, err := a.validateMigrationTarget(r.Context(), request.TargetNodeID)
+	targetIDs, err := request.targets()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	targets := make([]actor.WorkerReadiness, 0, len(targetIDs))
+	for _, id := range targetIDs {
+		target, err := a.validateMigrationTarget(r.Context(), id)
+		if err != nil {
+			http.Error(w, pkgerrors.WithMessagef(err, "validate migration target %s", id).Error(), http.StatusBadRequest)
+			return
+		}
+		targets = append(targets, target)
 	}
 
 	migrationID, err := newWorkerInstanceID()
@@ -69,33 +130,46 @@ func (a *app) handleMigrationStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 先独占预约目标，避免多个源 worker 同时将 Actor 迁入同一节点。
-	if err := a.reserveMigrationTarget(r.Context(), target, migrationID); err != nil {
+	if err := reserveMigrationTargets(r.Context(), targets, migrationID, a.reserveMigrationTarget, a.releaseMigrationTarget); err != nil {
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
+	releaseTargets := func() {
+		for _, target := range targets {
+			a.releaseMigrationTarget(context.Background(), target, migrationID)
+		}
+	}
 	// 源进入 draining 后立即从 agent 候选中移除，迁移失败时再回滚至 serving。
-	if err := a.transitionSelfWorkerState(r.Context(), actor.WorkerStateServing, actor.WorkerStateDraining); err != nil {
-		a.releaseMigrationTarget(context.Background(), target, migrationID)
+	if err := a.transitionSelfWorkerState(r.Context(), actor.WorkerStateServing, "", actor.WorkerStateDraining, migrationID); err != nil {
+		// 即使调用超时，Redis 也可能已经完成转换；仅回滚本次任务的状态。
+		if rollbackErr := a.transitionSelfWorkerState(context.Background(), actor.WorkerStateDraining, migrationID, actor.WorkerStateServing, ""); rollbackErr != nil {
+			logger.Get().Warnf("restore source worker state after failed transition: %v", rollbackErr)
+		}
+		releaseTargets()
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
 
-	if err := a.actorService.StartMigration(request.TargetNodeID, func(snapshot gactor.ServiceMigrationSnapshot) {
+	if err := a.actorService.StartMigrationWithPlanner(migrationPlanner(targetIDs), func(snapshot gactor.ServiceMigrationSnapshot) {
 		logger.Get().Infof(
-			"worker migration converged: target=%s actors=%d migrated=%d retries=%d",
-			snapshot.TargetNodeID,
+			"worker migration converged: targets=%v actors=%d migrated=%d retries=%d",
+			targetIDs,
 			snapshot.TrackedActorCount,
 			snapshot.MigratedActorCount,
 			snapshot.RetryCount,
 		)
 		// 仅在 gactor 已收敛后开放目标接入，防止迁移中的新 Player 混入目标。
-		if err := a.activateMigrationTarget(context.Background(), target, migrationID); err != nil {
-			logger.Get().Errorf("activate migration target failed: %v", err)
+		for _, target := range targets {
+			if err := a.activateMigrationTarget(context.Background(), target, migrationID); err != nil {
+				logger.Get().Errorf("activate migration target %s failed: %v", target.NodeID, err)
+			}
 		}
 	}); err != nil {
 		// StartMigration 未建立迁移上下文时，恢复两端的接入状态。
-		_ = a.transitionSelfWorkerState(context.Background(), actor.WorkerStateDraining, actor.WorkerStateServing)
-		a.releaseMigrationTarget(context.Background(), target, migrationID)
+		if rollbackErr := a.transitionSelfWorkerState(context.Background(), actor.WorkerStateDraining, migrationID, actor.WorkerStateServing, ""); rollbackErr != nil {
+			logger.Get().Errorf("restore source worker state failed: %v", rollbackErr)
+		}
+		releaseTargets()
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
@@ -214,23 +288,23 @@ func (a *app) releaseMigrationTarget(ctx context.Context, target actor.WorkerRea
 		actor.WorkerStateStandby,
 		"",
 	); err != nil {
-		logger.Get().Errorf("release migration target failed: %v", err)
+		logger.Get().Errorf("release migration target %s failed: %v", target.NodeID, err)
 	} else if !ok {
-		logger.Get().Error("release migration target ignored because state changed")
+		logger.Get().Warnf("release migration target %s ignored because state changed", target.NodeID)
 	}
 }
 
 // transitionSelfWorkerState 原子更新源 worker 的接入状态。
-func (a *app) transitionSelfWorkerState(ctx context.Context, from, to actor.WorkerAdmissionState) error {
-	// 源 worker 不携带 migrationID，状态转换仍受实例 ID 保护。
+func (a *app) transitionSelfWorkerState(ctx context.Context, from actor.WorkerAdmissionState, fromMigrationID string, to actor.WorkerAdmissionState, toMigrationID string) error {
+	// 用任务 ID 区分并发迁移，避免失败请求回滚其他任务的源状态。
 	ok, err := a.migrationStore.TransitionWorkerState(
 		ctx,
 		selfNode("").GetNodeId(),
 		a.workerInstanceID,
 		from,
-		"",
+		fromMigrationID,
 		to,
-		"",
+		toMigrationID,
 	)
 	if err != nil {
 		return err
