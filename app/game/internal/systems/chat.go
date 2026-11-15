@@ -9,6 +9,7 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/app"
+	"github.com/godyy/ggs/app/game/internal/base/cbctx"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/gdconf"
 	"github.com/godyy/ggs/internal/infra/actor"
@@ -308,18 +309,29 @@ func (m *chatModule) PlayerSendMsg(p *actors.Player, roomId int64, content strin
 		RoomId:   roomId,
 		SenderId: p.ID(),
 		Content:  content,
-	}, func(resp actor.ActorRPCResp) {
-		result := actor.NewRPCResult(resp.Reply, resp.Err)
-		if !result.Success() {
-			logger.Get().Errorf("[chatModule.PlayerSendMsg] player %d, send msg to room %d, %v", p.ID(), roomId, result.Err())
-			cb(p, result.Err())
-			return
-		}
-		cb(p, nil)
-	}, 5*time.Second); err != nil {
+	}, m.onAsyncPlayerSendMsgCallback, actor.NewCbCtx(
+		cbctx.KeyCallback, cb,
+		cbctx.KeyPlayer, p,
+		cbctx.KeyChatRoomID, roomId,
+	), 5*time.Second); err != nil {
 		logger.Get().Errorf("[chatModule.PlayerSendMsg] player %d, asyncRPC send msg to room %d, %v", p.ID(), roomId, err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
+}
+
+func (m *chatModule) onAsyncPlayerSendMsgCallback(resp actor.ActorRPCResp) {
+	cc := resp.CbCtx.(*actor.CbCtx)
+	player := actor.CbCtxMust(cc, cbctx.KeyPlayer)
+	roomId := actor.CbCtxMust(cc, cbctx.KeyChatRoomID)
+	cb := actor.CbCtxMust(cc, cbctx.KeyCallback).(func(p *actors.Player, err error))
+
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		logger.Get().Errorf("[chatModule.onAsyncPlayerSendMsgCallback] player %d, send msg to room %d, %v", player.ID(), roomId, result.Err())
+		cb(player, result.Err())
+		return
+	}
+	cb(player, nil)
 }
 
 type PlayerCreateRoomParams struct {
@@ -365,17 +377,26 @@ func (m *chatModule) playerDoCreateGroupChatRoom(p *actors.Player, params Player
 	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.CreateGroupChatRoomReq{
 		Name:      params.RoomName,
 		MemberIds: append([]int64{p.ID()}, params.MemberIds...),
-	}, func(resp actor.ActorRPCResp) {
-		result := actor.NewRPCResult(resp.Reply, resp.Err)
-		if !result.Success() {
-			cb(p, result.Err())
-			return
-		}
-		cb(p, nil)
-	}, 5*time.Second); err != nil {
+	}, m.onAsyncPlayerCreateGroupChatRoomCallback, actor.NewCbCtx(
+		cbctx.KeyCallback, cb,
+		cbctx.KeyPlayer, p,
+	), 5*time.Second); err != nil {
 		logger.Get().Errorf("[chatModule.PlayerDoCreateGroupChatRoom] player %d, asyncRPC create group chat room, %v", p.ID(), err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
+}
+
+func (m *chatModule) onAsyncPlayerCreateGroupChatRoomCallback(resp actor.ActorRPCResp) {
+	cc := resp.CbCtx.(*actor.CbCtx)
+	player := actor.CbCtxMust(cc, cbctx.KeyPlayer)
+	cb := actor.CbCtxMust(cc, cbctx.KeyCallback).(func(p *actors.Player, err error))
+
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		cb(player, result.Err())
+		return
+	}
+	cb(player, nil)
 }
 
 type CreateGroupChatRoomParams struct {
@@ -438,7 +459,7 @@ func (m *chatModule) CreateGroupChatRoom(mgr *actors.ChatMgr, params *CreateGrou
 			m.notifyMemberJoinChatRoom(chatMgr, room, memberId)
 		}
 
-	}, 5*time.Second); err != nil {
+	}, nil, 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule] notify owner %d to join group room, %v", ownerId, err)
 		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomCreateFailed))
 	}
@@ -475,7 +496,7 @@ func (m *chatModule) notifyMemberJoinChatRoom(chatMgr *actors.ChatMgr, room *cha
 							logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] room full, notify member %d to leave group room, %v", memberId, result.Err())
 							return
 						}
-					}, 5*time.Second); err != nil {
+					}, nil, 5*time.Second); err != nil {
 						logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] room full, async notify member %d to leave group room, %v", memberId, err)
 						return
 					}
@@ -488,7 +509,7 @@ func (m *chatModule) notifyMemberJoinChatRoom(chatMgr *actors.ChatMgr, room *cha
 				})
 				m.broadcastMemberJoinRoom(room, memberId)
 			})
-		}, 5*time.Second); err != nil {
+		}, nil, 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule] notify member %d to join group room, %v", memberId, err)
 	}
 }
@@ -541,7 +562,7 @@ func (m *chatModule) PlayerLeaveChatRoom(p *actors.Player, roomId int64, cb func
 				return
 			}
 			cb(p, nil)
-		}, 5*time.Second); err != nil {
+		}, nil, 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule.PlayerLeaveChatRoom] player %d, asyncRPC leave room %d failed, %v", p.ID(), roomId, err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
@@ -609,7 +630,7 @@ func (m *chatModule) LeaveChatRoom(mgr *actors.ChatMgr, roomId int64, memberId i
 					Chat.setDirtyRoom(mgr, room)
 					Chat.broadcastMemberLeaveRoom(room, memberId)
 				})
-			}, 5*time.Second); err != nil {
+			}, nil, 5*time.Second); err != nil {
 			logger.Get().Errorf("[ChatModule.LeaveChatRoom] notify member %d to leave room %d failed, %v", memberId, roomId, err)
 			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 			return
@@ -666,7 +687,7 @@ func (m *chatModule) PlayerChatRoomInvite(p *actors.Player, roomId int64, target
 			return
 		}
 		cb(p, nil)
-	}, 5*time.Second); err != nil {
+	}, nil, 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule.PlayerChatRoomInvite] player %d invite %+v to room %d, async call mgr failed, %v", p.ID(), targetIds, roomId, err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}

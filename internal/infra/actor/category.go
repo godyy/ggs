@@ -1,9 +1,11 @@
 package actor
 
-import "github.com/godyy/ggskit/infra/actor"
+import (
+	"github.com/godyy/gactor"
+)
 
 // Category 分类.
-type Category actor.Category
+type Category gactor.ActorCategory
 
 const (
 	CategoryServer  Category = 1 // 服务器Actor类别
@@ -11,8 +13,8 @@ const (
 	CategoryChatMgr Category = 3 // 聊天管理Actor类别
 )
 
-func (c Category) ActorCategory() actor.Category {
-	return actor.Category(c)
+func (c Category) ActorCategory() gactor.ActorCategory {
+	return gactor.ActorCategory(c)
 }
 
 func (c Category) String() string {

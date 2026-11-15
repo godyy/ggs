@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/godyy/gutils/deepcopy"
+	"github.com/godyy/gutils/container/kv"
 	"go.uber.org/zap"
 )
 
@@ -15,7 +15,7 @@ type Context struct {
 	svc   *Service  // Service.
 	req   request   // request.
 	actor actorImpl // actor.
-	kv    contextKV // kv mapping.
+	*kv.M           // kv mapping.
 
 	handlers    []HandlerFunc // handlers.
 	handlerIdx  int8          // handler index.
@@ -35,7 +35,7 @@ func newContext(svc *Service, req request) *Context {
 	cp := poolOfContext.Get().(*Context)
 	cp.svc = svc
 	cp.req = req
-	cp.kv = make(contextKV)
+	cp.M = kv.NewM()
 	return cp
 }
 
@@ -47,17 +47,6 @@ func (c *Context) service() *Service {
 // Actor 返回 Actor.
 func (c *Context) Actor() Actor {
 	return c.actor
-}
-
-// Set 设置 k->v.
-func (c *Context) Set(k any, v any) {
-	c.kv[k] = v
-}
-
-// Get 获取 k->v.
-func (c *Context) Get(k any) (v any, exists bool) {
-	v, exists = c.kv[k]
-	return
 }
 
 // RequestType 返回请求类型.
@@ -168,30 +157,40 @@ func (c *Context) RPCWithContext(ctx context.Context, to ActorUID, params any, r
 // ContextRPCFunc 基于 Context 的 RPC 回调.
 type ContextRPCFunc func(ctx *Context, resp RPCResp)
 
-// contextAsyncRPCFunc 基于 Context 的异步 RPC 回调.
-type contextAsyncRPCFunc struct {
-	ctx *Context
-	cb  ContextRPCFunc
+// cbctxAsyncRPC 构造异步 RPC 回调上下文.
+func (c *Context) cbctxAsyncRPC(cb ContextRPCFunc, cbctx any) *kv.M {
+	return NewCbCtx(cbctxKeyCallback, cb, cbctxKeyCbCtx, cbctx)
 }
 
-func (f *contextAsyncRPCFunc) invoke(a Actor, resp RPCResp) {
+// asyncRPCCallback 异步 RPC 回调.
+func (c *Context) asyncRPCCallback(a Actor, resp RPCResp) {
 	// 保险起见, 更新下Actor.
-	f.ctx.actor = a.(actorImpl)
+	c.actor = a.(actorImpl)
+
+	// 取上下文
+	cbctx := resp.ctx.(*kv.M)
+	defer CbCtxRelease(cbctx)
+	cb := cbctxKeyCallback.Must(cbctx)
+	innerCbCtx := cbctxKeyCbCtx.Must(cbctx)
+
 	// 优先执行回调.
-	f.cb(f.ctx, resp)
+	cb.(ContextRPCFunc)(c, RPCResp{
+		svc:     c.svc,
+		ctx:     innerCbCtx,
+		payload: resp.payload,
+		err:     resp.err,
+	})
 
 	// 恢复并继续执行.
-	f.ctx.resumeAndNext()
+	c.resumeAndNext()
 }
 
 // AsyncRPCWithDeadline 基于 Context 的异步 RPC 调用.
-func (c *Context) AsyncRPCWithDeadline(to ActorUID, params any, cb ContextRPCFunc, deadline time.Time) error {
+func (c *Context) AsyncRPCWithDeadline(to ActorUID, params any, cb ContextRPCFunc, cbctx any, deadline time.Time) error {
 	c.suspend()
-	asyncFunc := &contextAsyncRPCFunc{
-		ctx: c,
-		cb:  cb,
-	}
-	if err := c.actor.AsyncRPCWithDeadline(to, params, asyncFunc.invoke, deadline); err != nil {
+	cbctx = c.cbctxAsyncRPC(cb, cbctx)
+	if err := c.actor.AsyncRPCWithDeadline(to, params, c.asyncRPCCallback, cbctx, deadline); err != nil {
+		CbCtxRelease(cbctx.(*kv.M))
 		c.resume()
 		return err
 	}
@@ -199,21 +198,19 @@ func (c *Context) AsyncRPCWithDeadline(to ActorUID, params any, cb ContextRPCFun
 }
 
 // AsyncRPCWithTimeout 基于 Context 的异步 RPC 调用.
-func (c *Context) AsyncRPCWithTimeout(to ActorUID, params any, cb ContextRPCFunc, timeout time.Duration) error {
-	return c.AsyncRPCWithDeadline(to, params, cb, time.Now().Add(timeout))
+func (c *Context) AsyncRPCWithTimeout(to ActorUID, params any, cb ContextRPCFunc, cbctx any, timeout time.Duration) error {
+	return c.AsyncRPCWithDeadline(to, params, cb, cbctx, time.Now().Add(timeout))
 }
 
 // AsyncRPC 基于 Context 的异步 RPC 调用.
-func (c *Context) AsyncRPC(to ActorUID, params any, cb ContextRPCFunc) error {
+func (c *Context) AsyncRPC(to ActorUID, params any, cb ContextRPCFunc, cbctx any) error {
 	if deadline, ok := c.Deadline(); ok {
-		return c.AsyncRPCWithDeadline(to, params, cb, deadline)
+		return c.AsyncRPCWithDeadline(to, params, cb, cbctx, deadline)
 	}
 	c.suspend()
-	asyncFunc := &contextAsyncRPCFunc{
-		ctx: c,
-		cb:  cb,
-	}
-	if err := c.actor.AsyncRPC(to, params, asyncFunc.invoke); err != nil {
+	cbctx = c.cbctxAsyncRPC(cb, cbctx)
+	if err := c.actor.AsyncRPC(to, params, c.asyncRPCCallback, cbctx); err != nil {
+		CbCtxRelease(cbctx.(*kv.M))
 		c.resume()
 		return err
 	}
@@ -221,13 +218,11 @@ func (c *Context) AsyncRPC(to ActorUID, params any, cb ContextRPCFunc) error {
 }
 
 // AsyncRPCWithContext 基于 Context 的异步 RPC 调用.
-func (c *Context) AsyncRPCWithContext(ctx context.Context, to ActorUID, params any, cb ContextRPCFunc) error {
+func (c *Context) AsyncRPCWithContext(ctx context.Context, to ActorUID, params any, cb ContextRPCFunc, cbctx any) error {
 	c.suspend()
-	asyncFunc := &contextAsyncRPCFunc{
-		ctx: c,
-		cb:  cb,
-	}
-	if err := c.actor.AsyncRPCWithContext(ctx, to, params, asyncFunc.invoke); err != nil {
+	cbctx = c.cbctxAsyncRPC(cb, cbctx)
+	if err := c.actor.AsyncRPCWithContext(ctx, to, params, c.asyncRPCCallback, cbctx); err != nil {
+		CbCtxRelease(cbctx.(*kv.M))
 		c.resume()
 		return err
 	}
@@ -274,7 +269,7 @@ func (c *Context) Clone() *Context {
 	cp.svc = c.svc
 	cp.actor = c.actor
 	cp.req = c.req.clone(c)
-	cp.kv = c.kv.clone()
+	cp.M = c.M.Clone()
 	cp.handlers = c.handlers
 	cp.handlerIdx = c.handlerIdx
 	cp.suspendFlag = 0
@@ -298,7 +293,7 @@ func (c *Context) doRelease() {
 	c.svc = nil
 	c.req = nil
 	c.actor = nil
-	c.kv = nil
+	c.M = nil
 	c.handlers = nil
 	c.handlerIdx = -1
 	c.released = false
@@ -367,17 +362,6 @@ func (c *Context) Err() error {
 
 func (c *Context) Value(key any) any {
 	return nil
-}
-
-// contextKV 上下文键值对.
-type contextKV map[any]any
-
-func (kv contextKV) clone() contextKV {
-	cp := make(contextKV, len(kv))
-	for k, v := range kv {
-		cp[k] = deepcopy.Copy(v)
-	}
-	return cp
 }
 
 // ContextSuspender Context 挂起工具.

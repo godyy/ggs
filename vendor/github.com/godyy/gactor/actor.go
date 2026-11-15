@@ -96,7 +96,7 @@ type ActorMigrationBehavior interface {
 type ActorTimerArgs struct {
 	Actor Actor   // Actor.
 	TID   TimerId // 定时器ID
-	Args  any     // 参数.
+	Ctx   any     // 上下文.
 }
 
 // ActorTimerFunc Actor 定时器回调函数.
@@ -131,7 +131,7 @@ type Actor interface {
 	Behavior() ActorBehavior
 
 	// StartTimer 启动定时器.
-	StartTimer(d time.Duration, periodic bool, args any, cb ActorTimerFunc) TimerId
+	StartTimer(d time.Duration, periodic bool, cb ActorTimerFunc, cbctx any) TimerId
 
 	// StopTimer 停止定时器.
 	StopTimer(TimerId)
@@ -154,19 +154,19 @@ type Actor interface {
 
 	// AsyncRPCWithDeadline 向 to 指向的 Actor 发起异步 RPC 调用.
 	// deadline 为超时时间.
-	AsyncRPCWithDeadline(to ActorUID, params any, cb ActorRPCFunc, deadline time.Time) error
+	AsyncRPCWithDeadline(to ActorUID, params any, cb ActorRPCFunc, cbctx any, deadline time.Time) error
 
 	// AsyncRPCWithTimeout 向 to 指向的 Actor 发起异步 RPC 调用.
 	// timeout 为超时间隔.
-	AsyncRPCWithTimeout(to ActorUID, params any, cb ActorRPCFunc, timeout time.Duration) error
+	AsyncRPCWithTimeout(to ActorUID, params any, cb ActorRPCFunc, cbctx any, timeout time.Duration) error
 
 	// AsyncRPC 向 to 指向的 Actor 发起异步 RPC 调用.
 	// 使用配置的默认超时间隔.
-	AsyncRPC(to ActorUID, params any, cb ActorRPCFunc) error
+	AsyncRPC(to ActorUID, params any, cb ActorRPCFunc, cbctx any) error
 
 	// AsyncRPCWithContext 向 to 指向的 Actor 发起异步 RPC 调用.
 	// 超时 deadline 从 ctx 获取，若未设置, 使用默认超时时间.
-	AsyncRPCWithContext(ctx context.Context, to ActorUID, params any, cb ActorRPCFunc) error
+	AsyncRPCWithContext(ctx context.Context, to ActorUID, params any, cb ActorRPCFunc, cbctx any) error
 
 	// Cast 向 to 指向的 Actor 投递消息.
 	// payload 为投递的负载消息.

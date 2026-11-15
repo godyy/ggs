@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	ctxKeyPushMsgQueue = actor.NewCtxK[[]proto.Message]() // 推送的消息队列
+	ctxKeyPushMsgQueue = actor.NewCtxK[[]proto.Message]("push_msg_queue") // 推送的消息队列
 )
 
 // GetArgs 获取当前上下文的请求参数.

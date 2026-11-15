@@ -91,20 +91,23 @@ func handleChatHistory(ctx *actor.Context, req *pbc2s.ChatHistoryReq) error {
 		MemberId:  p.ID(),
 		RoomId:    req.RoomId,
 		LastMsgId: req.LastMsgId,
-	}, func(resp actor.ContextRPCResp) {
-		result := actor.NewRPCResult(resp.Reply, resp.Err)
-		if !result.Success() {
-			handler.ReplyErrorAbort(ctx, result.Err())
-			return
-		}
-		historyResp := result.Reply().(*pbs2s.ChatHistoryResp)
-		handler.Reply(ctx, &pbc2s.ChatHistoryResp{
-			RoomId: historyResp.RoomId,
-			Msgs:   historyResp.Msgs,
-		})
-	}, 5*time.Second); err != nil {
+	}, onAsyncChatHistoryCallback, nil, 5*time.Second); err != nil {
 		logger.Get().Errorf("[handleChatHistory] player %d async get room %d history failed, err: %v", p.ID(), req.RoomId, err)
 		return actor.WithPbError(pbcommon.ErrCode_ECInternalError)
 	}
 	return nil
+}
+
+// onAsyncChatHistoryCallback 处理异步获取聊天历史回调.
+func onAsyncChatHistoryCallback(resp actor.ContextRPCResp) {
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		handler.ReplyErrorAbort(resp.Ctx, result.Err())
+		return
+	}
+	historyResp := result.Reply().(*pbs2s.ChatHistoryResp)
+	handler.Reply(resp.Ctx, &pbc2s.ChatHistoryResp{
+		RoomId: historyResp.RoomId,
+		Msgs:   historyResp.Msgs,
+	})
 }

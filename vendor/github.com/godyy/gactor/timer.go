@@ -21,7 +21,7 @@ type TimerFunc func(TimerArgs)
 type TimerArgs struct {
 	TID      TimerId // 定时器ID.
 	Periodic bool    // 是否为周期定时器.
-	Args     any     // 定时器参数.
+	Ctx      any     // 上下文.
 	Err      error   // 错误.
 }
 
@@ -50,17 +50,17 @@ func (c *TimerConfig) init() {
 type timer struct {
 	id       TimerId   // 定时器ID.
 	periodic bool      // 是否为周期定时器.
-	f        TimerFunc // 定时器回调函数.
-	args     any       // 定时器参数.
+	cb       TimerFunc // 定时器回调函数.
+	cbctx    any       // 回调上下文.
 	err      error     // 错误.
 }
 
-func newTimer(id TimerId, periodic bool, f TimerFunc, args any) *timer {
+func newTimer(id TimerId, periodic bool, cb TimerFunc, cbctx any) *timer {
 	return &timer{
 		id:       id,
 		periodic: periodic,
-		f:        f,
-		args:     args,
+		cb:       cb,
+		cbctx:    cbctx,
 	}
 }
 
@@ -68,11 +68,11 @@ func (t *timer) release() {}
 
 func (t *timer) trigger() {
 	defer t.release()
-	if t.f != nil {
-		t.f(TimerArgs{
+	if t.cb != nil {
+		t.cb(TimerArgs{
 			TID:      t.id,
 			Periodic: t.periodic,
-			Args:     t.args,
+			Ctx:      t.cbctx,
 			Err:      t.err,
 		})
 	}
@@ -191,7 +191,7 @@ func (m *timerManager) enqueueCmd(c timerCmd) error {
 }
 
 // startTimer 启动定时器.
-func (m *timerManager) startTimer(d time.Duration, periodic bool, args any, cb TimerFunc) TimerId {
+func (m *timerManager) startTimer(d time.Duration, periodic bool, cb TimerFunc, cbctx any) TimerId {
 	tid := m.nextTimerId()
 	period := time.Duration(0)
 	if periodic {
@@ -199,7 +199,7 @@ func (m *timerManager) startTimer(d time.Duration, periodic bool, args any, cb T
 	}
 	if err := m.enqueueCmd(newTimerAddCmd(
 		tid, m.svc.getTimeSystem().Now().Add(d).UnixNano(),
-		period, cb, args,
+		period, cb, cbctx,
 	)); err != nil {
 		return TimerIdNone
 	}
@@ -284,21 +284,21 @@ type timerAddCmd struct {
 	expiredAt int64
 	period    time.Duration
 	cb        TimerFunc
-	args      any
+	cbctx     any
 }
 
-func newTimerAddCmd(tid TimerId, expiredAt int64, period time.Duration, cb TimerFunc, args any) *timerAddCmd {
+func newTimerAddCmd(tid TimerId, expiredAt int64, period time.Duration, cb TimerFunc, cbctx any) *timerAddCmd {
 	return &timerAddCmd{
 		tid:       tid,
 		expiredAt: expiredAt,
 		period:    period,
 		cb:        cb,
-		args:      args,
+		cbctx:     cbctx,
 	}
 }
 
 func (c *timerAddCmd) exec(tm *timerManager) {
-	t := newTimer(c.tid, c.period > 0, c.cb, c.args)
+	t := newTimer(c.tid, c.period > 0, c.cb, c.cbctx)
 	err := tm.timeWheel.AddTimer(c.tid, c.expiredAt, c.period, t)
 	if err == nil {
 		tm.svc.monitorStartTimerAmount(1)
@@ -311,7 +311,7 @@ func (c *timerAddCmd) exec(tm *timerManager) {
 
 func (c *timerAddCmd) release() {
 	c.cb = nil
-	c.args = nil
+	c.cbctx = nil
 }
 
 func (c *timerAddCmd) discard() {

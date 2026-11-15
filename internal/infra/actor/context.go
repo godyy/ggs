@@ -12,8 +12,8 @@ import (
 
 type CtxK[V any] = actor.CtxK[V]
 
-func NewCtxK[V any]() CtxK[V] {
-	return actor.NewCtxK[V]()
+func NewCtxK[V any](s string) CtxK[V] {
+	return actor.NewCtxK[V](s)
 }
 
 func CtxKSet[V any](ctx *Context, k CtxK[V], v V) {
@@ -22,6 +22,10 @@ func CtxKSet[V any](ctx *Context, k CtxK[V], v V) {
 
 func CtxKGet[V any](ctx *Context, k CtxK[V]) (V, bool) {
 	return actor.CtxKGet(ctx, k)
+}
+
+func CtxKMust[V any](ctx *Context, k CtxK[V]) V {
+	return actor.CtxKMust(ctx, k)
 }
 
 func CtxActor[Actor actor.ActorBehavior](ctx *Context) Actor {
@@ -36,7 +40,7 @@ func CtxActorModule[M actor.Module](ctx *Context, autocreate bool) (m M) {
 var contextSugarUtil *actor.ContextSugarUtil
 
 // ctxKeyMsg 用于上下文中消息的key.
-var ctxKeyMsg = NewCtxK[proto.Message]()
+var ctxKeyMsg = NewCtxK[proto.Message]("req_msg")
 
 // ContextSugared 上下文语法糖封装.
 type ContextSugared struct {
@@ -90,23 +94,23 @@ func (ctx ContextSugared) RPCWithContext(cctx context.Context, to ActorUID, args
 }
 
 // AsyncRPCWithDeadline
-func (ctx ContextSugared) AsyncRPCWithDeadline(to ActorUID, args proto.Message, callback ContextAsyncRPCCallback, deadline time.Time) error {
-	return contextSugarUtil.AsyncRPCWithDeadline(ctx.Context, to, args, callback, deadline)
+func (ctx ContextSugared) AsyncRPCWithDeadline(to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any, deadline time.Time) error {
+	return contextSugarUtil.AsyncRPCWithDeadline(ctx.Context, to, args, cb, cbctx, deadline)
 }
 
 // AsyncRPCWithTimeout
-func (ctx ContextSugared) AsyncRPCWithTimeout(to ActorUID, args proto.Message, callback ContextAsyncRPCCallback, timeout time.Duration) error {
-	return contextSugarUtil.AsyncRPCWithTimeout(ctx.Context, to, args, callback, timeout)
+func (ctx ContextSugared) AsyncRPCWithTimeout(to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any, timeout time.Duration) error {
+	return contextSugarUtil.AsyncRPCWithTimeout(ctx.Context, to, args, cb, cbctx, timeout)
 }
 
 // AsyncRPC
-func (ctx ContextSugared) AsyncRPC(to ActorUID, args proto.Message, callback ContextAsyncRPCCallback) error {
-	return contextSugarUtil.AsyncRPC(ctx.Context, to, args, callback)
+func (ctx ContextSugared) AsyncRPC(to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any) error {
+	return contextSugarUtil.AsyncRPC(ctx.Context, to, args, cb, cbctx)
 }
 
 // AsyncRPCWithContext
-func (ctx ContextSugared) AsyncRPCWithContext(cctx context.Context, to ActorUID, args proto.Message, callback ContextAsyncRPCCallback) error {
-	return contextSugarUtil.AsyncRPCWithContext(ctx.Context, cctx, to, args, callback)
+func (ctx ContextSugared) AsyncRPCWithContext(cctx context.Context, to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any) error {
+	return contextSugarUtil.AsyncRPCWithContext(ctx.Context, cctx, to, args, cb, cbctx)
 }
 
 // Cast

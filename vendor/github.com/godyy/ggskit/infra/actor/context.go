@@ -7,6 +7,7 @@ import (
 	"github.com/godyy/gactor"
 	codecc2s "github.com/godyy/ggskit/base/codec/c2s"
 	"github.com/godyy/ggskit/base/protocol"
+	"github.com/godyy/gutils/container/kv"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -22,33 +23,32 @@ type ContextFuncArgs = gactor.ContextFuncArgs
 // ContextFunc
 type ContextFunc = gactor.ContextFunc
 
-type ctxK struct{}
-
 // CtxK 上下文kv的key.
-type CtxK[V any] struct {
-	*ctxK
-}
+type CtxK[V any] = kv.K[V]
 
-// CtxV 上下文kv的value.
-type CtxV = any
-
-func NewCtxK[V CtxV]() CtxK[V] {
-	return CtxK[V]{ctxK: &ctxK{}}
+// NewCtxK 创建上下文kv的key.
+func NewCtxK[V any](s string) CtxK[V] {
+	return kv.NewK[V](s)
 }
 
 // CtxKSet 通过CtxK设置Value.
-func CtxKSet[V CtxV](ctx *Context, k CtxK[V], v V) {
+func CtxKSet[V any](ctx *Context, k CtxK[V], v V) {
 	ctx.Set(k, v)
 }
 
 // CtxKGet 通过CtxK获取Value.
-func CtxKGet[V CtxV](ctx *Context, k CtxK[V]) (v V, exists bool) {
+func CtxKGet[V any](ctx *Context, k CtxK[V]) (v V, exists bool) {
 	var vv any
 	vv, exists = ctx.Get(k)
 	if exists {
 		v = vv.(V)
 	}
 	return
+}
+
+// CtxKMust 通过CtxK获取Value, 若不存在则panic.
+func CtxKMust[V any](ctx *Context, k CtxK[V]) V {
+	return kv.Must(ctx, k)
 }
 
 // CtxActor 获取上下文中的 Actor, 泛型支持.
@@ -62,7 +62,7 @@ func CtxActorModule[M Module](ctx *Context, autoCreate bool) M {
 }
 
 // ctxKSeq	 用于存储请求序号的key.
-var ctxKSeq = NewCtxK[uint32]()
+var ctxKSeq = NewCtxK[uint32]("req_seq")
 
 // ContextSugarUtil 上下文语法糖工具.
 type ContextSugarUtil struct {
@@ -97,10 +97,7 @@ func (h *ContextSugarUtil) Decode(ctx *Context) (protocol.PID, proto.Message, er
 // Reply 回复.
 func (h *ContextSugarUtil) Reply(ctx *Context, reply proto.Message) error {
 	if ctx.RequestType() == gactor.RequestTypeReq {
-		seq, ok := CtxKGet(ctx, ctxKSeq)
-		if !ok {
-			panic("ctx has no seq")
-		}
+		seq := CtxKMust(ctx, ctxKSeq)
 		payload, err := NewC2SPayload(codecc2s.PtResp, seq, reply, h.C2S)
 		if err != nil {
 			return err
@@ -186,68 +183,88 @@ func (h *ContextSugarUtil) RPCWithContext(ctx *Context, cctx context.Context, to
 // ContextRPCResp 上下文 RPC 响应.
 type ContextRPCResp struct {
 	Ctx   *Context      // 上下文.
+	CbCtx any           // 回调上下文.
 	Reply proto.Message // 回复消息.
 	Err   error         // 错误.
 }
 
-// ContextAsyncRPCCallback 上下文异步 RPC 回调.
-type ContextAsyncRPCCallback func(resp ContextRPCResp)
+// ContextAsyncRPCFunc 上下文异步 RPC 回调.
+type ContextAsyncRPCFunc func(resp ContextRPCResp)
 
-// ContextAsyncRPCCallback 上下文异步 RPC 回调.
-func (h *ContextSugarUtil) handleAsyncRPCResp(ctx *Context, resp gactor.RPCResp, callback ContextAsyncRPCCallback) {
+// cbctxContextAsyncRPC 上下文异步 RPC 回调上下文.
+func cbctxContextAsyncRPC(cb ContextAsyncRPCFunc, cbctx any) *kv.M {
+	return gactor.NewCbCtx(cbctxKeyCb, cb, cbctxKeyCbCtx, cbctx)
+}
+
+// contextAsyncRPCCallback 上下文异步 RPC 回调.
+func contextAsyncRPCCallback(ctx *Context, resp gactor.RPCResp) {
+	cbctx := resp.Ctx().(*kv.M)
+	defer gactor.CbCtxRelease(cbctx)
+	cb := kv.Must(cbctx, cbctxKeyCb).(ContextAsyncRPCFunc)
+	innerCbCtx := kv.Must(cbctx, cbctxKeyCbCtx)
+
 	if err := resp.Err(); err != nil {
-		callback(ContextRPCResp{Ctx: ctx, Reply: nil, Err: err})
+		cb(ContextRPCResp{Ctx: ctx, CbCtx: innerCbCtx, Reply: nil, Err: err})
 		return
 	}
 
 	var replyPayload S2SPayload
 	if err := resp.DecodeReply(&replyPayload); err != nil {
-		callback(ContextRPCResp{Ctx: ctx, Reply: nil, Err: err})
+		cb(ContextRPCResp{Ctx: ctx, CbCtx: innerCbCtx, Reply: nil, Err: err})
 		return
 	}
 
-	callback(ContextRPCResp{Ctx: ctx, Reply: replyPayload.Msg, Err: nil})
+	cb(ContextRPCResp{Ctx: ctx, CbCtx: innerCbCtx, Reply: replyPayload.Msg, Err: nil})
 }
 
 // AsyncRPCWithDeadline
-func (h *ContextSugarUtil) AsyncRPCWithDeadline(ctx *Context, to ActorUID, args proto.Message, callback ContextAsyncRPCCallback, deadline time.Time) error {
+func (h *ContextSugarUtil) AsyncRPCWithDeadline(ctx *Context, to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any, deadline time.Time) error {
 	argsPayload, err := NewS2SPayload(args, h.S2S)
 	if err != nil {
 		return err
 	}
 
-	return ctx.AsyncRPCWithDeadline(to, &argsPayload, func(ctx *Context, resp gactor.RPCResp) {
-		h.handleAsyncRPCResp(ctx, resp, callback)
-	}, deadline)
+	cbctx = cbctxContextAsyncRPC(cb, cbctx)
+	if err := ctx.AsyncRPCWithDeadline(to, &argsPayload, contextAsyncRPCCallback, cbctx, deadline); err != nil {
+		gactor.CbCtxRelease(cbctx.(*kv.M))
+		return err
+	}
+	return nil
 }
 
 // AsyncRPCWithTimeout
-func (h *ContextSugarUtil) AsyncRPCWithTimeout(ctx *Context, to ActorUID, args proto.Message, callback ContextAsyncRPCCallback, timeout time.Duration) error {
-	return h.AsyncRPCWithDeadline(ctx, to, args, callback, time.Now().Add(timeout))
+func (h *ContextSugarUtil) AsyncRPCWithTimeout(ctx *Context, to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any, timeout time.Duration) error {
+	return h.AsyncRPCWithDeadline(ctx, to, args, cb, cbctx, time.Now().Add(timeout))
 }
 
 // AsyncRPC
-func (h *ContextSugarUtil) AsyncRPC(ctx *Context, to ActorUID, args proto.Message, callback ContextAsyncRPCCallback) error {
+func (h *ContextSugarUtil) AsyncRPC(ctx *Context, to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any) error {
 	argsPayload, err := NewS2SPayload(args, h.S2S)
 	if err != nil {
 		return err
 	}
 
-	return ctx.AsyncRPC(to, &argsPayload, func(ctx *Context, resp gactor.RPCResp) {
-		h.handleAsyncRPCResp(ctx, resp, callback)
-	})
+	cbctx = cbctxContextAsyncRPC(cb, cbctx)
+	if err := ctx.AsyncRPC(to, &argsPayload, contextAsyncRPCCallback, cbctx); err != nil {
+		gactor.CbCtxRelease(cbctx.(*kv.M))
+		return err
+	}
+	return nil
 }
 
 // AsyncRPCWithContext
-func (h *ContextSugarUtil) AsyncRPCWithContext(ctx *Context, cctx context.Context, to ActorUID, args proto.Message, callback ContextAsyncRPCCallback) error {
+func (h *ContextSugarUtil) AsyncRPCWithContext(ctx *Context, cctx context.Context, to ActorUID, args proto.Message, cb ContextAsyncRPCFunc, cbctx any) error {
 	argsPayload, err := NewS2SPayload(args, h.S2S)
 	if err != nil {
 		return err
 	}
 
-	return ctx.AsyncRPCWithContext(cctx, to, &argsPayload, func(ctx *Context, resp gactor.RPCResp) {
-		h.handleAsyncRPCResp(ctx, resp, callback)
-	})
+	cbctx = cbctxContextAsyncRPC(cb, cbctx)
+	if err := ctx.AsyncRPCWithContext(cctx, to, &argsPayload, contextAsyncRPCCallback, cbctx); err != nil {
+		gactor.CbCtxRelease(cbctx.(*kv.M))
+		return err
+	}
+	return nil
 }
 
 // Cast

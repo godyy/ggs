@@ -56,38 +56,38 @@ type HandlerFunc = actor.HandlerFunc
 // ActorRPCResp Actor RPC响应类型映射.
 type ActorRPCResp = actor.ActorRPCResp
 
-// ActorAsyncRPCCallback Actor异步RPC回调类型映射.
-type ActorAsyncRPCCallback = actor.ActorAsyncRPCCallback
+// ActorAsyncRPCFunc Actor异步RPC回调类型映射.
+type ActorAsyncRPCFunc = actor.ActorAsyncRPCFunc
 
 // ActorTimerArgs Actor定时器参数类型映射.
-type ActorTimerArgs = actor.ActorTimerArgs
+type ActorTimerArgs = gactor.ActorTimerArgs
 
 // ActorTimerFunc Actor定时器函数类型映射.
-type ActorTimerFunc = actor.ActorTimerFunc
+type ActorTimerFunc = gactor.ActorTimerFunc
 
 // ActorFuncArgs Actor函数参数类型映射.
-type ActorFuncArgs = actor.ActorFuncArgs
+type ActorFuncArgs = gactor.ActorFuncArgs
 
 // ActorFunc Actor函数类型映射.
-type ActorFunc = actor.ActorFunc
+type ActorFunc = gactor.ActorFunc
 
 // ContextRPCResp 上下文RPC响应类型映射.
 type ContextRPCResp = actor.ContextRPCResp
 
-// ContextAsyncRPCCallback 上下文异步RPC回调类型映射.
-type ContextAsyncRPCCallback = actor.ContextAsyncRPCCallback
+// ContextAsyncRPCFunc 上下文异步RPC回调类型映射.
+type ContextAsyncRPCFunc = actor.ContextAsyncRPCFunc
 
 // ContextFuncArgs 上下文函数参数类型映射.
-type ContextFuncArgs = actor.ContextFuncArgs
+type ContextFuncArgs = gactor.ContextFuncArgs
 
 // ContextFunc 上下文函数类型映射.
-type ContextFunc = actor.ContextFunc
+type ContextFunc = gactor.ContextFunc
 
 // ActorAsyncCaller Actor 异步函数调用器
-type ActorAsyncCaller = actor.ActorAsyncCaller
+type ActorAsyncCaller = gactor.ActorAsyncCaller
 
 // ContextSuspender 上下文挂起器类型映射.
-type ContextSuspender = actor.ContextSuspender
+type ContextSuspender = gactor.ContextSuspender
 
 // ModuleKey 模块键类型映射.
 type ModuleKey = actor.ModuleKey

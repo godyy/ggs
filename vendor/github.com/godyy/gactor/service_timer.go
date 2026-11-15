@@ -1,8 +1,9 @@
 package gactor
 
 import (
-	"sync"
 	"time"
+
+	"github.com/godyy/gutils/container/kv"
 )
 
 // startTimerManager 启动定时器管理器.
@@ -12,13 +13,13 @@ func (s *Service) startTimerManager() {
 
 // StartTimer 启动定时器.
 // Service 一旦开始停机, 调用无效.
-func (s *Service) StartTimer(d time.Duration, periodic bool, args any, cb TimerFunc) TimerId {
-	return s.startTimer(d, periodic, args, cb, false)
+func (s *Service) StartTimer(d time.Duration, periodic bool, cb TimerFunc, cbctx any) TimerId {
+	return s.startTimer(d, periodic, cb, cbctx, false)
 }
 
 // startTimer 启动定时器.
 // notStopped 是否在未停止状态下启动定时器.
-func (s *Service) startTimer(d time.Duration, periodic bool, args any, cb TimerFunc, notStopped bool) TimerId {
+func (s *Service) startTimer(d time.Duration, periodic bool, cb TimerFunc, cbctx any, notStopped bool) TimerId {
 	if cb == nil {
 		panic("gactor: cb is nil")
 	}
@@ -33,7 +34,7 @@ func (s *Service) startTimer(d time.Duration, periodic bool, args any, cb TimerF
 		}
 	}
 
-	return s.timerManager.startTimer(d, periodic, args, cb)
+	return s.timerManager.startTimer(d, periodic, cb, cbctx)
 }
 
 // StopTimer 停止定时器.
@@ -45,57 +46,39 @@ func (s *Service) StopTimer(tid TimerId) {
 	s.timerManager.stopTimer(tid)
 }
 
-// actorTimerArgs Actor 定时器参数.
-type actorTimerArgs struct {
-	uid  ActorUID       // Actor UID.
-	cb   ActorTimerFunc // 回调函数.
-	args any            // 参数.
-}
-
-var poolOfActorTimerArgs = &sync.Pool{
-	New: func() any {
-		return &actorTimerArgs{}
-	},
-}
-
-func newActorTimerArgs(uid ActorUID, cb ActorTimerFunc, args any) *actorTimerArgs {
-	aArgs := poolOfActorTimerArgs.Get().(*actorTimerArgs)
-	aArgs.uid = uid
-	aArgs.cb = cb
-	aArgs.args = args
-	return aArgs
-}
-
-func (a *actorTimerArgs) release() {
-	a.args = nil
-	a.cb = nil
-	poolOfActorTimerArgs.Put(a)
+// cbctxActorTimer 构造 Actor 定时器回调上下文.
+func (s *Service) cbctxActorTimer(uid ActorUID, cb ActorTimerFunc, cbctx any) *kv.M {
+	return NewCbCtx(cbctxKeyUID, uid, cbctxKeyCallback, cb, cbctxKeyCbCtx, cbctx)
 }
 
 // startActorTimer 启动 Actor 定时器.
-func (s *Service) startActorTimer(uid ActorUID, d time.Duration, periodic bool, args any, cb ActorTimerFunc, notStopped bool) TimerId {
+func (s *Service) startActorTimer(uid ActorUID, d time.Duration, periodic bool, cb ActorTimerFunc, cbctx any, notStopped bool) TimerId {
 	if cb == nil {
 		panic("gactor: cb is nil")
 	}
 
-	return s.startTimer(d, periodic, newActorTimerArgs(uid, cb, args), s.execActorTimer, notStopped)
+	return s.startTimer(d, periodic, s.execActorTimer, s.cbctxActorTimer(uid, cb, cbctx), notStopped)
 }
 
 // execActorTimer 执行 Actor 定时器.
 func (s *Service) execActorTimer(args TimerArgs) {
-	aargs := args.Args.(*actorTimerArgs)
+	cbctx := args.Ctx.(*kv.M)
 	if !args.Periodic {
-		defer aargs.release()
+		defer CbCtxRelease(cbctx)
 	}
 
-	actor, err := s.refActor(aargs.uid)
+	uid := cbctxKeyUID.Must(cbctx)
+	cb := cbctxKeyCallback.Must(cbctx)
+	innerCbCtx := cbctxKeyCbCtx.Must(cbctx)
+
+	actor, err := s.refActor(uid)
 	if err != nil || actor == nil {
 		return
 	}
 
 	defer actor.core().deref()
 
-	actor.core().receiveTriggerdTimer(args.TID, aargs.args, aargs.cb)
+	actor.core().receiveTriggerdTimer(args.TID, cb.(ActorTimerFunc), innerCbCtx)
 }
 
 // tickTimeWheel 推进时间轮.

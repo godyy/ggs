@@ -1,6 +1,9 @@
 package deepcopy
 
-import "reflect"
+import (
+	"reflect"
+	"unsafe"
+)
 
 // CopyGenericI 泛型深度拷贝接口
 // 实现该接口，深度拷贝会优先调用该接口
@@ -41,6 +44,14 @@ func CopyGeneric[T any](src T) T {
 }
 
 func deepCopyRecursive(destValue, srcValue *reflect.Value) {
+	// 未导出字段的源值带只读限制, 转为可读视图再处理
+	src := readable(*srcValue)
+	if !src.CanInterface() {
+		// 只读且不可寻址, 无法读取, 跳过
+		return
+	}
+	srcValue = &src
+
 	if srcValue.IsZero() {
 		return
 	}
@@ -81,14 +92,14 @@ func deepCopyRecursive(destValue, srcValue *reflect.Value) {
 }
 
 func deepCopyStruct(destValue, srcValue *reflect.Value) {
-	srcType := srcValue.Type()
+	// 源结构体需可寻址, 才能通过 unsafe 读取其未导出字段
+	src := addressable(*srcValue)
+	dest := *destValue
+	srcType := src.Type()
 	for i := 0; i < srcType.NumField(); i++ {
-		field := srcType.Field(i)
-		if !field.IsExported() {
-			continue
-		}
-		srcField := srcValue.Field(i)
-		destField := destValue.Field(i)
+		// 未导出字段不可读写, 通过 unsafe 去掉只读限制
+		srcField := readable(src.Field(i))
+		destField := writable(dest.Field(i))
 		deepCopyRecursive(&destField, &srcField)
 	}
 }
@@ -134,4 +145,34 @@ func deepCopyInterface(destValue, srcValue *reflect.Value) {
 	destElem := reflect.New(srcElem.Type()).Elem()
 	deepCopyRecursive(&destElem, &srcElem)
 	destValue.Set(destElem)
+}
+
+// addressable 返回 v 的可寻址视图:
+// v 已可寻址则原样返回, 否则复制一份到新分配的内存, 以便通过 unsafe 读取其未导出字段.
+func addressable(v reflect.Value) reflect.Value {
+	// 只读(不可 interface)的值无法通过 Set 复制, 原样返回由上层兜底
+	if v.CanAddr() || !v.CanInterface() {
+		return v
+	}
+	p := reflect.New(v.Type()).Elem()
+	p.Set(v)
+	return p
+}
+
+// readable 返回 v 的可读视图, 用于绕过未导出字段带来的只读限制.
+// v 需可寻址, 否则原样返回.
+func readable(v reflect.Value) reflect.Value {
+	if v.CanInterface() || !v.CanAddr() {
+		return v
+	}
+	return reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem()
+}
+
+// writable 返回 v 的可写视图, 用于绕过未导出字段带来的只读限制.
+// v 需可寻址, 否则原样返回.
+func writable(v reflect.Value) reflect.Value {
+	if v.CanSet() || !v.CanAddr() {
+		return v
+	}
+	return reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem()
 }
