@@ -134,6 +134,11 @@ func (p *Player) ID() int64 {
 	return p.GetActor().ActorUID().ID
 }
 
+// Name 获取玩家昵称.
+func (p *Player) Name() string {
+	return actor.GetActorModule[*player.BaseInfo](p, true).Name
+}
+
 // IsLogin 返回是否已登录.
 func (p *Player) IsLogin() bool {
 	return p.isLogin
@@ -162,7 +167,7 @@ func (p *Player) startHeartbeatTimer() {
 	if p.heartbeatTimerId != gactor.TimerIdNone {
 		p.StopTimer(p.heartbeatTimerId)
 	}
-	p.heartbeatTimerId = p.StartTimer(consts.HeartbeatTimeout, false, nil, p.onHeartbeatTimer)
+	p.heartbeatTimerId = p.StartTimer(consts.HeartbeatTimeout, false, p.onHeartbeatTimer, nil)
 }
 
 // stopHeartbeatTimer 停止心跳定时器.

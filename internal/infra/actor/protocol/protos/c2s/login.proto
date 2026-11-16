@@ -12,7 +12,7 @@ message LoginReq {
 }
 
 // 登陆响应.
-message LoginResp {}
+message LoginResp { LoginCharacterResp character = 1; }
 
 // 登陆游戏请求.
 message LoginCharacterReq {

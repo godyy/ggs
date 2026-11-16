@@ -24,7 +24,8 @@ const (
 // 角色基础信息.
 type PlayerBase struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // 昵称.
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`    // 角色ID.
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"` // 昵称.
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -59,6 +60,13 @@ func (*PlayerBase) Descriptor() ([]byte, []int) {
 	return file_common_player_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *PlayerBase) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
 func (x *PlayerBase) GetName() string {
 	if x != nil {
 		return x.Name
@@ -70,10 +78,11 @@ var File_common_player_proto protoreflect.FileDescriptor
 
 const file_common_player_proto_rawDesc = "" +
 	"\n" +
-	"\x13common/player.proto\x12\x06common\" \n" +
+	"\x13common/player.proto\x12\x06common\"0\n" +
 	"\n" +
-	"PlayerBase\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04nameB>Z<github.com/godyy/ggs/internal/infra/actor/protocol/pb/commonb\x06proto3"
+	"PlayerBase\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04nameB>Z<github.com/godyy/ggs/internal/infra/actor/protocol/pb/commonb\x06proto3"
 
 var (
 	file_common_player_proto_rawDescOnce sync.Once

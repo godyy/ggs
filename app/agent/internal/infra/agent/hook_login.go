@@ -166,7 +166,7 @@ func handleLoginGameResp(a *Agent, p []byte, msg proto.Message) {
 
 	// 发送登录响应.
 	if err := a.sendRespMessage(seq, &pbc2s.LoginResp{
-		// todo
+		Character: resp,
 	}); err != nil {
 		a.errorFields("send login response failed", log.FldError(err))
 		a.Stop(pbc2s.DisconnectPush_SystemError)

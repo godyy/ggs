@@ -10,6 +10,7 @@ import (
 	"github.com/godyy/ggs/internal/infra/actor"
 	"github.com/godyy/ggs/internal/infra/actor/actors"
 	pbc2s "github.com/godyy/ggs/internal/infra/actor/protocol/pb/c2s"
+	pbcommon "github.com/godyy/ggs/internal/infra/actor/protocol/pb/common"
 	"github.com/godyy/ggs/internal/infra/actor/protocol/pb/s2s"
 	pkgerrors "github.com/pkg/errors"
 )
@@ -36,7 +37,12 @@ func handleLoginCharacter(ctx *actor.Context, req *pbc2s.LoginCharacterReq) (*pb
 	}
 	handler.Logger().Info("get server name success, server name: %s", getServerNameResp.(*s2s.GetServerNameResp).ServerName)
 
-	return &pbc2s.LoginCharacterResp{}, nil
+	return &pbc2s.LoginCharacterResp{
+		Base: &pbcommon.PlayerBase{
+			Id:   player.ID(),
+			Name: player.Name(),
+		},
+	}, nil
 }
 
 // handleHearbeat 处理心跳.

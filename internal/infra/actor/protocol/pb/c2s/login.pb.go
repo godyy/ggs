@@ -125,6 +125,7 @@ func (x *LoginReq) GetToken() string {
 // 登陆响应.
 type LoginResp struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Character     *LoginCharacterResp    `protobuf:"bytes,1,opt,name=character,proto3" json:"character,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -157,6 +158,13 @@ func (x *LoginResp) ProtoReflect() protoreflect.Message {
 // Deprecated: Use LoginResp.ProtoReflect.Descriptor instead.
 func (*LoginResp) Descriptor() ([]byte, []int) {
 	return file_c2s_login_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *LoginResp) GetCharacter() *LoginCharacterResp {
+	if x != nil {
+		return x.Character
+	}
+	return nil
 }
 
 // 登陆游戏请求.
@@ -381,8 +389,9 @@ const file_c2s_login_proto_rawDesc = "" +
 	"\n" +
 	"\x0fc2s/login.proto\x12\x03c2s\x1a\x13common/player.proto\" \n" +
 	"\bLoginReq\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"\v\n" +
-	"\tLoginResp\"C\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"B\n" +
+	"\tLoginResp\x125\n" +
+	"\tcharacter\x18\x01 \x01(\v2\x17.c2s.LoginCharacterRespR\tcharacter\"C\n" +
 	"\x11LoginCharacterReq\x12\x10\n" +
 	"\x03uid\x18\x01 \x01(\tR\x03uid\x12\x1c\n" +
 	"\taccountId\x18\x02 \x01(\x03R\taccountId\"<\n" +
@@ -426,13 +435,14 @@ var file_c2s_login_proto_goTypes = []any{
 	(*common.PlayerBase)(nil),  // 8: common.PlayerBase
 }
 var file_c2s_login_proto_depIdxs = []int32{
-	8, // 0: c2s.LoginCharacterResp.base:type_name -> common.PlayerBase
-	0, // 1: c2s.DisconnectPush.reason:type_name -> c2s.DisconnectPush.Reason
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 0: c2s.LoginResp.character:type_name -> c2s.LoginCharacterResp
+	8, // 1: c2s.LoginCharacterResp.base:type_name -> common.PlayerBase
+	0, // 2: c2s.DisconnectPush.reason:type_name -> c2s.DisconnectPush.Reason
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_c2s_login_proto_init() }

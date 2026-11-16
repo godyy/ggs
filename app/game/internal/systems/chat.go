@@ -9,7 +9,7 @@ import (
 
 	"github.com/godyy/gactor"
 	"github.com/godyy/ggs/app/game/internal/app"
-	"github.com/godyy/ggs/app/game/internal/base/cbctx"
+	"github.com/godyy/ggs/app/game/internal/base/cbctxkey"
 	"github.com/godyy/ggs/internal/base/logger"
 	"github.com/godyy/ggs/internal/gdconf"
 	"github.com/godyy/ggs/internal/infra/actor"
@@ -128,21 +128,21 @@ func (m *chatModule) delRoomLoader(roomId int64) {
 }
 
 // LoadRoomAsync 异步加载房间.
-func (m *chatModule) LoadRoomAsync(ctx any, roomId int64, cb ChatRoomLoadCallback) {
+func (m *chatModule) LoadRoomAsync(op any, roomId int64, cb ChatRoomLoadFunc, cbctx any) {
 	var mgr *actors.ChatMgr
 
-	switch ctx := ctx.(type) {
+	switch ctx := op.(type) {
 	case *actor.Context:
 		mgr = actor.CtxActor[*actors.ChatMgr](ctx)
 	case *actors.ChatMgr:
 		mgr = ctx
 	default:
-		cb(ctx, nil, fmt.Errorf("loadRoomAsync ctx type %T not supported", ctx))
+		cb(ChatRoomLoadResp{Op: op, RoomId: roomId, Room: nil, Err: fmt.Errorf("loadRoomAsync ctx type %T not supported", ctx), CbCtx: cbctx})
 	}
 
 	room := mgr.GetRoom(roomId)
 	if room != nil {
-		cb(ctx, room, nil)
+		cb(ChatRoomLoadResp{Op: op, RoomId: roomId, Room: room, Err: nil, CbCtx: cbctx})
 		return
 	}
 
@@ -150,15 +150,15 @@ func (m *chatModule) LoadRoomAsync(ctx any, roomId int64, cb ChatRoomLoadCallbac
 	loader := m.getRoomLoader(roomId)
 
 	// 加载器已存在
-	if loader != nil && !loader.appendCallback(cb) {
-		loader.invokeCallback(ctx, cb)
+	if loader != nil && !loader.appendCallback(chatRoomLoadCallbackPairs{cb: cb, cbCtx: cbctx}) {
+		loader.invokeCallback(op, chatRoomLoadCallbackPairs{cb: cb, cbCtx: cbctx})
 		return
 	}
 
 	// 添加加载器
-	loader = newChatRoomLoader(roomId, cb)
+	loader = newChatRoomLoader(roomId, chatRoomLoadCallbackPairs{cb: cb, cbCtx: cbctx})
 	m.addRoomLoader(roomId, loader)
-	loader.start(ctx)
+	loader.start(op)
 }
 
 // addRoom 添加房间.
@@ -174,7 +174,7 @@ func (m *chatModule) addRoom(mgr *actors.ChatMgr, room *chat.Room, new bool) {
 func (m *chatModule) setDirtyRoom(mgr *actors.ChatMgr, room *chat.Room) {
 	mgr.SetDirtyRoom(room)
 	if mgr.DirtyTimerId == gactor.TimerIdNone {
-		mgr.DirtyTimerId = mgr.StartTimer(5*time.Second, false, nil, m.onDirtyTimer)
+		mgr.DirtyTimerId = mgr.StartTimer(5*time.Second, false, m.onDirtyTimer, nil)
 	}
 }
 
@@ -184,7 +184,7 @@ func (m *chatModule) onDirtyTimer(args gactor.ActorTimerArgs) {
 	mgr.DirtyTimerId = 0
 	if err := m.saveDirtyRooms(mgr); err != nil {
 		logger.Get().Errorf("save dirty rooms failed, err: %v", err)
-		mgr.DirtyTimerId = mgr.StartTimer(5*time.Second, false, nil, m.onDirtyTimer)
+		mgr.DirtyTimerId = mgr.StartTimer(5*time.Second, false, m.onDirtyTimer, nil)
 	}
 }
 
@@ -239,36 +239,48 @@ type SendMsgParams struct {
 	Content  string // 消息内容
 }
 
+var cbctxKeySendMsgParams = actor.NewCbCtxK[SendMsgParams]("send_msg_params")
+
 // SendMsg 发送聊天消息到参数指定的聊天室.
 func (m *chatModule) SendMsg(mgr *actors.ChatMgr, params SendMsgParams, cb func(m *actors.ChatMgr, err error)) {
-	m.LoadRoomAsync(mgr, params.RoomId, func(ctx any, room *chat.Room, err error) {
-		mgr := ctx.(*actors.ChatMgr)
+	m.LoadRoomAsync(mgr, params.RoomId, m.onLoadRoom2SendMsg, actor.NewCbCtx(
+		cbctxKeySendMsgParams, params,
+		cbctxkey.Callback, cb,
+	))
+}
 
-		if err != nil {
-			logger.Get().Errorf("[ChatModule.SendMsg] load room async %d failed, from sender %d, %v", params.RoomId, params.SenderId, err)
-			cb(mgr, err)
-			return
-		}
+// onLoadRoom2SendMsg 加载聊天室数据以处理发送消息回调.
+func (m *chatModule) onLoadRoom2SendMsg(resp ChatRoomLoadResp) {
+	mgr := resp.Op.(*actors.ChatMgr)
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	params := actor.CbCtxMust(cc, cbctxKeySendMsgParams)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(m *actors.ChatMgr, err error))
 
-		// 检查权限
-		if err := m.checkSendPriviledge(room, params.SenderId); err != nil {
-			cb(mgr, err)
-			return
-		}
+	if resp.Err != nil {
+		logger.Get().Errorf("[ChatModule.SendMsg] load room async %d failed, from sender %d, %v", params.RoomId, params.SenderId, resp.Err)
+		cb(mgr, resp.Err)
+		return
+	}
 
-		// 添加消息记录.
-		nowTs := time.Now().Unix()
-		record := chat.NewMessageRecord(room.NextMsgID(), params.SenderId, params.Content, nowTs)
-		room.AddHistory(record, gdconf.Global().GetChatRoomHistoryMaxByType(gdconf.ChatRoomType(room.Type)))
-		room.LastActiveAt = nowTs
-		m.setDirtyRoom(mgr, room)
+	// 检查权限
+	if err := m.checkSendPriviledge(resp.Room, params.SenderId); err != nil {
+		cb(mgr, err)
+		return
+	}
 
-		// 转发消息.
-		m.forwardMsg(room, record)
+	// 添加消息记录.
+	nowTs := time.Now().Unix()
+	record := chat.NewMessageRecord(resp.Room.NextMsgID(), params.SenderId, params.Content, nowTs)
+	resp.Room.AddHistory(record, gdconf.Global().GetChatRoomHistoryMaxByType(gdconf.ChatRoomType(resp.Room.Type)))
+	resp.Room.LastActiveAt = nowTs
+	m.setDirtyRoom(mgr, resp.Room)
 
-		// 成功
-		cb(mgr, nil)
-	})
+	// 转发消息.
+	m.forwardMsg(resp.Room, record)
+
+	// 成功
+	cb(mgr, nil)
 }
 
 // checkSendPriviledge 检查发送权限.
@@ -309,21 +321,23 @@ func (m *chatModule) PlayerSendMsg(p *actors.Player, roomId int64, content strin
 		RoomId:   roomId,
 		SenderId: p.ID(),
 		Content:  content,
-	}, m.onAsyncPlayerSendMsgCallback, actor.NewCbCtx(
-		cbctx.KeyCallback, cb,
-		cbctx.KeyPlayer, p,
-		cbctx.KeyChatRoomID, roomId,
+	}, m.onAsyncPlayerSendMsg, actor.NewCbCtx(
+		cbctxkey.Callback, cb,
+		cbctxkey.Player, p,
+		cbctxkey.ChatRoomID, roomId,
 	), 5*time.Second); err != nil {
 		logger.Get().Errorf("[chatModule.PlayerSendMsg] player %d, asyncRPC send msg to room %d, %v", p.ID(), roomId, err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
 }
 
-func (m *chatModule) onAsyncPlayerSendMsgCallback(resp actor.ActorRPCResp) {
+// onAsyncPlayerSendMsgCallback 异步处理玩家发送聊天消息回调.
+func (m *chatModule) onAsyncPlayerSendMsg(resp actor.ActorRPCResp) {
 	cc := resp.CbCtx.(*actor.CbCtx)
-	player := actor.CbCtxMust(cc, cbctx.KeyPlayer)
-	roomId := actor.CbCtxMust(cc, cbctx.KeyChatRoomID)
-	cb := actor.CbCtxMust(cc, cbctx.KeyCallback).(func(p *actors.Player, err error))
+	defer actor.CbCtxRelease(cc)
+	player := actor.CbCtxMust(cc, cbctxkey.Player)
+	roomId := actor.CbCtxMust(cc, cbctxkey.ChatRoomID)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(p *actors.Player, err error))
 
 	result := actor.NewRPCResult(resp.Reply, resp.Err)
 	if !result.Success() {
@@ -377,19 +391,21 @@ func (m *chatModule) playerDoCreateGroupChatRoom(p *actors.Player, params Player
 	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.CreateGroupChatRoomReq{
 		Name:      params.RoomName,
 		MemberIds: append([]int64{p.ID()}, params.MemberIds...),
-	}, m.onAsyncPlayerCreateGroupChatRoomCallback, actor.NewCbCtx(
-		cbctx.KeyCallback, cb,
-		cbctx.KeyPlayer, p,
+	}, m.onAsyncPlayerCreateGroupChatRoom, actor.NewCbCtx(
+		cbctxkey.Callback, cb,
+		cbctxkey.Player, p,
 	), 5*time.Second); err != nil {
 		logger.Get().Errorf("[chatModule.PlayerDoCreateGroupChatRoom] player %d, asyncRPC create group chat room, %v", p.ID(), err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
 }
 
-func (m *chatModule) onAsyncPlayerCreateGroupChatRoomCallback(resp actor.ActorRPCResp) {
+// onAsyncPlayerCreateGroupChatRoom 异步处理玩家创建群聊室回调.
+func (m *chatModule) onAsyncPlayerCreateGroupChatRoom(resp actor.ActorRPCResp) {
 	cc := resp.CbCtx.(*actor.CbCtx)
-	player := actor.CbCtxMust(cc, cbctx.KeyPlayer)
-	cb := actor.CbCtxMust(cc, cbctx.KeyCallback).(func(p *actors.Player, err error))
+	defer actor.CbCtxRelease(cc)
+	player := actor.CbCtxMust(cc, cbctxkey.Player)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(p *actors.Player, err error))
 
 	result := actor.NewRPCResult(resp.Reply, resp.Err)
 	if !result.Success() {
@@ -435,33 +451,44 @@ func (m *chatModule) CreateGroupChatRoom(mgr *actors.ChatMgr, params *CreateGrou
 	if err := mgr.AsyncRPCWithTimeout(actor.PlayerUID(ownerId), &pbs2s.NotifyJoinChatRoomReq{
 		RoomId:   room.ID,
 		RoomType: room.Type,
-	}, func(resp actor.ActorRPCResp) {
-		chatMgr := actor.ToActor[*actors.ChatMgr](resp.Actor)
-
-		result := actor.NewRPCResult(resp.Reply, resp.Err)
-		if !result.Success() {
-			logger.Get().Errorf("[ChatModule] notify owner %d to join group room, %v", ownerId, result.Err())
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomCreateFailed))
-			return
-		}
-
-		// 添加聊天室
-		m.addRoom(chatMgr, room, true)
-
-		// 回复
-		cb(mgr, nil)
-		Player.Send2OnlinePlayer(ownerId, &pbc2s.JoinChatRoomPush{
-			Room: m.packPBRoom(room),
-		})
-
-		// 异步通知其它成员加入聊天室.
-		for _, memberId := range params.MemberIds[1:] {
-			m.notifyMemberJoinChatRoom(chatMgr, room, memberId)
-		}
-
-	}, nil, 5*time.Second); err != nil {
+	}, m.onAsyncNotifyGroupOwnerJoin, actor.NewCbCtx(
+		cbctxkey.Callback, cb,
+		cbctxkey.ChatRoom, room,
+		cbctxkey.MemberIds, params.MemberIds[1:],
+	), 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule] notify owner %d to join group room, %v", ownerId, err)
 		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomCreateFailed))
+	}
+}
+
+// onAsyncNotifyGroupOwnerJoin 异步通知群主加入聊天室回调.
+func (m *chatModule) onAsyncNotifyGroupOwnerJoin(resp actor.ActorRPCResp) {
+	chatMgr := actor.ToActor[*actors.ChatMgr](resp.Actor)
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(mgr *actors.ChatMgr, err error))
+	room := actor.CbCtxMust(cc, cbctxkey.ChatRoom)
+	memberIds := actor.CbCtxMust(cc, cbctxkey.MemberIds)
+
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		logger.Get().Errorf("[ChatModule] notify owner %d to join group room, %v", room.OwnerID, result.Err())
+		cb(chatMgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomCreateFailed))
+		return
+	}
+
+	// 添加聊天室
+	m.addRoom(chatMgr, room, true)
+
+	// 回复
+	cb(chatMgr, nil)
+	Player.Send2OnlinePlayer(room.OwnerID, &pbc2s.JoinChatRoomPush{
+		Room: m.packPBRoom(room),
+	})
+
+	// 异步通知其它成员加入聊天室.
+	for _, memberId := range memberIds {
+		m.notifyMemberJoinChatRoom(chatMgr, room, memberId)
 	}
 }
 
@@ -472,46 +499,65 @@ func (m *chatModule) notifyMemberJoinChatRoom(chatMgr *actors.ChatMgr, room *cha
 		RoomId:   room.ID,
 		RoomType: room.Type,
 	},
-		func(resp actor.ActorRPCResp) {
-			result := actor.NewRPCResult(resp.Reply, resp.Err)
-			if !result.Success() {
-				logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] notify member %d to join group room, %v", memberId, result.Err())
-				return
-			}
-			chatMgr := actor.ToActor[*actors.ChatMgr](resp.Actor)
-			m.LoadRoomAsync(chatMgr, roomId, func(ctx any, room *chat.Room, err error) {
-				chatMgr := ctx.(*actors.ChatMgr)
-				if err != nil {
-					logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] load room async %d failed, member %d, %v", roomId, memberId, err)
-					return
-				}
-				maxMemebers := gdconf.Global().GetChatRoomMemberMaxByType(gdconf.ChatRoomType(room.Type))
-				if room.MemberCount() >= maxMemebers {
-					// 聊天室已满.
-					if err := chatMgr.AsyncRPCWithTimeout(actor.PlayerUID(memberId), &pbs2s.NotifyLeaveChatRoomReq{
-						RoomId: roomId,
-					}, func(resp actor.ActorRPCResp) {
-						result := actor.NewRPCResult(resp.Reply, resp.Err)
-						if !result.Success() {
-							logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] room full, notify member %d to leave group room, %v", memberId, result.Err())
-							return
-						}
-					}, nil, 5*time.Second); err != nil {
-						logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] room full, async notify member %d to leave group room, %v", memberId, err)
-						return
-					}
-					return
-				}
-				room.AddMember(chat.NewRoomMember(memberId))
-				m.setDirtyRoom(chatMgr, room)
-				Player.Send2OnlinePlayer(memberId, &pbc2s.JoinChatRoomPush{
-					Room: m.packPBRoom(room),
-				})
-				m.broadcastMemberJoinRoom(room, memberId)
-			})
-		}, nil, 5*time.Second); err != nil {
+		m.onAsyncNotifyMemberJoinChatRoom, actor.NewCbCtx(
+			cbctxkey.ChatRoomID, roomId,
+			cbctxkey.MemberId, memberId,
+		), 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule] notify member %d to join group room, %v", memberId, err)
 	}
+}
+
+func (m *chatModule) onAsyncNotifyMemberJoinChatRoom(resp actor.ActorRPCResp) {
+	chatMgr := actor.ToActor[*actors.ChatMgr](resp.Actor)
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	roomId := actor.CbCtxMust(cc, cbctxkey.ChatRoomID)
+	memberId := actor.CbCtxMust(cc, cbctxkey.MemberId)
+
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] notify member %d to join group room, %v", memberId, result.Err())
+		return
+	}
+	m.LoadRoomAsync(chatMgr, roomId, m.onLoadRoom2AddMember, actor.NewCbCtx(
+		cbctxkey.MemberId, memberId,
+	))
+}
+
+// onLoadRoom2AddMember 加载聊天室数据以处理成员加入回调.
+func (m *chatModule) onLoadRoom2AddMember(resp ChatRoomLoadResp) {
+	chatMgr := resp.Op.(*actors.ChatMgr)
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	memberId := actor.CbCtxMust(cc, cbctxkey.MemberId)
+
+	if resp.Err != nil {
+		logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] load room async %d failed, member %d, %v", resp.RoomId, memberId, resp.Err)
+		return
+	}
+	maxMemebers := gdconf.Global().GetChatRoomMemberMaxByType(gdconf.ChatRoomType(resp.Room.Type))
+	if resp.Room.MemberCount() >= maxMemebers {
+		// 聊天室已满.
+		if err := chatMgr.AsyncRPCWithTimeout(actor.PlayerUID(memberId), &pbs2s.NotifyLeaveChatRoomReq{
+			RoomId: resp.RoomId,
+		}, func(resp actor.ActorRPCResp) {
+			result := actor.NewRPCResult(resp.Reply, resp.Err)
+			if !result.Success() {
+				logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] room full, notify member %d to leave group room, %v", memberId, result.Err())
+				return
+			}
+		}, nil, 5*time.Second); err != nil {
+			logger.Get().Errorf("[ChatModule.notifyMemberJoinChatRoom] room full, async notify member %d to leave group room, %v", memberId, err)
+			return
+		}
+		return
+	}
+	resp.Room.AddMember(chat.NewRoomMember(memberId))
+	m.setDirtyRoom(chatMgr, resp.Room)
+	Player.Send2OnlinePlayer(memberId, &pbc2s.JoinChatRoomPush{
+		Room: m.packPBRoom(resp.Room),
+	})
+	m.broadcastMemberJoinRoom(resp.Room, memberId)
 }
 
 // broadcastMemberJoinRoom 广播成员加入聊天室.
@@ -554,18 +600,31 @@ func (m *chatModule) PlayerLeaveChatRoom(p *actors.Player, roomId int64, cb func
 		return
 	}
 	if err := p.AsyncRPCWithTimeout(m.MgrUID(p.ServerID()), &pbs2s.LeaveChatRoomReq{RoomId: roomId, MemberId: p.ID()},
-		func(resp actor.ActorRPCResp) {
-			result := actor.NewRPCResult(resp.Reply, resp.Err)
-			if !result.Success() {
-				logger.Get().Errorf("[ChatModule.PlayerLeaveChatRoom] player %d leave room %d failed, %v", p.ID(), roomId, result.Err())
-				cb(p, result.Err())
-				return
-			}
-			cb(p, nil)
-		}, nil, 5*time.Second); err != nil {
+		m.onAsyncPlayerLeaveChatRoom, actor.NewCbCtx(
+			cbctxkey.Player, p,
+			cbctxkey.ChatRoomID, roomId,
+			cbctxkey.Callback, cb,
+		), 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule.PlayerLeaveChatRoom] player %d, asyncRPC leave room %d failed, %v", p.ID(), roomId, err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
+}
+
+// onAsyncPlayerLeaveChatRoom 异步处理玩家退出聊天室回调.
+func (m *chatModule) onAsyncPlayerLeaveChatRoom(resp actor.ActorRPCResp) {
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	p := actor.CbCtxMust(cc, cbctxkey.Player)
+	roomId := actor.CbCtxMust(cc, cbctxkey.ChatRoomID)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(p *actors.Player, err error))
+
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		logger.Get().Errorf("[ChatModule.PlayerLeaveChatRoom] player %d leave room %d failed, %v", p.ID(), roomId, result.Err())
+		cb(p, result.Err())
+		return
+	}
+	cb(p, nil)
 }
 
 // checkLeaveRoom 检查退出聊天室.
@@ -586,56 +645,86 @@ func (m *chatModule) checkLeaveRoom(room *chat.Room, memberId int64) error {
 
 // LeaveChatRoom 退出聊天室.
 func (m *chatModule) LeaveChatRoom(mgr *actors.ChatMgr, roomId int64, memberId int64, cb func(mgr *actors.ChatMgr, err error)) {
-	m.LoadRoomAsync(mgr, roomId, func(ctx any, room *chat.Room, err error) {
-		if err != nil {
-			logger.Get().Errorf("[ChatModule.LeaveChatRoom] member %d, load room %d failed, %v", memberId, roomId, err)
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomNotExists))
-			return
-		}
+	m.LoadRoomAsync(mgr, roomId, m.onLoadRoom2MemberLeave1, actor.NewCbCtx(
+		cbctxkey.MemberId, memberId,
+		cbctxkey.Callback, cb,
+	))
+}
 
-		// 检查退出聊天室.
-		if err := m.checkLeaveRoom(room, memberId); err != nil {
-			cb(mgr, err)
-			return
-		}
+// onLoadRoom2MemberLeave1 加载聊天室数据以处理成员退出 step 1.
+func (m *chatModule) onLoadRoom2MemberLeave1(resp ChatRoomLoadResp) {
+	mgr := resp.Op.(*actors.ChatMgr)
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	memberId := actor.CbCtxMust(cc, cbctxkey.MemberId)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(mgr *actors.ChatMgr, err error))
 
-		// 通知成员退出聊天室.
-		if err := mgr.AsyncRPCWithTimeout(actor.PlayerUID(memberId), &pbs2s.NotifyLeaveChatRoomReq{RoomId: room.ID},
-			func(resp actor.ActorRPCResp) {
-				mgr := actor.ToActor[*actors.ChatMgr](resp.Actor)
+	if resp.Err != nil {
+		logger.Get().Errorf("[ChatModule.LeaveChatRoom] member %d, load room %d failed, %v", memberId, resp.RoomId, resp.Err)
+		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomNotExists))
+		return
+	}
 
-				result := actor.NewRPCResult(resp.Reply, resp.Err)
-				if !result.Success() {
-					err := result.Err()
-					var pbErr *actor.PbError
-					if !(errors.As(err, &pbErr) && pbErr.Err.Code == pbcommon.ErrCode_ECChatRoomMemberNotInRoom) {
-						logger.Get().Errorf("[ChatModule.LeaveChatRoom] notify member %d to leave room %d failed, %v", memberId, roomId, result.Err())
-						cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomMemberNotInRoom))
-						return
-					}
+	// 检查退出聊天室.
+	if err := m.checkLeaveRoom(resp.Room, memberId); err != nil {
+		cb(mgr, err)
+		return
+	}
+
+	// 通知成员退出聊天室.
+	if err := mgr.AsyncRPCWithTimeout(actor.PlayerUID(memberId), &pbs2s.NotifyLeaveChatRoomReq{RoomId: resp.RoomId},
+		func(resp actor.ActorRPCResp) {
+			mgr := actor.ToActor[*actors.ChatMgr](resp.Actor)
+			cc := resp.CbCtx.(*actor.CbCtx)
+			defer actor.CbCtxRelease(cc)
+			roomId := actor.CbCtxMust(cc, cbctxkey.ChatRoomID)
+			memberId := actor.CbCtxMust(cc, cbctxkey.MemberId)
+			cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(mgr *actors.ChatMgr, err error))
+
+			result := actor.NewRPCResult(resp.Reply, resp.Err)
+			if !result.Success() {
+				err := result.Err()
+				var pbErr *actor.PbError
+				if !(errors.As(err, &pbErr) && pbErr.Err.Code == pbcommon.ErrCode_ECChatRoomMemberNotInRoom) {
+					logger.Get().Errorf("[ChatModule.LeaveChatRoom] notify member %d to leave room %d failed, %v", memberId, roomId, result.Err())
+					cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomMemberNotInRoom))
+					return
 				}
+			}
 
-				// 回复成功
-				cb(mgr, nil)
+			// 回复成功
+			cb(mgr, nil)
 
-				// 加载聊天室数据以删除成员
-				Chat.LoadRoomAsync(mgr, roomId, func(ctx any, room *chat.Room, err error) {
-					mgr := ctx.(*actors.ChatMgr)
-					if err != nil {
-						logger.Get().Errorf("[ChatModule.LeaveChatRoom] after notify member %d to leave, load room %d failed, %v", memberId, roomId, err)
-						return
-					}
-					// 从聊天室中删除成员
-					room.RemoveMember(memberId)
-					Chat.setDirtyRoom(mgr, room)
-					Chat.broadcastMemberLeaveRoom(room, memberId)
-				})
-			}, nil, 5*time.Second); err != nil {
-			logger.Get().Errorf("[ChatModule.LeaveChatRoom] notify member %d to leave room %d failed, %v", memberId, roomId, err)
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
-			return
-		}
-	})
+			// 加载聊天室数据以删除成员
+			Chat.LoadRoomAsync(mgr, roomId, m.onLoadRoom2MemberLeaveFinal, actor.NewCbCtx(
+				cbctxkey.MemberId, memberId,
+			))
+		}, actor.NewCbCtx(
+			cbctxkey.MemberId, memberId,
+			cbctxkey.ChatRoomID, resp.RoomId,
+			cbctxkey.Callback, cb,
+		), 5*time.Second); err != nil {
+		logger.Get().Errorf("[ChatModule.LeaveChatRoom] notify member %d to leave room %d failed, %v", memberId, resp.RoomId, err)
+		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
+		return
+	}
+}
+
+// onLoadRoom2MemberLeaveFinal 加载聊天室数据以处理成员退出 step final.
+func (m *chatModule) onLoadRoom2MemberLeaveFinal(resp ChatRoomLoadResp) {
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	memberId := actor.CbCtxMust(cc, cbctxkey.MemberId)
+
+	mgr := resp.Op.(*actors.ChatMgr)
+	if resp.Err != nil {
+		logger.Get().Errorf("[ChatModule.onLoadRoom2MemberLeaveFinal] member %d, load room %d failed, %v", memberId, resp.RoomId, resp.Err)
+		return
+	}
+	// 从聊天室中删除成员
+	resp.Room.RemoveMember(memberId)
+	m.setDirtyRoom(mgr, resp.Room)
+	m.broadcastMemberLeaveRoom(resp.Room, memberId)
 }
 
 // broadcastMemberLeaveRoom 广播成员退出聊天室.
@@ -678,19 +767,33 @@ func (m *chatModule) PlayerChatRoomInvite(p *actors.Player, roomId int64, target
 		RoomId:    roomId,
 		InviterId: p.ID(),
 		TargetIds: targetIds,
-	}, func(resp actor.ActorRPCResp) {
-		result := actor.NewRPCResult(resp.Reply, resp.Err)
-		if !result.Success() {
-			err := result.Err()
-			logger.Get().Errorf("[ChatModule.PlayerChatRoomInvite] player %d invite %+v to room %d failed, %v", p.ID(), targetIds, roomId, result.Err())
-			cb(p, err)
-			return
-		}
-		cb(p, nil)
-	}, nil, 5*time.Second); err != nil {
+	}, m.onAsyncPlayerChatRoomInvite, actor.NewCbCtx(
+		cbctxkey.Player, p,
+		cbctxkey.ChatRoomID, roomId,
+		cbctxkey.MemberIds, targetIds,
+		cbctxkey.Callback, cb,
+	), 5*time.Second); err != nil {
 		logger.Get().Errorf("[ChatModule.PlayerChatRoomInvite] player %d invite %+v to room %d, async call mgr failed, %v", p.ID(), targetIds, roomId, err)
 		cb(p, actor.WithPbError(pbcommon.ErrCode_ECInternalError))
 	}
+}
+
+// onAsyncPlayerChatRoomInvite 异步处理玩家邀请聊天室回调.
+func (m *chatModule) onAsyncPlayerChatRoomInvite(resp actor.ActorRPCResp) {
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	p := actor.CbCtxMust(cc, cbctxkey.Player)
+	roomId := actor.CbCtxMust(cc, cbctxkey.ChatRoomID)
+	targetIds := actor.CbCtxMust(cc, cbctxkey.MemberIds)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(p *actors.Player, err error))
+
+	result := actor.NewRPCResult(resp.Reply, resp.Err)
+	if !result.Success() {
+		logger.Get().Errorf("[ChatModule.PlayerChatChatRoomInvite] player %d invite %+v to room %d failed, %v", p.ID(), targetIds, roomId, result.Err())
+		cb(p, result.Err())
+		return
+	}
+	cb(p, nil)
 }
 
 type ChatRoomInviteParams struct {
@@ -699,39 +802,52 @@ type ChatRoomInviteParams struct {
 	TargetIds []int64 // 邀请目标ID列表
 }
 
+var cbctxKeyInviteParams = actor.NewCbCtxK[*ChatRoomInviteParams]("invite_params")
+
 // ChatRoomInvite 邀请玩家加入聊天室.
 func (m *chatModule) ChatRoomInvite(mgr *actors.ChatMgr, params *ChatRoomInviteParams, cb func(mgr *actors.ChatMgr, err error)) {
-	m.LoadRoomAsync(mgr, params.RoomId, func(ctx any, room *chat.Room, err error) {
-		mgr := ctx.(*actors.ChatMgr)
-		if err != nil {
-			logger.Get().Errorf("[ChatModule.ChatRoomInvite] %d invite %+v, load room %d failed, %v", params.InviterId, params.TargetIds, params.RoomId, err)
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomNotExists))
+	m.LoadRoomAsync(mgr, params.RoomId, m.onLoadRoom2InviteMembers, actor.NewCbCtx(
+		cbctxKeyInviteParams, params,
+		cbctxkey.Callback, cb,
+	))
+}
+
+// onLoadRoom2InviteMembers 加载聊天室数据以处理邀请回调.
+func (m *chatModule) onLoadRoom2InviteMembers(resp ChatRoomLoadResp) {
+	mgr := resp.Op.(*actors.ChatMgr)
+	cc := resp.CbCtx.(*actor.CbCtx)
+	defer actor.CbCtxRelease(cc)
+	params := actor.CbCtxMust(cc, cbctxKeyInviteParams)
+	cb := actor.CbCtxMust(cc, cbctxkey.Callback).(func(mgr *actors.ChatMgr, err error))
+
+	if resp.Err != nil {
+		logger.Get().Errorf("[ChatModule.ChatRoomInvite] %d invite %+v, load room %d failed, %v", params.InviterId, params.TargetIds, params.RoomId, resp.Err)
+		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomNotExists))
+		return
+	}
+	if resp.Room.Type != int32(gdconf.ChatRoomTypeGroup) {
+		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomTypeCantInvite))
+		return
+	}
+	if params.InviterId != resp.Room.OwnerID {
+		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomNoPriviledge))
+		return
+	}
+	maxMembers := gdconf.Global().GetChatRoomMemberMaxByType(gdconf.ChatRoomType(resp.Room.Type))
+	if resp.Room.MemberCount()+int32(len(params.TargetIds)) > maxMembers {
+		cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomMemberCountExceed))
+		return
+	}
+	for _, targetId := range params.TargetIds {
+		if resp.Room.FindMember(targetId) != nil {
+			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomMemberAlreadyInRoom))
 			return
 		}
-		if room.Type != int32(gdconf.ChatRoomTypeGroup) {
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomTypeCantInvite))
-			return
-		}
-		if params.InviterId != room.OwnerID {
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomNoPriviledge))
-			return
-		}
-		maxMembers := gdconf.Global().GetChatRoomMemberMaxByType(gdconf.ChatRoomType(room.Type))
-		if room.MemberCount()+int32(len(params.TargetIds)) > maxMembers {
-			cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomMemberCountExceed))
-			return
-		}
-		for _, targetId := range params.TargetIds {
-			if room.FindMember(targetId) != nil {
-				cb(mgr, actor.WithPbError(pbcommon.ErrCode_ECChatRoomMemberAlreadyInRoom))
-				return
-			}
-		}
-		for _, targetId := range params.TargetIds {
-			m.notifyMemberJoinChatRoom(mgr, room, targetId)
-		}
-		cb(mgr, nil)
-	})
+	}
+	for _, targetId := range params.TargetIds {
+		m.notifyMemberJoinChatRoom(mgr, resp.Room, targetId)
+	}
+	cb(mgr, nil)
 }
 
 // CheckChatHistory 检查聊天历史权限.
@@ -796,8 +912,23 @@ func (m *chatModule) PackPBHistorys(records []*chat.MessageRecord) []*pbcommon.C
 	return msgs
 }
 
-// ChatRoomLoadCallback 聊天室加载回调.
-type ChatRoomLoadCallback func(ctx any, room *chat.Room, err error)
+// ChatRoomLoadResp 加载聊天室响应.
+type ChatRoomLoadResp struct {
+	Op     any        // 操作人.
+	RoomId int64      // 房间ID.
+	Room   *chat.Room // 房间数据
+	Err    error      // 错误.
+	CbCtx  any        // 回调上下文.
+}
+
+// ChatRoomLoadFunc 聊天室加载回调.
+type ChatRoomLoadFunc func(resp ChatRoomLoadResp)
+
+// chatRoomLoadCallbackPairs 聊天室加载回调对.
+type chatRoomLoadCallbackPairs struct {
+	cb    ChatRoomLoadFunc // 回调.
+	cbCtx any              // 回调上下文.
+}
 
 const (
 	chatRoomLoaderStateNone = 0
@@ -808,27 +939,27 @@ const (
 
 // chatRoomLoader 聊天室加载器.
 type chatRoomLoader struct {
-	mtx         sync.Mutex             // 互斥锁
-	state       int32                  // 状态
-	initCond    sync.Cond              // 初始化完成条件
-	roomId      int64                  // 聊天室ID
-	room        *chat.Room             // 聊天室数据
-	callbacks   []ChatRoomLoadCallback // 结果回调
-	asyncCaller actor.ActorAsyncCaller // 异步调用器
-	err         error                  // 错误
+	mtx         sync.Mutex                  // 互斥锁
+	state       int32                       // 状态
+	initCond    sync.Cond                   // 初始化完成条件
+	roomId      int64                       // 聊天室ID
+	room        *chat.Room                  // 聊天室数据
+	cbPairs     []chatRoomLoadCallbackPairs // 结果回调
+	asyncCaller actor.ActorAsyncCaller      // 异步调用器
+	err         error                       // 错误
 }
 
-func newChatRoomLoader(roomId int64, callbacks ...ChatRoomLoadCallback) *chatRoomLoader {
+func newChatRoomLoader(roomId int64, cbPairs ...chatRoomLoadCallbackPairs) *chatRoomLoader {
 	l := &chatRoomLoader{
-		roomId:    roomId,
-		callbacks: callbacks,
+		roomId:  roomId,
+		cbPairs: cbPairs,
 	}
 	l.initCond.L = &l.mtx
 	return l
 }
 
 // start 开始加载.
-func (l *chatRoomLoader) start(ctx any) {
+func (l *chatRoomLoader) start(op any) {
 	l.mtx.Lock()
 	if l.state != chatRoomLoaderStateNone {
 		l.mtx.Unlock()
@@ -839,19 +970,19 @@ func (l *chatRoomLoader) start(ctx any) {
 
 	// 异步加载房间数据.
 	room := &chat.Room{}
-	op := mongobd.NewOp[mongobd.OpLoad](app.Env().DB(), model.CollChatRoom).
+	dbOp := mongobd.NewOp[mongobd.OpLoad](app.Env().DB(), model.CollChatRoom).
 		SetFilter(bson.M{"_id": l.roomId}).
 		SetPrimary(true).
 		SetTarget(room)
-	if err := app.MongoBD().Add(l.roomId, op, l.loadCallback); err != nil {
-		l.endWithErr(ctx, err)
+	if err := app.MongoBD().Add(l.roomId, dbOp, l.loadCallback); err != nil {
+		l.endWithErr(op, err)
 		return
 	}
 
 	// 添加异步调用.
-	asyncCaller, err := l.asyncCall(ctx)
+	asyncCaller, err := l.asyncCall(op)
 	if err != nil {
-		l.endWithErr(ctx, err)
+		l.endWithErr(op, err)
 		return
 	}
 
@@ -863,7 +994,7 @@ func (l *chatRoomLoader) start(ctx any) {
 	l.initCond.Signal()
 }
 
-func (l *chatRoomLoader) endWithErr(ctx any, err error) {
+func (l *chatRoomLoader) endWithErr(op any, err error) {
 	l.mtx.Lock()
 	if l.state == chatRoomLoaderStateEnd {
 		l.mtx.Unlock()
@@ -873,16 +1004,16 @@ func (l *chatRoomLoader) endWithErr(ctx any, err error) {
 	l.room = nil
 	l.state = chatRoomLoaderStateEnd
 	l.mtx.Unlock()
-	l.invokeCallbacks(ctx)
+	l.invokeCallbacks(op)
 }
 
 // loadCallback 加载回调.
-func (l *chatRoomLoader) loadCallback(op mongobd.Op) {
+func (l *chatRoomLoader) loadCallback(dbOp mongobd.Op) {
 	l.mtx.Lock()
 	if l.state == chatRoomLoaderStateInit {
 		l.initCond.Wait()
 	}
-	if err := op.Err(); err != nil {
+	if err := dbOp.Err(); err != nil {
 		l.err = err
 		l.room = nil
 	}
@@ -890,12 +1021,12 @@ func (l *chatRoomLoader) loadCallback(op mongobd.Op) {
 	l.asyncCaller(nil, nil)
 }
 
-func (l *chatRoomLoader) asyncCall(ctx any) (actor.ActorAsyncCaller, error) {
-	switch ctx := ctx.(type) {
+func (l *chatRoomLoader) asyncCall(op any) (actor.ActorAsyncCaller, error) {
+	switch op := op.(type) {
 	case *actor.Context:
-		return ctx.AsyncCall(l.asyncCallback1, 5*time.Second)
+		return op.AsyncCall(l.asyncCallback1, 5*time.Second)
 	case *actors.ChatMgr:
-		return ctx.AsyncCall(l.asyncCallback2, 5*time.Second)
+		return op.AsyncCall(l.asyncCallback2, 5*time.Second)
 	default:
 		return nil, errors.New("invalid context")
 	}
@@ -937,24 +1068,24 @@ func (l *chatRoomLoader) asyncCallback2(args actor.ActorFuncArgs) {
 
 // appendCallback 添加回调.
 // 若加载起已完成, 失败.
-func (l *chatRoomLoader) appendCallback(cb ChatRoomLoadCallback) bool {
+func (l *chatRoomLoader) appendCallback(cbPair chatRoomLoadCallbackPairs) bool {
 	l.mtx.Lock()
 	defer l.mtx.Unlock()
 	if l.state == chatRoomLoaderStateEnd {
 		return false
 	}
-	l.callbacks = append(l.callbacks, cb)
+	l.cbPairs = append(l.cbPairs, cbPair)
 	return true
 }
 
 // invokeCallbacks 执行回调函数.
-func (l *chatRoomLoader) invokeCallbacks(ctx any) {
-	for _, cb := range l.callbacks {
-		cb(ctx, l.room, l.err)
+func (l *chatRoomLoader) invokeCallbacks(op any) {
+	for _, cb := range l.cbPairs {
+		cb.cb(ChatRoomLoadResp{Op: op, RoomId: l.roomId, Room: l.room, Err: l.err, CbCtx: cb.cbCtx})
 	}
 }
 
 // invokeCallback 执行指定回调函数.
-func (l *chatRoomLoader) invokeCallback(ctx any, cb ChatRoomLoadCallback) {
-	cb(ctx, l.room, l.err)
+func (l *chatRoomLoader) invokeCallback(op any, cbPair chatRoomLoadCallbackPairs) {
+	cbPair.cb(ChatRoomLoadResp{Op: op, RoomId: l.roomId, Room: l.room, Err: l.err, CbCtx: cbPair.cbCtx})
 }
