@@ -4,6 +4,14 @@
 
 本仓库是具体的多服务 Go 游戏后端，模块名：`github.com/godyy/ggs`，Go 版本：`1.25.0`。
 
+主要依赖（均以 vendor 方式引入）：
+
+- `github.com/godyy/gactor v0.4.17`：Actor 运行时。
+- `github.com/godyy/ggskit v0.2.16`：通用工具包（`base` / `infra` / `utils`）。
+- `github.com/godyy/gcluster` / `gnet` / `gmpsc` / `gtimewheel` / `gevent` / `grendezvous` / `glog`：集群、网络、无锁队列、时间轮、事件、一致性哈希、日志。
+
+项目概览见 `README.md`，架构分析见 `服务器架构分析报告.md`。
+
 通用游戏服工具已经抽离到 `github.com/godyy/ggskit`。当前仓库只应承载：
 
 - 各服务启动与接线
@@ -94,6 +102,8 @@ app/<service>/internal
 - env / flags / logger / auth / codec / protocol 基础能力
 - 通用 monitor / probe 基础能力
 
+注：`ggskit/infra/actor` 是对 `gactor` 的工程化封装，新增通用能力优先在此层做语法糖封装（参考 `ContextSugarUtil` / `ActorSugarUtil`），不要改动底层 `gactor`。
+
 判断规则：
 
 - 服务专属策略：放在 `app/<service>/internal`。
@@ -180,6 +190,25 @@ NodeID   = category/nodeName
 - 不要用运行期 nil guard 掩盖错误接线。
 - 构造期非法参数错误倾向于直接 `errors.New`。
 - 需要嵌套上下文 error 时，优先使用 `pkgerrors.WithMessage` / `WithMessagef`，但不要过度包装简单透传错误。
+
+### 3.5 Actor 迁移与租约
+
+规则：
+
+- `Registry` 的租约（lease）承载**迁移代际**：`TakeOverActor` 必须基于 `SourceLeaseId` 原子接管，代际不匹配返回 `ErrLeaseMismatch`。
+- 迁移分三阶段：**接管** → **转发（`migrated` 态）** → **清理**。迁移期源端 Actor 仍驻留并转发流量，`OnStop(ActorStopReasonMigrated)` 表示源端交接完成。
+- 业务 `OnMigrateOut` / `OnMigrateIn` 必须**幂等**（迁移可能重试，规划基于冻结计划）。
+- **停机 ≠ 迁移收敛**：停机是 Actor 生命周期终止，迁移收敛指流量与状态已切到目标。
+- 默认 `RegistryTTL=60s`、`KeepAliveInterval=TTL/3`；调整时需与 Actor 回收（`RecycleTime`）保留时间余量，避免「已回收但注册仍在」的窗口。
+
+### 3.6 泛型与上下文使用
+
+规则：
+
+- 泛型只作为边界处的**类型安全外壳**（handler 包装、模型基类、`CtxK` / `CbCtx`），不要为「性能特化」引入泛型；运行时核心保持接口化。
+- 热点路径优先使用 Actor 内状态，不要用 `CtxK` 传递 / 暂存大对象；必须用时传指针，避免每次存取的装箱与小对象分配。
+- `CtxK` 的 key 判等基于内部指针身份，**必须全局唯一并复用同一实例**（通常在包级 `var` 定义一次）。
+- 异步回调上下文用 `CbCtx` 相关 API（`CbCtxK`）承载，异步 RPC 经 `RPCResp.Ctx()` 取回，用完释放。
 
 ---
 
@@ -483,3 +512,5 @@ make run_client
 - 如果改了接线，是否验证启动或相关集成行为？
 - 如果改动看起来通用，是否确认它是否应该放到 `ggskit`？
 - 是否避免新增宽泛运行期兜底逻辑？
+- 若改动涉及 Actor 迁移，`OnMigrateOut` / `OnMigrateIn` 是否保持幂等？
+- 是否避免在热点路径用 `CtxK` 暂存大对象，或引入无必要的泛型特化？
