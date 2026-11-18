@@ -10,7 +10,7 @@
 - `github.com/godyy/ggskit v0.2.16`：通用工具包（`base` / `infra` / `utils`）。
 - `github.com/godyy/gcluster` / `gnet` / `gmpsc` / `gtimewheel` / `gevent` / `grendezvous` / `glog`：集群、网络、无锁队列、时间轮、事件、一致性哈希、日志。
 
-项目概览见 `README.md`，架构分析见 `服务器架构分析报告.md`。
+项目概览见 `README.md`，架构分析见 `docs/服务器架构分析报告.md`，发展建议见 `docs/服务器架构发展建议.md`。
 
 通用游戏服工具已经抽离到 `github.com/godyy/ggskit`。当前仓库只应承载：
 

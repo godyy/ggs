@@ -6,5 +6,4 @@ docker/dev/configs
 .vscode
 .trae/documents
 tmp/
-docs/
 服务器架构分析报告.md
